@@ -1,0 +1,38 @@
+{
+  "name": "oscli",
+  "version": "0.1.0",
+  "description": "Terminal-first framework for building CLI tools with a single ergonomic API.",
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "OSCLI_DISABLE_PROCESS_EXIT=1 vitest run test/chunk1.test.ts",
+    "example:chunk1": "pnpm run build && node dist/examples/chunk1.js",
+    "kitchen-sink": "pnpm run build && node dist/oscli-kitchen-sink.js"
+  },
+  "keywords": [
+    "cli",
+    "framework",
+    "terminal"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^14.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.1",
+    "typescript": "^5.9.2",
+    "vitest": "^4.0.18"
+  }
+}
