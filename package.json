@@ -4,14 +4,15 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run examples/test-create-builder.ts",
-    "dev:builder": "bun run examples/test-create-builder.ts",
-    "dev:storage": "bun run examples/test-create-storage.ts",
+    "dev": "bun run examples/kitchen-sink.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "build": "bun build src/index.ts --outdir dist --target node",
     "typecheck": "bun tsc --noEmit"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "vitest": "^4.0.18"
   },
   "peerDependencies": {
     "typescript": "^5"

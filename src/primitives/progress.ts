@@ -86,7 +86,12 @@ function buildStepsBar(
     .map((step) => `▷ ${step}`)
     .join(" ");
 
-  return [past, active, future].filter(Boolean).join(past ? " ▶ " : " ");
+  let result = past ? `${past} ▶ ${active}` : active;
+  if (future) {
+    result = `${result} ${future}`;
+  }
+
+  return result;
 }
 
 function buildPercentBar(
