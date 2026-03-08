@@ -100,11 +100,68 @@ export class NumberBuilder extends PromptBuilder<number> {
   }
 }
 
+export class SelectBuilder<T extends string> extends PromptBuilder<T> {
+  private readonly _choices: readonly T[];
+  private readonly _rules = new Map<T, string>();
+
+  constructor(options: { choices: readonly T[] }) {
+    super();
+    this._choices = options.choices;
+  }
+
+  rule(choice: T, description: string): this {
+    this._rules.set(choice, description);
+    return this;
+  }
+
+  config() {
+    return {
+      ...super.config(),
+      choices: this._choices,
+      rules: Object.fromEntries(this._rules),
+    };
+  }
+}
+
+export class MultiselectBuilder<T extends string> extends PromptBuilder<T[]> {
+  private readonly _choices: readonly T[];
+  private _min?: number;
+  private _max?: number;
+
+  constructor(options: { choices: readonly T[] }) {
+    super();
+    this._choices = options.choices;
+  }
+
+  min(value: number): this {
+    this._min = value;
+    return this;
+  }
+
+  max(value: number): this {
+    this._max = value;
+    return this;
+  }
+
+  config() {
+    return {
+      ...super.config(),
+      choices: this._choices,
+      min: this._min,
+      max: this._max,
+    };
+  }
+}
+
 export function createBuilder() {
   return {
     text: () => new TextBuilder(),
     number: () => new NumberBuilder(),
     password: () => new PasswordBuilder(),
+    select: <T extends string>(options: { choices: readonly T[] }) =>
+      new SelectBuilder(options),
+    multiselect: <T extends string>(options: { choices: readonly T[] }) =>
+      new MultiselectBuilder(options),
     confirm: () => new ConfirmBuilder(),
   };
 }
