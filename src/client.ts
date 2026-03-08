@@ -9,6 +9,7 @@ import {
   renderTextPrompt,
 } from "./primitives/prompt";
 import { Command } from "commander";
+import pc from "picocolors";
 
 type PromptLike<TValue = unknown> = {
   readonly __valueType: TValue;
@@ -184,8 +185,29 @@ export function createCLI<TPrompts extends PromptDefinitions>(
 
       await program.parseAsync(process.argv);
     },
+    intro: (message: string) => {
+      process.stdout.write(`${pc.cyan("○")} ${message}\n`);
+    },
+    outro: (message: string) => {
+      process.stdout.write(`${pc.cyan("●")} ${message}\n`);
+    },
+    log: (level: "info" | "warn" | "error" | "success", message: string) => {
+      const prefix =
+        level === "info"
+          ? pc.blue("info")
+          : level === "warn"
+            ? pc.yellow("warn")
+            : level === "error"
+              ? pc.red("error")
+              : pc.green("success");
+
+      process.stdout.write(`${prefix} ${message}\n`);
+    },
+    success: (message: string) => {
+      process.stdout.write(`${pc.green("success")} ${message}\n`);
+    },
     exit: (message: string): never => {
-      process.stderr.write(`${message}\n`);
+      process.stderr.write(`${pc.red("error")} ${message}\n`);
       process.exit(1);
     },
   };
