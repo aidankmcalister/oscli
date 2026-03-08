@@ -1,14 +1,44 @@
 {
-  "name": "oscli",
-  "module": "index.ts",
+  "name": "clios",
+  "version": "0.1.0",
+  "description": "The last CLI framework you'll reach for.",
   "type": "module",
-  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "bun run examples/kitchen-sink.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "bun build src/index.ts --outdir dist --target node",
-    "typecheck": "bun tsc --noEmit"
+    "build": "bun build src/index.ts --outdir dist --target node --format esm && bun tsc -p tsconfig.build.json",
+    "typecheck": "bun tsc --noEmit",
+    "prepublishOnly": "bun run test && bun run build"
+  },
+  "keywords": [
+    "cli",
+    "framework",
+    "typescript",
+    "prompts",
+    "terminal",
+    "bun"
+  ],
+  "author": "Aidan McAlister",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aidankmcalister/clios"
+  },
+  "homepage": "https://github.com/aidankmcalister/clios#readme",
+  "engines": {
+    "node": ">=18"
   },
   "devDependencies": {
     "@types/bun": "latest",

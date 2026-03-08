@@ -1,8 +1,8 @@
-# oscli
+# clios
 
 The last CLI framework you'll reach for.
 
-`oscli` is a Bun-first TypeScript CLI framework built with
+`clios` is a Bun-first TypeScript CLI framework built with
 [`commander`](https://www.npmjs.com/package/commander) and
 [`picocolors`](https://www.npmjs.com/package/picocolors). You define prompts
 once, define flags once, run your flow, and read typed values from
@@ -45,7 +45,7 @@ bun run typecheck
 This is the minimal shape for a CLI with no prompts.
 
 ```ts
-import { createCLI } from "oscli";
+import { createCLI } from "clios";
 
 const cli = createCLI(() => ({
   description: "my cli",
@@ -64,7 +64,7 @@ await cli.run(async () => {
 This example shows the typed builder API and `cli.storage`.
 
 ```ts
-import { createCLI } from "oscli";
+import { createCLI } from "clios";
 
 const cli = createCLI((b) => ({
   description: "project setup",
@@ -104,7 +104,7 @@ await cli.run(async () => {
 This example shows typed `cli.flags`, choice inference, and prompt bypass.
 
 ```ts
-import { createCLI } from "oscli";
+import { createCLI } from "clios";
 
 const cli = createCLI((b) => ({
   description: "create-db",
@@ -138,7 +138,7 @@ await cli.run(async () => {
 
 ## Runtime behavior
 
-`oscli` adapts to interactive terminals, pipes, and CI by changing only its
+`clios` adapts to interactive terminals, pipes, and CI by changing only its
 runtime behavior, not your CLI definition.
 
 - `stdout` non-TTY: prompts use defaults or matching flags, spinners stop
@@ -162,7 +162,7 @@ cli.exit("package.json not found.", {
 This example shows table, box, spinner, and progress.
 
 ```ts
-import { createCLI } from "oscli";
+import { createCLI } from "clios";
 
 const cli = createCLI(() => ({
   description: "visual demo",
@@ -173,7 +173,7 @@ await cli.run(async () => {
   const summary = cli.table(
     ["Field", "Value"],
     [
-      ["framework", "oscli"],
+      ["framework", "clios"],
       ["runtime", "bun"],
       ["status", "ready"],
     ],
@@ -196,12 +196,12 @@ await cli.run(async () => {
 
 ## Theme overrides
 
-You can override the default terminal theme per CLI instance. `oscli` deep
+You can override the default terminal theme per CLI instance. `clios` deep
 merges your override with the defaults, so you only specify the parts you want
 to change.
 
 ```ts
-import { createCLI } from "oscli";
+import { createCLI } from "clios";
 
 const cli = createCLI((b) => ({
   description: "styled cli",
@@ -225,7 +225,7 @@ const cli = createCLI((b) => ({
 
 ## API reference
 
-`oscli` currently exports these functions from the package root.
+`clios` currently exports these functions from the package root.
 
 | Export | Description |
 | --- | --- |

@@ -68,7 +68,7 @@ describe("phase 2 runtime ux", () => {
       prompts: {},
     }));
 
-    await withArgv(["node", "oscli"], async () => {
+    await withArgv(["node", "clios"], async () => {
       await cli.run(async () => {
         cli.log("error", "problem");
         cli.success("done");
@@ -144,7 +144,7 @@ describe("phase 2 runtime ux", () => {
       },
     }));
 
-    await withArgv(["node", "oscli"], async () => {
+    await withArgv(["node", "clios"], async () => {
       await cli.run(async () => {
         expect(await cli.prompt.project()).toBe("my-app");
         expect(cli.storage.project).toBe("my-app");
@@ -170,7 +170,7 @@ describe("phase 2 runtime ux", () => {
     }));
 
     await expect(
-      withArgv(["node", "oscli"], async () => {
+      withArgv(["node", "clios"], async () => {
         await cli.run(async () => {
           await cli.prompt.project();
         });
@@ -202,7 +202,7 @@ describe("phase 2 runtime ux", () => {
     }));
 
     await expect(
-      withArgv(["node", "oscli", "--project", "ab"], async () => {
+      withArgv(["node", "clios", "--project", "ab"], async () => {
         await cli.run(async () => {
           await cli.prompt.project();
         });
@@ -228,7 +228,7 @@ describe("phase 2 runtime ux", () => {
     }));
 
     await withTTY(true, true, async () => {
-      await withArgv(["node", "oscli", "--no-color"], async () => {
+      await withArgv(["node", "clios", "--no-color"], async () => {
         await cli.run(async () => {
           expect(cli._noColor).toBe(true);
           cli.log("info", "plain");
@@ -251,7 +251,7 @@ describe("phase 2 runtime ux", () => {
       prompts: {},
     }));
 
-    await withArgv(["node", "oscli", "--no-color"], async () => {
+    await withArgv(["node", "clios", "--no-color"], async () => {
       await cli.run(async () => {
         await cli.spin("Installing packages", async () => {
           await Promise.resolve();
@@ -274,7 +274,7 @@ describe("phase 2 runtime ux", () => {
       prompts: {},
     }));
 
-    await withArgv(["node", "oscli"], async () => {
+    await withArgv(["node", "clios"], async () => {
       await cli.run(async () => {
         await cli.spin("Installing packages", async () => {
           await Promise.resolve();
@@ -306,7 +306,7 @@ describe("phase 2 runtime ux", () => {
     }));
 
     await expect(
-      withArgv(["node", "oscli", "depoy"], async () => {
+      withArgv(["node", "clios", "depoy"], async () => {
         await cli.run(async () => {});
       }),
     ).rejects.toThrow("EXIT:2");
@@ -328,7 +328,7 @@ describe("phase 2 runtime ux", () => {
         },
         prompts: {},
       })),
-    ).toThrowError("Flag 'no-color' is reserved by oscli.");
+    ).toThrowError("Flag 'no-color' is reserved by clios.");
   });
 
   it("exposes the suggestion helper on the cli instance", () => {

@@ -7,7 +7,7 @@ describe("table primitive", () => {
     const output = table(
       ["Field", "Value"],
       [
-        ["project", "oscli"],
+        ["project", "clios"],
         ["teamSize", 3],
         ["approved", true],
       ],
@@ -18,7 +18,7 @@ describe("table primitive", () => {
         "┌──────────┬───────┐",
         "│ Field    │ Value │",
         "├──────────┼───────┤",
-        "│ project  │ oscli │",
+        "│ project  │ clios │",
         "│ teamSize │ 3     │",
         "│ approved │ true  │",
         "└──────────┴───────┘",
@@ -31,11 +31,11 @@ describe("box primitive", () => {
   it("wraps multiline content with title", () => {
     const output = box({
       title: "Summary",
-      content: ["project: oscli", "teamSize: 3", "approved: true"].join("\n"),
+      content: ["project: clios", "teamSize: 3", "approved: true"].join("\n"),
     });
 
     expect(output).toContain("┌ Summary ");
-    expect(output).toContain("│ project: oscli │");
+    expect(output).toContain("│ project: clios │");
     expect(output).toContain("│ teamSize: 3    │");
     expect(output).toContain("│ approved: true │");
     expect(output).toContain("└────────────────┘");

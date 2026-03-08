@@ -1,0 +1,9 @@
+src/
+examples/
+tests/
+.cursor/
+tsconfig.build.json
+tsconfig.json
+bun.lock
+CLAUDE.md
+*.test.ts
