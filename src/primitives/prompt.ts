@@ -144,3 +144,49 @@ export function renderPasswordPrompt(
     render();
   });
 }
+
+export type NumberPromptOptions = {
+  label: string;
+  min?: number;
+  max?: number;
+  prefix?: string;
+  placeholder?: string;
+  defaultValue?: number;
+};
+
+export async function renderNumberPrompt(
+  options: NumberPromptOptions,
+): Promise<number> {
+  const { label, min, max, prefix, placeholder, defaultValue } = options;
+
+  while (true) {
+    const raw = await renderTextPrompt({
+      label,
+      placeholder,
+      defaultValue:
+        defaultValue === undefined ? undefined : String(defaultValue),
+    });
+
+    const normalized =
+      prefix && raw.startsWith(prefix) ? raw.slice(prefix.length).trim() : raw;
+
+    const parsed = Number(normalized);
+
+    if (Number.isNaN(parsed)) {
+      process.stdout.write("Invalid number. Please enter a numeric value.\n");
+      continue;
+    }
+
+    if (min !== undefined && parsed < min) {
+      process.stdout.write(`Value must be at least ${min}.\n`);
+      continue;
+    }
+
+    if (max !== undefined && parsed > max) {
+      process.stdout.write(`Value must be at most ${max}.\n`);
+      continue;
+    }
+
+    return parsed;
+  }
+}
