@@ -9,6 +9,7 @@ import {
   renderTextPrompt,
 } from "./primitives/prompt";
 import { table as renderTable } from "./primitives/table";
+import { box as renderBox } from "./primitives/box";
 import { Command } from "commander";
 import pc from "picocolors";
 
@@ -209,6 +210,9 @@ export function createCLI<TPrompts extends PromptDefinitions>(
       rows: Array<Array<string | number | boolean | null | undefined>>,
     ) => {
       return renderTable(headers, rows);
+    },
+    box: (options: { title?: string; content: string }) => {
+      process.stdout.write(`${renderBox(options)}\n`);
     },
     success: (message: string) => {
       process.stdout.write(`${pc.green("success")} ${message}\n`);
