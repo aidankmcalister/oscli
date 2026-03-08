@@ -90,6 +90,7 @@ export type ConfirmPromptOptions<TValue = boolean> = SharedPromptOptions<
   boolean,
   TValue
 > & {
+  confirmMode?: "toggle" | "simple";
   defaultValue?: boolean;
 };
 
@@ -1078,7 +1079,108 @@ export async function renderDatePrompt<TValue = Date>(
 export async function renderConfirmPrompt<TValue = boolean>(
   options: ConfirmPromptOptions<TValue>,
 ): Promise<TValue> {
-  const { label, describe, promptColor, defaultValue, resolve, summaryWidth } = options;
+  const {
+    label,
+    describe,
+    promptColor,
+    confirmMode = "simple",
+    defaultValue,
+    resolve,
+    summaryWidth,
+  } = options;
+
+  if (confirmMode === "toggle") {
+    let selected = defaultValue ?? true;
+    let errorMessage = "";
+    let renderedLines = 0;
+
+    const render = () => {
+      const yes = selected
+        ? theme.color.active(`${theme.symbols.radio_on} Yes`)
+        : theme.color.muted(`${theme.symbols.radio_off} Yes`);
+      const no = !selected
+        ? theme.color.active(`${theme.symbols.radio_on} No`)
+        : theme.color.muted(`${theme.symbols.radio_off} No`);
+      const lines = [`${INDENT}${promptLabel(label, promptColor)}`];
+
+      if (describe) {
+        lines.push(`${INDENT}${theme.color.hint(describe)}`);
+      }
+
+      lines.push(`${INDENT}${yes}${theme.color.muted("  /  ")}${no}`);
+
+      if (errorMessage) {
+        lines.push(
+          `${INDENT}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
+        );
+      }
+
+      renderedLines = renderBlock(lines, renderedLines);
+    };
+
+    return new Promise((resolvePrompt, reject) => {
+      const cleanup = () => {
+        process.stdin.off("data", onData);
+        disableRawMode();
+      };
+
+      const onData = async (chunk: Buffer | string) => {
+        const key = chunk.toString("utf8");
+
+        if (key === "\u0003") {
+          cleanup();
+          clearRenderedBlock(renderedLines);
+          writeLine("");
+          reject(new Error("Prompt cancelled by user."));
+          return;
+        }
+
+        if (key === "\u001b[D" || key.toLowerCase() === "y") {
+          selected = true;
+          errorMessage = "";
+          render();
+          return;
+        }
+
+        if (key === "\u001b[C" || key.toLowerCase() === "n") {
+          selected = false;
+          errorMessage = "";
+          render();
+          return;
+        }
+
+        if (key === "\r" || key === "\n") {
+          if (!resolve) {
+            cleanup();
+            clearRenderedBlock(renderedLines);
+            writePromptSummary(label, selected ? "yes" : "no", summaryWidth);
+            resolvePrompt(selected as TValue);
+            return;
+          }
+
+          const result = await resolve(selected);
+          if (result.ok === false) {
+            errorMessage = result.error;
+            render();
+            return;
+          }
+
+          cleanup();
+          clearRenderedBlock(renderedLines);
+          writePromptSummary(
+            label,
+            result.summaryValue ?? (selected ? "yes" : "no"),
+            summaryWidth,
+          );
+          resolvePrompt(result.value);
+        }
+      };
+
+      enableRawMode();
+      process.stdin.on("data", onData);
+      render();
+    });
+  }
 
   const hint =
     defaultValue === true ? "(Y/n)" : defaultValue === false ? "(y/N)" : "(y/n)";

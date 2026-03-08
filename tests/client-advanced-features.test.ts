@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCLI } from "../src/client";
+import { stripAnsi } from "../src/theme";
 
 async function withArgv(args: string[], fn: () => Promise<void>) {
   const originalArgv = process.argv;
@@ -69,6 +70,10 @@ async function withEnv(
   }
 }
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("phase 3", () => {
   it("supports log chaining and reusable style builders", async () => {
     const stdout = vi
@@ -106,9 +111,11 @@ describe("phase 3", () => {
       prompts: {},
     }));
 
-    await withArgv(["node", "oscli"], async () => {
-      await cli.run(async () => {
-        cli.link("Docs", "https://oscli.dev");
+    await withTTY(false, false, async () => {
+      await withArgv(["node", "oscli"], async () => {
+        await cli.run(async () => {
+          cli.link("Docs", "https://oscli.dev");
+        });
       });
     });
 
@@ -144,7 +151,9 @@ describe("phase 3", () => {
       });
     });
 
-    const rendered = stdout.mock.calls.map((call) => String(call[0])).join("");
+    const rendered = stripAnsi(
+      stdout.mock.calls.map((call) => String(call[0])).join(""),
+    );
     expect(rendered).toContain("Results");
     expect(rendered).toContain("- world");
     expect(rendered).toContain("+ oscli");
@@ -221,5 +230,54 @@ describe("phase 3", () => {
 
     expect(result.exitCode).toBe(3);
     expect(result.output).toContain("Not authenticated.");
+  });
+
+  it("shows autocomplete hints for unknown commands", async () => {
+    const cli = createCLI(() => ({
+      description: "autocomplete",
+      autocompleteHint: "Run `oscli completion` to enable tab completion",
+      prompts: {},
+    }));
+
+    cli.command("deploy", async () => {});
+
+    const result = await cli.test({
+      argv: ["depoy"],
+    });
+
+    expect(result.exitCode).toBe(2);
+    expect(result.output).toContain('Unknown command: "depoy"');
+    expect(result.output).toContain("Did you mean: deploy?");
+    expect(result.output).toContain("Run `oscli completion` to enable tab completion");
+  });
+
+  it("suppresses decorative output and emits only json when --json is active", async () => {
+    const cli = createCLI((b) => ({
+      description: "json mode",
+      json: true,
+      prompts: {
+        name: b.text().label("Name").default("my-app"),
+      },
+    }));
+
+    cli.command("init", async () => {
+      cli.intro("json mode");
+      await cli.prompt.name();
+      cli.success("done");
+      cli.setResult({ name: cli.storage.name, created: true });
+      cli.outro("finished");
+    });
+
+    const result = await cli.test({
+      argv: ["init", "--json"],
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.output.trim()).toBe(
+      JSON.stringify({ name: "my-app", created: true }, null, 2),
+    );
+    expect(result.output).not.toContain("json mode");
+    expect(result.output).not.toContain("Name:");
+    expect(result.output).not.toContain("done");
   });
 });

@@ -1,4 +1,5 @@
 import * as pc from "picocolors";
+import * as readline from "node:readline";
 import {
   activeNoColor,
   activeTheme as theme,
@@ -10,6 +11,8 @@ import {
 
 let railEnabled = false;
 let lastLiveLineWidth = 0;
+let hasPersistentCorner = false;
+let outputSuppressed = false;
 
 export type LogLevel = "info" | "warn" | "error" | "success" | "plain";
 
@@ -44,6 +47,14 @@ export function isRailEnabled(): boolean {
   return railEnabled;
 }
 
+export function setOutputSuppressed(suppressed: boolean): void {
+  outputSuppressed = suppressed;
+}
+
+export function isOutputSuppressed(): boolean {
+  return outputSuppressed;
+}
+
 export function decorateLine(line: string): string {
   if (!railEnabled) {
     return line;
@@ -58,12 +69,51 @@ export function decorateLine(line: string): string {
   return `${theme.color.border(theme.symbols.pipe)}  ${content}`;
 }
 
+function canRenderPersistentCorner(stream: "stdout" | "stderr"): boolean {
+  return (
+    stream === "stdout" &&
+    !outputSuppressed &&
+    railEnabled &&
+    process.stdout.isTTY === true &&
+    theme.symbols.outro.length > 0
+  );
+}
+
+export function clearPersistentCorner(): void {
+  if (!hasPersistentCorner || process.stdout.isTTY !== true) {
+    return;
+  }
+
+  readline.moveCursor(process.stdout, 0, -1);
+  readline.clearLine(process.stdout, 0);
+  readline.cursorTo(process.stdout, 0);
+  hasPersistentCorner = false;
+}
+
+function writePersistentCorner(stream: "stdout" | "stderr"): void {
+  if (!canRenderPersistentCorner(stream)) {
+    return;
+  }
+
+  process.stdout.write(`${theme.color.border(theme.symbols.outro)}\n`);
+  hasPersistentCorner = true;
+}
+
 export function writeLine(line: string, stream: "stdout" | "stderr" = "stdout"): void {
+  if (outputSuppressed) {
+    return;
+  }
+
+  if (stream === "stdout" && hasPersistentCorner) {
+    clearPersistentCorner();
+  }
+
   const target = stream === "stdout" ? process.stdout : process.stderr;
   const decorated = decorateLine(line);
   const formatted =
     activeNoColor || target.isTTY !== true ? stripAnsi(decorated) : decorated;
   target.write(`${formatted}\n`);
+  writePersistentCorner(stream);
 }
 
 export function createLogChain(
@@ -202,12 +252,22 @@ export function writeSectionLines(
 export function writeSectionGap(
   stream: "stdout" | "stderr" = "stdout",
 ): void {
+  if (outputSuppressed) {
+    return;
+  }
+
   for (let index = 0; index < theme.layout.spacing; index += 1) {
     writeLine("", stream);
   }
 }
 
 export function writeLiveLine(line: string): void {
+  if (outputSuppressed) {
+    return;
+  }
+
+  clearPersistentCorner();
+
   const decorated = decorateLine(line);
   const formatted =
     activeNoColor || process.stdout.isTTY !== true
@@ -226,6 +286,10 @@ export function writeLiveLine(line: string): void {
 }
 
 export function finalizeLiveLine(line: string): void {
+  if (outputSuppressed) {
+    return;
+  }
+
   writeLiveLine(line);
   if (process.stdout.isTTY) {
     process.stdout.write("\n");

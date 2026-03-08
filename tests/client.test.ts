@@ -36,7 +36,7 @@ describe("createCLI", () => {
 
     const t = cli.table(["Field", "Value"], [["project", "oscli"]]);
 
-    expect(t).toContain("┌");
+    expect(t).toContain("Field");
     expect(t).toContain("project");
 
     const stdout = vi

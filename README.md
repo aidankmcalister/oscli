@@ -18,22 +18,38 @@ bun add @oscli-dev/oscli
 
 ## Quick start
 
-This example shows the smallest useful CLI. It defines one prompt, reads the
-result from `cli.storage`, and uses the built-in output helpers.
+This example shows a small CLI with one prompt, one result object, and the
+built-in output helpers.
 
 ```ts
 import { createCLI } from "@oscli-dev/oscli";
 
 const cli = createCLI((b) => ({
   description: "project setup",
+  json: true,
   prompts: {
     project: b.text().label("Project").default("my-app"),
+    approved: b.confirm().label("Continue?").default(true),
   },
 }));
 
 await cli.run(async () => {
   cli.intro("oscli quick start");
   await cli.prompt.project();
+  await cli.prompt.approved();
+
+  if (!cli.storage.approved) {
+    cli.exit("Cancelled.", {
+      hint: "Pass --yes to auto-approve confirmation prompts.",
+      code: "usage",
+    });
+  }
+
+  cli.setResult({
+    project: cli.storage.project,
+    approved: cli.storage.approved,
+  });
+
   cli.success(`Created ${cli.storage.project}`);
   cli.outro("Done.");
 });
@@ -49,22 +65,25 @@ import { createCLI } from "@oscli-dev/oscli";
 
 const cli = createCLI((b) => ({
   description: "workspace setup",
+  theme: "rounded",
   flags: {
     env: b
       .flag()
       .string()
+      .label("Environment")
       .choices(["dev", "staging", "prod"] as const)
       .default("dev"),
   },
   prompts: {
-    project: b.text().label("Project").default("my-app"),
+    project: b.text().label("Project").default("my-app").color("cyan"),
     framework: b
       .search({ choices: ["react", "vue", "svelte"] as const })
       .label("Framework")
-      .color("cyan"),
+      .rule("react", "component model"),
     tags: b.list().label("Tags").min(1).max(3),
     deadline: b.date().label("Deadline").format("YYYY-MM-DD"),
     approved: b.confirm().label("Continue?").default(true),
+    fallback: b.confirm("simple").label("Use fallback mode?").default(false),
   },
 }));
 
@@ -76,13 +95,7 @@ await cli.run(async () => {
   await cli.prompt.tags();
   await cli.prompt.deadline();
   await cli.prompt.approved();
-
-  if (!cli.storage.approved) {
-    cli.exit("Run cancelled.", {
-      hint: "Pass --yes to auto-approve confirmation prompts.",
-      code: "usage",
-    });
-  }
+  await cli.prompt.fallback();
 
   cli.log(`Environment: ${cli.flags.env}`);
   cli.success(`Ready: ${cli.storage.project}`);
@@ -101,6 +114,7 @@ import { createCLI } from "@oscli-dev/oscli";
 
 const cli = createCLI((b) => ({
   description: "workspace tool",
+  autocompleteHint: "Run `workspace-tool completion` to enable tab completion",
   prompts: {
     name: b.text().label("Name").default("my-app"),
   },
@@ -130,14 +144,14 @@ import { createCLI } from "@oscli-dev/oscli";
 
 const cli = createCLI((b) => ({
   description: "create-db",
+  json: true,
   flags: {
     ttl: b.flag().string().label("TTL").default("1h"),
-    json: b.flag().boolean().label("JSON output").default(false),
     env: b
       .flag()
       .string()
-      .choices(["dev", "staging", "prod"] as const)
       .label("Environment")
+      .choices(["dev", "staging", "prod"] as const)
       .default("dev"),
   },
   prompts: {
@@ -148,11 +162,15 @@ const cli = createCLI((b) => ({
 
 await cli.run(async () => {
   cli.log(`env: ${cli.flags.env}`);
-  cli.log(`json: ${cli.flags.json}`);
   cli.log(`ttl: ${cli.flags.ttl}`);
 
   await cli.prompt.name();
   await cli.prompt.approved();
+
+  cli.setResult({
+    name: cli.storage.name,
+    approved: cli.storage.approved,
+  });
 });
 ```
 
@@ -160,13 +178,38 @@ Built-in runtime flags:
 
 - `-y`, `--yes`: auto-answer every confirmation as `true`
 - `--no-color`: disable ANSI color output
+- `--json`: emit only the final JSON result when `json: true` is enabled
 - `NO_COLOR=1`: disable ANSI color output from the environment
 
-## Output primitives
+## Runtime behavior
 
-`oscli` ships with terminal primitives that follow the same theme and rail
-layout as the prompt system. Some return strings for composition, and some
-write directly to the current output stream.
+`oscli` adapts to interactive terminals, pipes, and CI by changing only its
+runtime behavior, not your CLI definition.
+
+- `stdout` non-TTY: prompts use defaults or matching flags, spinners stop
+  animating, progress prints sequential step lines, and ANSI styling is
+  removed.
+- `stderr` non-TTY: error output stays on `stderr`, but ANSI styling is
+  removed.
+- `--no-color` and `NO_COLOR`: force plain output even in a TTY.
+- `cli.exit(message, { hint, code })`: prints an error line, an optional hint,
+  and exits with either a numeric code or a semantic code.
+- `autocompleteHint`: adds an extra hint line for unknown commands and unknown
+  flags.
+- `json: true` with `--json`: suppresses decorative output and prints the value
+  passed to `cli.setResult()` as raw JSON.
+
+```ts
+cli.exit("package.json not found.", {
+  hint: "Are you running this command from the right directory?",
+  code: "not_found",
+});
+```
+
+## Visual primitives example
+
+This example shows `table`, `box`, `tree`, `diff`, `link`, `spinner`, and
+`progress`.
 
 ```ts
 import { createCLI } from "@oscli-dev/oscli";
@@ -180,7 +223,7 @@ await cli.run(async () => {
   cli.intro("output demo");
   cli.divider("Summary");
 
-  const projectTree = cli.tree({
+  const fileTree = cli.tree({
     src: {
       "index.ts": null,
       "client.ts": null,
@@ -190,7 +233,7 @@ await cli.run(async () => {
 
   cli.box({
     title: "Files",
-    content: projectTree,
+    content: fileTree,
   });
 
   cli.diff("name=old\nmode=dry-run", "name=new\nmode=live");
@@ -232,8 +275,8 @@ cli.log("plain message").italic().flush();
 
 ## Theme overrides
 
-Use the `theme` field in `createCLI()` to override colors, symbols, spacing,
-and the sidebar style for one CLI instance.
+Use the `theme` field in `createCLI()` to pass either a preset name or a custom
+override object.
 
 ```ts
 const cli = createCLI((b) => ({
@@ -256,6 +299,14 @@ const cli = createCLI((b) => ({
 }));
 ```
 
+Theme presets:
+
+| Preset | Description |
+| --- | --- |
+| `default` | Square corners, `│` rail, spacing `1` |
+| `basic` | No intro or outro corners, `│` rail kept, spacing `0`, cyan cursor and active color |
+| `rounded` | Rounded `╭` and `╰` corners, `│` rail, spacing `1` |
+
 ## Testing
 
 Use `cli.test()` to run the CLI in non-interactive mode for Vitest or other
@@ -263,7 +314,8 @@ programmatic checks. The returned object includes captured output, parsed flags,
 storage, and the exit code.
 
 For command-based CLIs, pass the subcommand in `argv`. For single-command CLIs,
-`cli.test()` reuses the most recent handler you passed to `cli.run(fn)`.
+call `cli.run(fn)` at least once before `cli.test()` so the CLI has a stored
+main handler.
 
 ```ts
 import { createCLI } from "@oscli-dev/oscli";
@@ -305,25 +357,41 @@ helpers.
 | `createCLI` | Create a CLI instance with prompts, flags, and output helpers |
 | `createBuilder` | Create a standalone prompt builder factory |
 | `createStorage` | Create typed key/value storage |
-| `suggest` | Return the closest string match within edit distance 3 |
+| `suggest` | Return the closest string match within edit distance `3` |
 | `levenshtein` | Return the edit distance between two strings |
 
 ### `createCLI()` config
 
-Use the config function to define prompts, flags, and theme overrides before
-your flow runs.
+Use the config function to define prompts, flags, theme overrides, and optional
+JSON output support before your flow runs.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `description` | `string` | No | Commander help description |
 | `prompts` | `Record<string, PromptBuilder>` | No | Prompt definitions map |
 | `flags` | `Record<string, FlagDefinitionBuilder>` | No | Flag definitions map |
-| `theme` | `ThemeOverride` | No | Deep-merged theme override |
+| `theme` | `ThemeOverride \| ThemePreset` | No | Deep-merged theme override or preset name |
+| `autocompleteHint` | `string` | No | Extra hint shown for unknown commands and flags |
+| `json` | `boolean` | No | Enable the global `--json` flag and `cli.setResult()` |
 | `emojis` | `boolean` | No | Reserved emoji toggle |
 
 ### Prompt builders
 
 Use the shared chainable prompt API to define how each prompt behaves.
+
+Canonical chain order for prompt builders:
+
+```ts
+b.<type>()
+  .label()
+  .describe()
+  .placeholder()
+  .default()
+  .optional()
+  .validate()
+  .transform()
+  .color()
+```
 
 | Factory | Result type | Extra methods |
 | --- | --- | --- |
@@ -335,7 +403,8 @@ Use the shared chainable prompt API to define how each prompt behaves.
 | `b.multiselect({ choices })` | Array of union from choices | `.min(n)`, `.max(n)` |
 | `b.list()` | `string[]` | `.min(n)`, `.max(n)` |
 | `b.date()` | `Date` | `.format(string)` |
-| `b.confirm()` | `boolean` | Shared methods only |
+| `b.confirm()` | `boolean` | Toggle confirm by default |
+| `b.confirm("simple")` | `boolean` | Simple typed `y/n` confirm |
 
 ### Shared prompt methods
 
@@ -348,7 +417,7 @@ values, validation, transforms, and styling.
 | `.describe(string)` | Add helper text below the label |
 | `.placeholder(string)` | Show ghost text in empty text-like prompts |
 | `.default(value)` | Set the default value |
-| `.optional()` | Return `T | undefined` |
+| `.optional()` | Return `T \| undefined` |
 | `.validate(fn)` | Run sync or async validation |
 | `.transform(fn)` | Transform the stored value |
 | `.theme(string)` | Store a per-prompt theme key |
@@ -357,10 +426,12 @@ values, validation, transforms, and styling.
 ### Flag builders
 
 Use flag builders to create typed `cli.flags` values before your handler runs.
+The canonical flag chain is
+`b.flag().string|boolean|number().label().choices().default().optional()`.
 
 | Factory | Result type | Methods |
 | --- | --- | --- |
-| `b.flag().string()` | `string` | `.label()`, `.default()`, `.choices()`, `.optional()` |
+| `b.flag().string()` | `string` | `.label()`, `.choices()`, `.default()`, `.optional()` |
 | `b.flag().boolean()` | `boolean` | `.label()`, `.default()`, `.optional()` |
 | `b.flag().number()` | `number` | `.label()`, `.default()`, `.optional()` |
 
@@ -381,9 +452,10 @@ Use these methods from the object returned by `createCLI()`.
 | `cli.log(message)` | Print a plain section line |
 | `cli.log(level, message)` | Print a leveled section line |
 | `cli.style()` | Create a reusable style builder |
+| `cli.setResult(value)` | Store the final JSON result for `--json` mode |
 | `cli.success(message)` | Print a success line |
 | `cli.exit(message, options?)` | Print an error, optional hint, and exit |
-| `cli.confirm(label, defaultValue?)` | Run an inline confirmation prompt |
+| `cli.confirm(label, defaultValue?)` | Run an inline simple confirmation prompt |
 | `cli.spin(label, fn, options?)` | Run a spinner around async work |
 | `cli.progress(label, steps, fn)` | Render multi-step progress output |
 | `cli.box(options)` | Print boxed content |

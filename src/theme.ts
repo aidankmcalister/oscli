@@ -78,6 +78,25 @@ export interface ThemeOverride {
   spacing?: 0 | 1 | 2;
 }
 
+export type ThemePreset = "default" | "basic" | "rounded";
+
+export const themePresets: Record<ThemePreset, ThemeOverride> = {
+  default: {},
+  basic: {
+    sidebar: false,
+    spacing: 0,
+    cursor: "cyan",
+    active: "cyan",
+    symbols: {
+      pipe: "│",
+    },
+  },
+  rounded: {
+    sidebar: "rounded",
+    spacing: 1,
+  },
+};
+
 export const colorFormatters: Record<ColorName, (value: string) => string> = {
   black: pc.black,
   red: pc.red,
@@ -169,8 +188,9 @@ export function applyTheme(
   override: ThemeOverride = {},
   noColor = false,
 ): ResolvedTheme {
+  const baseSymbols = resolveSidebarSymbols(theme.symbols, override.sidebar);
   const mergedSymbols = {
-    ...theme.symbols,
+    ...baseSymbols,
     ...(override.symbols ?? {}),
   };
 
@@ -206,7 +226,7 @@ export function applyTheme(
       };
 
   const resolved: ResolvedTheme = {
-    symbols: resolveSidebarSymbols(mergedSymbols, override.sidebar),
+    symbols: mergedSymbols,
     color,
     layout: {
       ...theme.layout,

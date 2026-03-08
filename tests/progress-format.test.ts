@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createProgressGroup, renderProgressLine } from "../src/primitives/progress";
 import { decorateLine, setRailEnabled } from "../src/output";
-import { visibleLength } from "../src/theme";
+import { stripAnsi, visibleLength } from "../src/theme";
 
 describe("progress formatting", () => {
   it("keeps timer and percent columns aligned across a group", () => {
@@ -30,13 +30,20 @@ describe("progress formatting", () => {
       context,
     });
 
-    expect(doneLine).toContain("[00:03]");
-    expect(runningLine).toContain("[00:04]");
-    expect(doneLine.endsWith("100%")).toBe(true);
-    expect(runningLine.endsWith(" 60%")).toBe(true);
+    const strippedDoneLine = stripAnsi(doneLine);
+    const strippedRunningLine = stripAnsi(runningLine);
 
-    expect(doneLine.indexOf("[00:03]")).toBe(runningLine.indexOf("[00:04]"));
-    expect(doneLine.lastIndexOf("100%")).toBe(runningLine.lastIndexOf(" 60%"));
+    expect(strippedDoneLine).toContain("[00:03]");
+    expect(strippedRunningLine).toContain("[00:04]");
+    expect(strippedDoneLine.endsWith("100%")).toBe(true);
+    expect(strippedRunningLine.endsWith(" 60%")).toBe(true);
+
+    expect(strippedDoneLine.indexOf("[00:03]")).toBe(
+      strippedRunningLine.indexOf("[00:04]"),
+    );
+    expect(strippedDoneLine.lastIndexOf("100%")).toBe(
+      strippedRunningLine.lastIndexOf(" 60%"),
+    );
   });
 
   it("renders named step style", () => {
@@ -54,9 +61,11 @@ describe("progress formatting", () => {
       context,
     });
 
-    expect(line).toContain("validate ▶ prepare ▶ [write] ▷ finalize");
-    expect(line).toContain("[00:04]");
-    expect(line.includes("%")).toBe(false);
+    const strippedLine = stripAnsi(line);
+
+    expect(strippedLine).toContain("validate ▶ prepare ▶ [write] ▷ finalize");
+    expect(strippedLine).toContain("[00:04]");
+    expect(strippedLine.includes("%")).toBe(false);
   });
 
   it("keeps a rail-decorated progress line inside terminal width", () => {

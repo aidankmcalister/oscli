@@ -1,13 +1,117 @@
 ---
-title: Hello World
-description: Your first document
+title: oscli overview
+description: Build terminal workflows with typed prompts, flags, themes, and test helpers.
 ---
 
-Welcome to the docs! You can start writing documents in `/content/docs`.
+`oscli` gives you a typed CLI runtime for Bun and TypeScript. This page gives
+you the shortest path to a working CLI and points you to the parts of the API
+that matter most in daily use.
 
-## What is Next?
+## Start here
 
-<Cards>
-  <Card title="Learn more about Next.js" href="https://nextjs.org/docs" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
-</Cards>
+Use this example to define prompts, run one flow, and emit a JSON result when
+you want machine-readable output.
+
+```ts
+import { createCLI } from "@oscli-dev/oscli";
+
+const cli = createCLI((b) => ({
+  description: "project setup",
+  json: true,
+  theme: "rounded",
+  prompts: {
+    project: b.text().label("Project").default("my-app"),
+    framework: b
+      .search({ choices: ["react", "vue", "svelte"] as const })
+      .label("Framework"),
+    approved: b.confirm().label("Continue?").default(true),
+  },
+}));
+
+await cli.run(async () => {
+  cli.intro("project setup");
+  await cli.prompt.project();
+  await cli.prompt.framework();
+  await cli.prompt.approved();
+
+  cli.setResult({
+    project: cli.storage.project,
+    framework: cli.storage.framework,
+    approved: cli.storage.approved,
+  });
+
+  cli.success(`Created ${cli.storage.project}`);
+  cli.outro("Done.");
+});
+```
+
+## Core ideas
+
+These are the main concepts to keep in mind as you build with `oscli`.
+
+- **Prompt builders** define the input shape once, then infer the stored type.
+- **Flag builders** parse values before your handler runs and populate
+  `cli.flags`.
+- **Theme presets** give you a fast way to switch the visual tone of a CLI.
+- **JSON mode** lets you suppress decorative output and emit a single result.
+- **`cli.test()`** runs the same CLI in non-interactive mode for Vitest.
+
+## Prompt builders
+
+Use the builder chain to define prompts in a consistent order.
+
+```ts
+b.<type>()
+  .label()
+  .describe()
+  .placeholder()
+  .default()
+  .optional()
+  .validate()
+  .transform()
+  .color()
+```
+
+Available prompt factories:
+
+- `b.text()`
+- `b.password()`
+- `b.number()`
+- `b.select({ choices })`
+- `b.search({ choices })`
+- `b.multiselect({ choices })`
+- `b.list()`
+- `b.date()`
+- `b.confirm()` for the default toggle confirm
+- `b.confirm("simple")` for typed `y/n` input
+
+## Flags and non-interactive execution
+
+`oscli` lets you bypass prompts with matching flags and run safely in CI or
+piped output.
+
+- Use `b.flag().string()`, `b.flag().boolean()`, or `b.flag().number()`.
+- Keep the chain order as `b.flag().type().label().choices().default().optional()`.
+- Use `--yes` to auto-approve confirmation prompts.
+- Use `--no-color` or `NO_COLOR=1` to strip ANSI output.
+- Enable `json: true` to register `--json` and print only the value passed to
+  `cli.setResult()`.
+
+## Theme presets
+
+Use a preset name when you want a fast, consistent starting point.
+
+| Preset | Description |
+| --- | --- |
+| `default` | Square corners, `│` rail, spacing `1` |
+| `basic` | No intro or outro corners, `│` rail kept, spacing `0`, cyan cursor and active color |
+| `rounded` | Rounded `╭` and `╰` corners, `│` rail, spacing `1` |
+
+## Next steps
+
+Use these docs pages next.
+
+- Open [API reference](/docs/api-reference) for the full client and builder
+  surface.
+- Read the package `README.md` for longer walkthrough examples that combine
+  prompts, flags, JSON mode, and visual primitives.

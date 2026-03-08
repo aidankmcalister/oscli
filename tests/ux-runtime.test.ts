@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCLI } from "../src/client";
 import { suggest } from "../src/suggest";
+import { stripAnsi } from "../src/theme";
 
 async function withArgv(args: string[], fn: () => Promise<void>) {
   const originalArgv = process.argv;
@@ -125,7 +126,9 @@ describe("phase 2 runtime ux", () => {
 
     expect(() => cli.exit("Run cancelled.")).toThrow("EXIT:1");
 
-    const stderrText = stderr.mock.calls.map((call) => String(call[0])).join("");
+    const stderrText = stripAnsi(
+      stderr.mock.calls.map((call) => String(call[0])).join(""),
+    );
     expect(stderrText).toContain("✗ Run cancelled.");
     expect(stderrText.endsWith("└\n")).toBe(true);
 
@@ -144,10 +147,12 @@ describe("phase 2 runtime ux", () => {
       },
     }));
 
-    await withArgv(["node", "oscli"], async () => {
-      await cli.run(async () => {
-        expect(await cli.prompt.project()).toBe("my-app");
-        expect(cli.storage.project).toBe("my-app");
+    await withTTY(false, false, async () => {
+      await withArgv(["node", "oscli"], async () => {
+        await cli.run(async () => {
+          expect(await cli.prompt.project()).toBe("my-app");
+          expect(cli.storage.project).toBe("my-app");
+        });
       });
     });
 
@@ -170,9 +175,11 @@ describe("phase 2 runtime ux", () => {
     }));
 
     await expect(
-      withArgv(["node", "oscli"], async () => {
-        await cli.run(async () => {
-          await cli.prompt.project();
+      withTTY(false, false, async () => {
+        await withArgv(["node", "oscli"], async () => {
+          await cli.run(async () => {
+            await cli.prompt.project();
+          });
         });
       }),
     ).rejects.toThrow("EXIT:2");

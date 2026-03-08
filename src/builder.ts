@@ -1,5 +1,8 @@
 import type { ColorName } from "./theme";
 
+// Canonical chain order for all prompt builders:
+// b.<type>().label().describe().placeholder().default().optional().validate().transform().color()
+
 export type Validator<T> = (value: T) => true | string | Promise<true | string>;
 export type FlagType = "string" | "boolean" | "number";
 
@@ -98,10 +101,18 @@ export class PasswordBuilder extends PromptBuilder<string> {
 }
 
 export class ConfirmBuilder extends PromptBuilder<boolean> {
+  private readonly _confirmMode: "toggle" | "simple";
+
+  constructor(mode: "toggle" | "simple" = "toggle") {
+    super();
+    this._confirmMode = mode;
+  }
+
   config() {
     return {
       type: "confirm" as const,
       ...super.config(),
+      confirmMode: this._confirmMode,
     };
   }
 }
@@ -334,6 +345,7 @@ export function createBuilder() {
       new MultiselectBuilder(options),
     list: () => new ListBuilder(),
     date: () => new DateBuilder(),
-    confirm: () => new ConfirmBuilder(),
+    confirm: (mode: "toggle" | "simple" = "toggle") =>
+      new ConfirmBuilder(mode),
   };
 }

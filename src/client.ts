@@ -1,10 +1,13 @@
 import { Command, CommanderError, Option } from "commander";
 import { createBuilder } from "./builder";
 import {
+  clearPersistentCorner,
   createLogChain,
   createStyleBuilder,
   isRailEnabled,
+  isOutputSuppressed,
   renderLink,
+  setOutputSuppressed,
   setRailEnabled,
   type LogChain,
   type LogLevel,
@@ -40,7 +43,9 @@ import {
   activeTheme as theme,
   applyTheme,
   type ColorName,
+  type ThemePreset,
   type ThemeOverride,
+  themePresets,
 } from "./theme";
 
 type PromptLike<TValue = unknown> = {
@@ -82,7 +87,9 @@ type CLIConfig<
   description?: string;
   prompts?: TPrompts;
   flags?: TFlags;
-  theme?: ThemeOverride;
+  theme?: ThemeOverride | ThemePreset;
+  autocompleteHint?: string;
+  json?: boolean;
   emojis?: boolean;
 };
 
@@ -104,6 +111,7 @@ type RuntimePromptConfig = {
   max?: number;
   prefix?: string;
   format?: string;
+  confirmMode?: "toggle" | "simple";
 };
 
 type RuntimeFlagConfig = {
@@ -556,6 +564,7 @@ async function renderByType(
         label,
         describe: config.describe,
         promptColor: config.promptColor,
+        confirmMode: config.confirmMode,
         summaryWidth,
         defaultValue:
           typeof config.defaultValue === "boolean" ? config.defaultValue : undefined,
@@ -594,6 +603,16 @@ function clearStorage<T extends Record<string, unknown>>(storage: Partial<T>): v
   }
 }
 
+function resolveTheme(
+  value: ThemeOverride | ThemePreset | undefined,
+): ThemeOverride {
+  if (typeof value === "string") {
+    return themePresets[value] ?? {};
+  }
+
+  return value ?? {};
+}
+
 export function createCLI<
   TPrompts extends PromptDefinitions = {},
   TFlags extends FlagDefinitions = {},
@@ -601,6 +620,7 @@ export function createCLI<
   configFn: (b: ReturnType<typeof createBuilder>) => CLIConfig<TPrompts, TFlags>,
 ) {
   const config = configFn(createBuilder());
+  const resolvedThemeOverride = resolveTheme(config.theme);
   const promptDefs = (config.prompts ?? {}) as TPrompts;
   const flagDefs = (config.flags ?? {}) as TFlags;
   const runtimePromptConfigs = new Map<keyof TPrompts, RuntimePromptConfig>();
@@ -612,6 +632,10 @@ export function createCLI<
 
   if (Object.prototype.hasOwnProperty.call(flagDefs, "no-color")) {
     throw new Error("Flag 'no-color' is reserved by oscli.");
+  }
+
+  if (config.json && Object.prototype.hasOwnProperty.call(flagDefs, "json")) {
+    throw new Error("Flag name 'json' is reserved by oscli. Use a different name.");
   }
 
   for (const key of Object.keys(promptDefs) as Array<keyof TPrompts>) {
@@ -644,8 +668,11 @@ export function createCLI<
     process.env.NO_COLOR !== undefined ||
     process.env.TERM === "dumb" ||
     process.argv.includes("--no-color");
-  let resolvedTheme = applyTheme(config.theme ?? {}, noColor);
+  let resolvedTheme = applyTheme(resolvedThemeOverride, noColor);
   let exitInterceptor: ((code: number) => never) | null = null;
+  let jsonMode = false;
+  let resultValue: unknown;
+  let hasResult = false;
 
   function initializeFlags(): void {
     for (const key of Object.keys(flagDefs) as Array<keyof TFlags>) {
@@ -689,8 +716,13 @@ export function createCLI<
     process.exit(code);
   };
 
-  const exitWithMessage = (message: string, options: ExitOptions = {}): never => {
+  const exitWithMessage = (
+    message: string,
+    options: ExitOptions = {},
+    extraHint?: string,
+  ): never => {
     const shouldCloseRail = isRailEnabled() && theme.symbols.outro.length > 0;
+    clearPersistentCorner();
     writeLine(
       `${theme.layout.indent}${theme.color.error(theme.symbols.error)} ${theme.color.error(message)}`,
       "stderr",
@@ -699,6 +731,13 @@ export function createCLI<
     if (options.hint) {
       writeLine(
         `${theme.layout.indent}${theme.layout.indent}${theme.color.dim(`→ ${options.hint}`)}`,
+        "stderr",
+      );
+    }
+
+    if (extraHint) {
+      writeLine(
+        `${theme.layout.indent}${theme.layout.indent}${theme.color.dim(extraHint)}`,
         "stderr",
       );
     }
@@ -748,7 +787,11 @@ export function createCLI<
         continue;
       }
 
-      if (String(key) === "yes" || String(key) === "no-color") {
+      if (
+        String(key) === "yes" ||
+        String(key) === "no-color" ||
+        (config.json === true && String(key) === "json")
+      ) {
         continue;
       }
 
@@ -780,6 +823,9 @@ export function createCLI<
 
     target.option("-y, --yes", "Answer yes to all confirmation prompts");
     target.option("--no-color", "Disable ANSI colors");
+    if (config.json === true) {
+      target.option("--json", "Output JSON only");
+    }
   };
 
   const getOptionSource = (program: Command, parser: Command, name: string) => {
@@ -801,6 +847,9 @@ export function createCLI<
 
     const opts = getOptions(parser);
     autoYes = opts.yes === true;
+    jsonMode = config.json === true && opts.json === true;
+    setOutputSuppressed(jsonMode);
+    cli._jsonMode = jsonMode;
 
     for (const key of Object.keys(flagDefs) as Array<keyof TFlags>) {
       const runtimeConfig = runtimeFlagConfigs.get(key);
@@ -922,6 +971,7 @@ export function createCLI<
     _theme: resolvedTheme,
     _isTTY: isTTY,
     _noColor: noColor,
+    _jsonMode: jsonMode,
     _writeLine,
     suggest: suggestValue,
     command: (name: string, fn: () => Promise<void> | void) => {
@@ -941,10 +991,16 @@ export function createCLI<
         process.env.NO_COLOR !== undefined ||
         process.env.TERM === "dumb" ||
         process.argv.includes("--no-color");
-      resolvedTheme = applyTheme(config.theme ?? {}, noColor);
+      jsonMode = false;
+      hasResult = false;
+      resultValue = undefined;
+      setOutputSuppressed(false);
+      clearPersistentCorner();
+      resolvedTheme = applyTheme(resolvedThemeOverride, noColor);
       cli._theme = resolvedTheme;
       cli._isTTY = isTTY;
       cli._noColor = noColor;
+      cli._jsonMode = jsonMode;
 
       program.name("oscli");
       if (config.description) {
@@ -988,6 +1044,10 @@ export function createCLI<
         if (commandHandlers.size > 0 && !handled) {
           program.outputHelp();
         }
+
+        if (jsonMode && hasResult) {
+          process.stdout.write(`${JSON.stringify(resultValue, null, 2)}\n`);
+        }
       } catch (error) {
         if (error instanceof CommanderError) {
           if (error.exitCode === 0) {
@@ -1012,7 +1072,14 @@ export function createCLI<
               hint
                 ? { hint: `Did you mean: ${hint}?`, code: "usage" }
                 : { code: "usage" },
+              config.autocompleteHint,
             );
+          }
+
+          if (error.code === "commander.unknownOption") {
+            exitWithMessage(normalizeCommanderMessage(error.message), {
+              code: "usage",
+            }, config.autocompleteHint);
           }
 
           exitWithMessage(normalizeCommanderMessage(error.message), {
@@ -1079,6 +1146,8 @@ export function createCLI<
         testInputs.clear();
         testFlagOverrides = null;
         exitInterceptor = null;
+        setOutputSuppressed(false);
+        clearPersistentCorner();
         process.argv = originalArgv;
         process.stdout.write = stdoutWrite as typeof process.stdout.write;
         process.stderr.write = stderrWrite as typeof process.stderr.write;
@@ -1099,6 +1168,11 @@ export function createCLI<
       };
     },
     intro: (message: string) => {
+      if (isOutputSuppressed()) {
+        return;
+      }
+
+      clearPersistentCorner();
       setRailEnabled(false);
       if (resolvedTheme.layout.spacing > 0) {
         process.stdout.write("\n".repeat(resolvedTheme.layout.spacing));
@@ -1110,6 +1184,11 @@ export function createCLI<
       writeSectionGap();
     },
     outro: (message: string) => {
+      if (isOutputSuppressed()) {
+        return;
+      }
+
+      clearPersistentCorner();
       setRailEnabled(false);
       writeLine(
         `${theme.color.border(theme.symbols.outro)}  ${theme.color.title(message)}`,
@@ -1120,6 +1199,10 @@ export function createCLI<
     },
     log,
     style: (): StyleBuilder => createStyleBuilder(cli._noColor),
+    setResult: (value: unknown) => {
+      resultValue = value;
+      hasResult = true;
+    },
     link: (label: string, url: string) => {
       _writeInlineLine(
         `${theme.layout.indent}${renderLink(label, url, cli._noColor, cli._isTTY)}`,
@@ -1183,6 +1266,8 @@ export function createCLI<
 
       return renderConfirmPrompt({
         label,
+        confirmMode: "simple",
+        defaultValue,
       });
     },
     success: (message: string) => {

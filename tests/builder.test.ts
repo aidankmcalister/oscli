@@ -138,4 +138,27 @@ describe("createBuilder", () => {
       optional: true,
     });
   });
+
+  it("builds confirm configs with toggle default and simple override", () => {
+    const b = createBuilder();
+
+    const toggleConfig = b.confirm().label("Continue?").default(true).config();
+    const simpleConfig = b
+      .confirm("simple")
+      .label("Continue?")
+      .default(false)
+      .config();
+
+    expect(toggleConfig).toMatchObject({
+      type: "confirm",
+      confirmMode: "toggle",
+      defaultValue: true,
+    });
+
+    expect(simpleConfig).toMatchObject({
+      type: "confirm",
+      confirmMode: "simple",
+      defaultValue: false,
+    });
+  });
 });

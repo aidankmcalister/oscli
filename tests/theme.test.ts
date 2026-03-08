@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createCLI } from "../src/client";
-import { activeTheme, applyTheme, theme } from "../src/theme";
+import { activeTheme, applyTheme, theme, themePresets } from "../src/theme";
 
 afterEach(() => {
   applyTheme({});
@@ -61,6 +61,32 @@ describe("theme overrides", () => {
     expect(resolved.symbols.pipe).toBe("");
   });
 
+  it("exports named theme presets", () => {
+    expect(themePresets.default).toEqual({});
+    expect(themePresets.basic).toMatchObject({
+      sidebar: false,
+      spacing: 0,
+      cursor: "cyan",
+      active: "cyan",
+      symbols: {
+        pipe: "│",
+      },
+    });
+    expect(themePresets.rounded).toMatchObject({
+      sidebar: "rounded",
+      spacing: 1,
+    });
+  });
+
+  it("keeps the pipe when the basic preset disables corners", () => {
+    const resolved = applyTheme(themePresets.basic);
+
+    expect(resolved.symbols.intro).toBe("");
+    expect(resolved.symbols.outro).toBe("");
+    expect(resolved.symbols.pipe).toBe("│");
+    expect(resolved.layout.spacing).toBe(0);
+  });
+
   it("stores the resolved theme on the cli instance", () => {
     const cli = createCLI(() => ({
       description: "Theme test",
@@ -89,5 +115,15 @@ describe("theme overrides", () => {
     expect(cli._theme.symbols.intro).toBe("");
     expect(cli._theme.symbols.outro).toBe("");
     expect(cli._theme.symbols.pipe).toBe("");
+  });
+
+  it("accepts theme preset names on the cli config", () => {
+    const cli = createCLI(() => ({
+      description: "Preset test",
+      theme: "rounded",
+    }));
+
+    expect(cli._theme.symbols.intro).toBe("╭");
+    expect(cli._theme.symbols.outro).toBe("╰");
   });
 });
