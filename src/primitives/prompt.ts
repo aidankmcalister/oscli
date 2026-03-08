@@ -274,3 +274,122 @@ export function renderSelectPrompt<T extends string>(
     renderMenu();
   });
 }
+
+export type MultiselectPromptOptions<T extends string> = {
+  label: string;
+  choices: readonly T[];
+  min?: number;
+  max?: number;
+};
+
+export function renderMultiselectPrompt<T extends string>(
+  options: MultiselectPromptOptions<T>,
+): Promise<T[]> {
+  const { label, choices, min, max } = options;
+  let cursorIndex = 0;
+  const selected = new Set<number>();
+  let renderedLines = 0;
+  let errorMessage = "";
+
+  const clearMenu = () => {
+    if (renderedLines === 0) return;
+    readline.moveCursor(process.stdout, 0, -renderedLines);
+    readline.cursorTo(process.stdout, 0);
+    readline.clearScreenDown(process.stdout);
+    renderedLines = 0;
+  };
+
+  const renderMenu = () => {
+    clearMenu();
+
+    const lines = [
+      `${label}:`,
+      ...choices.map((choice, index) => {
+        const cursor = index === cursorIndex ? "❯" : " ";
+        const checkbox = selected.has(index) ? "x" : " ";
+        return `${cursor} [${checkbox}] ${choice}`;
+      }),
+      "Use ↑/↓, Space to toggle, Enter to confirm",
+    ];
+
+    if (errorMessage) {
+      lines.push(`Error: ${errorMessage}`);
+    }
+
+    for (const line of lines) {
+      process.stdout.write(`${line}\n`);
+    }
+
+    renderedLines = lines.length;
+  };
+
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      process.stdin.off("data", onData);
+      disableRawMode();
+      clearMenu();
+    };
+
+    const onData = (chunk: Buffer | string) => {
+      const key = chunk.toString("utf8");
+
+      if (key === "\u0003") {
+        cleanup();
+        process.stdout.write("\n");
+        reject(new Error("Prompt cancelled by user."));
+        return;
+      }
+
+      if (key === "\u001b[A") {
+        cursorIndex = cursorIndex === 0 ? choices.length - 1 : cursorIndex - 1;
+        errorMessage = "";
+        renderMenu();
+        return;
+      }
+
+      if (key === "\u001b[B") {
+        cursorIndex = cursorIndex === choices.length - 1 ? 0 : cursorIndex + 1;
+        errorMessage = "";
+        renderMenu();
+        return;
+      }
+
+      if (key === " ") {
+        if (selected.has(cursorIndex)) {
+          selected.delete(cursorIndex);
+          errorMessage = "";
+          renderMenu();
+          return;
+        }
+
+        if (max !== undefined && selected.size >= max) {
+          errorMessage = `Select at most ${max}.`;
+          renderMenu();
+          return;
+        }
+
+        selected.add(cursorIndex);
+        errorMessage = "";
+        renderMenu();
+        return;
+      }
+
+      if (key === "\r" || key === "\n") {
+        if (min !== undefined && selected.size < min) {
+          errorMessage = `Select at least ${min}.`;
+          renderMenu();
+          return;
+        }
+
+        const result = choices.filter((_, index) => selected.has(index));
+        cleanup();
+        process.stdout.write(`${label}: ${result.join(", ")}\n`);
+        resolve(result);
+      }
+    };
+
+    enableRawMode();
+    process.stdin.on("data", onData);
+    renderMenu();
+  });
+}
