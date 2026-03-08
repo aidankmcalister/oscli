@@ -393,3 +393,35 @@ export function renderMultiselectPrompt<T extends string>(
     renderMenu();
   });
 }
+
+export type ConfirmPromptOptions = {
+  label: string;
+  defaultValue?: boolean;
+};
+
+export async function renderConfirmPrompt(
+  options: ConfirmPromptOptions,
+): Promise<boolean> {
+  const { label, defaultValue } = options;
+
+  const hint =
+    defaultValue === true ? "Y/n" : defaultValue === false ? "y/N" : "y/n";
+
+  const defaultText =
+    defaultValue === undefined ? undefined : defaultValue ? "y" : "n";
+
+  while (true) {
+    const input = await renderTextPrompt({
+      label: `${label} (${hint})`,
+      defaultValue: defaultText,
+      placeholder: defaultText,
+    });
+
+    const normalized = input.trim().toLowerCase();
+
+    if (normalized === "y" || normalized === "yes") return true;
+    if (normalized === "n" || normalized === "no") return false;
+
+    process.stdout.write("Please enter y or n.\n");
+  }
+}
