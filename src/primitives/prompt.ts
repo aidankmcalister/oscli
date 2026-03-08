@@ -1,3 +1,5 @@
+import readline from "node:readline";
+
 export type TextPromptOptions = {
   label: string;
   placeholder?: string;
@@ -189,4 +191,86 @@ export async function renderNumberPrompt(
 
     return parsed;
   }
+}
+
+export type SelectPromptOptions<T extends string> = {
+  label: string;
+  choices: readonly T[];
+};
+
+export function renderSelectPrompt<T extends string>(
+  options: SelectPromptOptions<T>,
+): Promise<T> {
+  const { label, choices } = options;
+  let selectedIndex = 0;
+  let renderedLines = 0;
+
+  const clearMenu = () => {
+    if (renderedLines === 0) return;
+    readline.moveCursor(process.stdout, 0, -renderedLines);
+    readline.cursorTo(process.stdout, 0);
+    readline.clearScreenDown(process.stdout);
+    renderedLines = 0;
+  };
+
+  const renderMenu = () => {
+    clearMenu();
+    const lines = [
+      `${label}:`,
+      ...choices.map(
+        (choice, index) => `${index === selectedIndex ? "❯" : " "} ${choice}`,
+      ),
+      "Use ↑/↓ and press Enter",
+    ];
+
+    for (const line of lines) {
+      process.stdout.write(`${line}\n`);
+    }
+
+    renderedLines = lines.length;
+  };
+
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      process.stdin.off("data", onData);
+      disableRawMode();
+      clearMenu();
+    };
+
+    const onData = (chunk: Buffer | string) => {
+      const key = chunk.toString("utf8");
+
+      if (key === "\u0003") {
+        cleanup();
+        process.stdout.write("\n");
+        reject(new Error("Prompt cancelled by user."));
+        return;
+      }
+
+      if (key === "\u001b[A") {
+        selectedIndex =
+          selectedIndex === 0 ? choices.length - 1 : selectedIndex - 1;
+        renderMenu();
+        return;
+      }
+
+      if (key === "\u001b[B") {
+        selectedIndex =
+          selectedIndex === choices.length - 1 ? 0 : selectedIndex + 1;
+        renderMenu();
+        return;
+      }
+
+      if (key === "\r" || key === "\n") {
+        const selected = choices[selectedIndex];
+        cleanup();
+        process.stdout.write(`${label}: ${selected}\n`);
+        resolve(selected);
+      }
+    };
+
+    enableRawMode();
+    process.stdin.on("data", onData);
+    renderMenu();
+  });
 }
