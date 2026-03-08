@@ -46,7 +46,7 @@ export function renderTextPrompt(options: TextPromptOptions): Promise<string> {
     const onData = (chunk: Buffer | string) => {
       const key = chunk.toString("utf8");
 
-      if (key === "/u0003") {
+      if (key === "\u0003") {
         cleanup();
         process.stdout.write("\n");
         reject(new Error("Prompt cancelled by user."));
@@ -58,6 +58,71 @@ export function renderTextPrompt(options: TextPromptOptions): Promise<string> {
         cleanup();
         clearLine();
         process.stdout.write(`${label}: ${result}\n`);
+        resolve(result);
+        return;
+      }
+
+      if (key === "\u007f" || key === "\b" || key === "\x08") {
+        value = value.slice(0, -1);
+        render();
+        return;
+      }
+
+      if (key >= " " && key <= "~") {
+        value += key;
+        render();
+      }
+    };
+
+    enableRawMode();
+    process.stdin.on("data", onData);
+    render();
+  });
+}
+
+export type PasswordPromptOptions = {
+  label: string;
+  placeholder?: string;
+  defaultValue?: string;
+};
+
+export function renderPasswordPrompt(
+  options: PasswordPromptOptions,
+): Promise<string> {
+  const { label, placeholder, defaultValue } = options;
+  let value = "";
+
+  const render = () => {
+    const preview =
+      value.length > 0
+        ? "*".repeat(value.length)
+        : (placeholder ??
+          (defaultValue ? "*".repeat(defaultValue.length) : ""));
+    clearLine();
+    process.stdout.write(`${label}: ${preview}`);
+  };
+
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      process.stdin.off("data", onData);
+      disableRawMode();
+    };
+
+    const onData = (chunk: Buffer | string) => {
+      const key = chunk.toString("utf8");
+
+      if (key === "\u0003") {
+        cleanup();
+        process.stdout.write("\n");
+        reject(new Error("Prompt cancelled by user."));
+        return;
+      }
+
+      if (key === "\r" || key === "\n") {
+        const result = value.length > 0 ? value : (defaultValue ?? "");
+        cleanup();
+        clearLine();
+        process.stdout.write(`${label}: ${"*".repeat(result.length)}\n`);
         resolve(result);
         return;
       }
