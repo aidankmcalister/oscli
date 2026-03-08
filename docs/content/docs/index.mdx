@@ -9,15 +9,15 @@ import { Card, Cards } from "fumadocs-ui/components/card";
 import { File, Files, Folder } from "fumadocs-ui/components/files";
 import { Step, Steps } from "fumadocs-ui/components/steps";
 
-`oscli` is a TypeScript-first CLI framework for Bun. You define prompts and
-flags once with a builder API, run your flow, then read typed values from
-`cli.storage` and `cli.flags`.
+`oscli` is a TypeScript-first CLI framework published on npm. You define
+prompts and flags once with a builder API, run your flow, then read typed
+values from `cli.storage` and `cli.flags`.
 
 ## Install
 
 Use the package manager you already use.
 
-```package-install title="Install oscli"
+```package-install
 @oscli-dev/oscli
 ```
 
@@ -29,7 +29,7 @@ complete.
 ```ts title="src/cli.ts"
 import { createCLI } from "@oscli-dev/oscli";
 
-const cli = createCLI(() => ({ description: "my tool", prompts: {} }));
+const cli = createCLI(() => ({ description: "my tool" }));
 
 await cli.run(async () => {
   cli.success("Done.");
@@ -109,29 +109,29 @@ Use this order when you are starting a new CLI.
 <Steps>
   <Step>
     <h3>Install the package</h3>
-    <p>
+    <div>
       Add <code>@oscli-dev/oscli</code> to your project.
-    </p>
+    </div>
   </Step>
   <Step>
     <h3>Define prompts and flags</h3>
-    <p>
+    <div>
       Put your builder definitions inside <code>createCLI()</code> so types are
       inferred once and reused everywhere.
-    </p>
+    </div>
   </Step>
   <Step>
     <h3>Run the flow</h3>
-    <p>
+    <div>
       Call <code>await cli.run(...)</code>, resolve prompts, and read values
       from <code>cli.storage</code> and <code>cli.flags</code>.
-    </p>
+    </div>
   </Step>
 </Steps>
 
 <Callout type="info">
-  <code>oscli</code> is Bun-native, but the published package works in Node 18+
-  at runtime because the output bundle targets Node.
+  <code>oscli</code> installs cleanly with npm, pnpm, Yarn, and Bun. The
+  published package targets Node 18+ at runtime.
 </Callout>
 
 ## Read next

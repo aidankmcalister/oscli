@@ -88,6 +88,12 @@ await cli.run(async () => {
 If you call `cli.log(level, message)`, the returned chain lets you apply text
 modifiers before the message is written.
 
+```oscli title="Rendered output"
+  ready
+  ⚠ review this before production
+  ✓ Done.
+```
+
 <TypeTable type={outputMethods} />
 
 ## Reusable styles
@@ -104,6 +110,11 @@ await cli.run(async () => {
 });
 ```
 
+```oscli title="Rendered output"
+  ℹ important
+  plain line with shared styling
+```
+
 <TypeTable type={styleMethods} />
 
 ## Exit with hints
@@ -116,6 +127,33 @@ cli.exit("package.json not found.", {
   hint: "Run this command from the project root.",
   code: "not_found",
 });
+```
+
+```oscli title="Rendered output"
+│
+│  ✗ package.json not found.
+│    → Run this command from the project root.
+└
+```
+
+## Inline confirm
+
+Use `cli.confirm()` when you need one simple confirmation in the middle of a
+flow without defining a named prompt.
+
+```ts title="src/cli.ts"
+await cli.run(async () => {
+  const approved = await cli.confirm("Deploy now?", false);
+
+  if (!approved) {
+    cli.exit("Cancelled.");
+  }
+});
+```
+
+```oscli title="Rendered output"
+  Deploy now?
+  › (y/N) _
 ```
 
 <Callout type="info">

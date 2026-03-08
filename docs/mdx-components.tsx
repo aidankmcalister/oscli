@@ -1,9 +1,17 @@
-import defaultMdxComponents from 'fumadocs-ui/mdx';
-import type { MDXComponents } from 'mdx/types';
+import defaultMdxComponents from "fumadocs-ui/mdx";
+import { CodeBlock, Pre } from "fumadocs-ui/components/codeblock";
+import type { MDXComponents } from "mdx/types";
 
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
     ...defaultMdxComponents,
+    pre: (props) => {
+      return (
+        <CodeBlock {...props}>
+          <Pre>{props.children}</Pre>
+        </CodeBlock>
+      );
+    },
     ...components,
   };
 }

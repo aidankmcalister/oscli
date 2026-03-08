@@ -30,7 +30,7 @@ export default function HomePage() {
             <br />
             you&apos;ll reach for.
           </h1>
-          <p className="mx-auto max-w-2xl font-sans text-[clamp(1.02rem,2vw,1.35rem)] leading-[1.2] text-balance text-fd-muted-foreground italic">
+          <p className="mx-auto max-w-2xl mt-8 font-sans text-[clamp(1.02rem,2vw,1.35rem)] leading-[1.2] text-balance text-fd-muted-foreground italic">
             Everything your TypeScript CLI needs, in one runtime.
           </p>
         </div>

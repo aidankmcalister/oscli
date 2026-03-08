@@ -147,6 +147,23 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
+While prompting:
+
+```oscli
+┌
+│  Project
+│  › my-app_
+└
+```
+
+After submit:
+
+```oscli
+┌
+│  ✓ Project:   my-app
+└
+```
+
 ## Password
 
 Use `b.password()` when the user types sensitive text.
@@ -158,6 +175,23 @@ export const cli = createCLI((b) => ({
     token: b.password().label("API token"),
   },
 }));
+```
+
+While prompting:
+
+```oscli
+┌
+│  API token
+│  › ********_
+└
+```
+
+After submit:
+
+```oscli
+┌
+│  ✓ API token:   ********
+└
 ```
 
 ## Number
@@ -172,6 +206,23 @@ export const cli = createCLI((b) => ({
     budget: b.number().label("Budget").prefix("$").min(0),
   },
 }));
+```
+
+While prompting:
+
+```oscli
+┌
+│  Budget
+│  $ › 500_
+└
+```
+
+After submit:
+
+```oscli
+┌
+│  ✓ Budget:   500
+└
 ```
 
 ## Select
@@ -191,6 +242,25 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
+While prompting:
+
+```oscli
+┌
+│  Mode
+│  › ● personal   single-user setup
+│    ○ team       shared project
+│  ↑↓ navigate   enter select
+└
+```
+
+After submit:
+
+```oscli
+┌
+│  ✓ Mode:   personal
+└
+```
+
 ## Multiselect
 
 Use `b.multiselect()` when the user can choose multiple values.
@@ -208,6 +278,27 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
+While prompting:
+
+```oscli
+┌
+│  Features  (1–3)
+│  › ◉ api
+│    ○ ui
+│    ◉ docs
+│    ○ tests
+│  ↑↓ navigate   space toggle   enter confirm
+└
+```
+
+After submit:
+
+```oscli
+┌
+│  ✓ Features:   api, docs
+└
+```
+
 ## Confirm
 
 Use `b.confirm()` for boolean input. Toggle is the default. Simple keeps the
@@ -219,18 +310,51 @@ older typed `y/n` flow.
 ```ts title="src/cli.ts"
 approved: b.confirm().label("Continue?").default(true)
 ```
-
-This mode renders an inline Yes or No selector and confirms with Enter.
   </Tab>
   <Tab value="Simple">
 
 ```ts title="src/cli.ts"
 approved: b.confirm("simple").label("Continue?").default(false)
 ```
-
-This mode renders the typed `y/n` prompt.
   </Tab>
 </Tabs>
+
+- `Toggle`: inline `Yes / No` selector, arrow keys or `y`/`n`, then Enter
+- `Simple`: typed `y/n` input
+
+Toggle while prompting:
+
+```oscli
+┌
+│  Continue?
+│  ● Yes  /  ○ No
+└
+```
+
+Toggle after submit:
+
+```oscli
+┌
+│  ✓ Continue?:   yes
+└
+```
+
+Simple while prompting:
+
+```oscli
+┌
+│  Continue?
+│  › (y/N) _
+└
+```
+
+Simple after submit:
+
+```oscli
+┌
+│  ✓ Continue?:   no
+└
+```
 
 ## Search
 
@@ -250,6 +374,26 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
+While prompting:
+
+```oscli
+┌
+│  Framework
+│  › sv_
+│  › ● svelte   minimal runtime
+│    ○ solid
+│  ↑↓ navigate   enter select
+└
+```
+
+After submit:
+
+```oscli
+┌
+│  ✓ Framework:   svelte
+└
+```
+
 ## List
 
 Use `b.list()` for repeated free-form input. The prompt ends on an empty Enter.
@@ -263,6 +407,33 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
+While prompting:
+
+```oscli
+┌
+│  Tags  1 / 5
+│  › api_
+└
+```
+
+Accepted items:
+
+```oscli
+┌
+│  ✓ Tags:   api
+│  ✓ Tags:   docs
+│  ✓ Tags:   tests
+└
+```
+
+After submit:
+
+```oscli
+┌
+│  ✓ Tags:   api, docs, tests
+└
+```
+
 ## Date
 
 Use `b.date()` for validated date input stored as `Date`.
@@ -274,6 +445,31 @@ export const cli = createCLI((b) => ({
     deadline: b.date().label("Deadline").format("YYYY-MM-DD"),
   },
 }));
+```
+
+While prompting:
+
+```oscli
+┌
+│  Deadline
+│  › 2026-03-31_
+└
+```
+
+After submit:
+
+```oscli
+┌
+│  ✓ Deadline:   2026-03-31
+└
+```
+
+```oscli title="Validation error"
+┌
+│  Deadline
+│  › tomorrow_
+│  ✗ Use a valid date in YYYY-MM-DD format.
+└
 ```
 
 <Callout type="info">

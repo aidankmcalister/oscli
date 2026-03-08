@@ -19,7 +19,22 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   metadataBase: new URL("https://github.com/aidankmcalister/oscli"),
   title: "oscli",
-  description: "Documentation for oscli, a Bun-first TypeScript CLI framework.",
+  description:
+    "Documentation for oscli, a TypeScript-first CLI framework published on npm.",
+  icons: {
+    icon: [
+      {
+        media: "(prefers-color-scheme: light)",
+        url: "/favicon-light.svg",
+        href: "/favicon-light.svg",
+      },
+      {
+        media: "(prefers-color-scheme: dark)",
+        url: "/favicon-dark.svg",
+        href: "/favicon-dark.svg",
+      },
+    ],
+  },
 };
 
 export default function Layout({ children }: LayoutProps<"/">) {

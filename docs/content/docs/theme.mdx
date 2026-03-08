@@ -98,11 +98,8 @@ These are the built-in presets.
 export const cli = createCLI(() => ({
   description: "default theme",
   theme: "default",
-  prompts: {},
 }));
 ```
-
-Square corners, `│` rail, and spacing `1`.
   </Tab>
   <Tab value="basic">
 
@@ -110,12 +107,8 @@ Square corners, `│` rail, and spacing `1`.
 export const cli = createCLI(() => ({
   description: "basic theme",
   theme: "basic",
-  prompts: {},
 }));
 ```
-
-No intro or outro corners, rail kept, spacing `0`, cyan cursor, and cyan active
-state.
   </Tab>
   <Tab value="rounded">
 
@@ -123,13 +116,40 @@ state.
 export const cli = createCLI(() => ({
   description: "rounded theme",
   theme: "rounded",
-  prompts: {},
 }));
 ```
-
-Rounded `╭` and `╰` corners with the standard rail and spacing `1`.
   </Tab>
 </Tabs>
+
+- `default`: square corners, `│` rail, spacing `1`
+- `basic`: no corners, no rail, spacing `0`, cyan cursor and active state
+- `rounded`: `╭` and `╰` corners, pipe rail, spacing `1`
+
+## Preset previews
+
+These examples show the overall layout difference, not the full color treatment.
+
+```oscli title="default"
+┌  project setup
+│
+│  ✓ Project:   my-app
+│
+└  Done.
+```
+
+```oscli title="basic"
+  project setup
+  ✓ Project:   my-app
+  Done.
+```
+
+```oscli title="rounded"
+╭  project setup
+│
+│  ✓ Project:   my-app
+│
+╰  Done.
+```
 
 ## Theme overrides
 

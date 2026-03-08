@@ -73,6 +73,16 @@ await cli.run(async () => {
 });
 ```
 
+```oscli title="Rendered output"
+  ┌─ Summary ───────────────┐
+  │  Field     Value        │
+  │  ─────────────────      │
+  │  project   oscli        │
+  │  teamSize  3            │
+  │  approved  true         │
+  └─────────────────────────┘
+```
+
 ## Spinner
 
 Use `cli.spin()` around one async operation.
@@ -83,6 +93,11 @@ await cli.run(async () => {
     await new Promise((resolve) => setTimeout(resolve, 300));
   });
 });
+```
+
+```oscli title="Rendered output"
+  ⠸ Installing packages...   0.2s
+  ✓ Installed packages       0.3s
 ```
 
 If you do not pass `doneLabel`, `oscli` tries to convert common gerunds to a
@@ -112,6 +127,11 @@ await cli.run(async () => {
 });
 ```
 
+```oscli title="Rendered output"
+  ⠸ Running steps  [######--------------]  [00:01]   33%
+  ✓ Running steps  [####################]  [00:03]  100%
+```
+
 ## Divider and link
 
 Use dividers for section boundaries and links for docs or support URLs.
@@ -121,6 +141,11 @@ await cli.run(async () => {
   cli.divider("Results");
   cli.link("oscli docs", "https://github.com/aidankmcalister/oscli");
 });
+```
+
+```oscli title="Rendered output"
+  ───────────────── Results ────────────────
+  oscli docs (https://github.com/aidankmcalister/oscli)
 ```
 
 ## Tree
@@ -143,6 +168,15 @@ cli.box({
 });
 ```
 
+```oscli title="Rendered output"
+  ┌─ Project ───────────────┐
+  │  ├─ src                │
+  │  │  ├─ index.ts        │
+  │  │  └─ client.ts       │
+  │  └─ package.json       │
+  └────────────────────────┘
+```
+
 ## Diff
 
 Use `cli.diff()` when you want to show a text change without pulling in an
@@ -152,6 +186,12 @@ external diff library.
 await cli.run(async () => {
   cli.diff("hello\nworld", "hello\noscli");
 });
+```
+
+```oscli title="Rendered output"
+    hello
+  - world
+  + oscli
 ```
 
 <Callout type="info">

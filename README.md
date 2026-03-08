@@ -2,7 +2,7 @@
 
 The last CLI framework you'll reach for.
 
-`oscli` is a Bun-first TypeScript CLI framework built on
+`oscli` is a TypeScript-first CLI framework published on npm, built on
 [`commander`](https://www.npmjs.com/package/commander) and
 [`picocolors`](https://www.npmjs.com/package/picocolors). You define prompts,
 flags, and output once, then read typed values from `cli.storage` and
@@ -10,7 +10,7 @@ flags, and output once, then read typed values from `cli.storage` and
 
 ## Install
 
-Use the package from npm with Bun.
+Use the package from npm with your package manager of choice.
 
 ```bash
 bun add @oscli-dev/oscli
@@ -216,7 +216,6 @@ import { createCLI } from "@oscli-dev/oscli";
 
 const cli = createCLI(() => ({
   description: "output demo",
-  prompts: {},
 }));
 
 await cli.run(async () => {

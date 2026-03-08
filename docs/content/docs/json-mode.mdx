@@ -55,19 +55,17 @@ Use `--json` only when you want raw output for another process.
 ```bash title="Shell"
 bun run src/cli.ts
 ```
-
-Prompts, logs, intro, outro, boxes, progress, and success lines render as
-normal.
   </Tab>
   <Tab value="JSON run">
 
 ```bash title="Shell"
 bun run src/cli.ts --json
 ```
-
-Only the value from `cli.setResult()` is printed.
   </Tab>
 </Tabs>
+
+- `Normal run`: prompts, logs, intro, outro, boxes, progress, and success lines render normally
+- `JSON run`: only the value from `cli.setResult()` is printed
 
 ## Minimal diff
 
