@@ -10,6 +10,7 @@ import {
 } from "./primitives/prompt";
 import { table as renderTable } from "./primitives/table";
 import { box as renderBox } from "./primitives/box";
+import { spin as runSpinner } from "./primitives/spinner";
 import { Command } from "commander";
 import pc from "picocolors";
 
@@ -213,6 +214,9 @@ export function createCLI<TPrompts extends PromptDefinitions>(
     },
     box: (options: { title?: string; content: string }) => {
       process.stdout.write(`${renderBox(options)}\n`);
+    },
+    spin: async <T>(label: string, fn: () => Promise<T>) => {
+      return runSpinner(label, fn);
     },
     success: (message: string) => {
       process.stdout.write(`${pc.green("success")} ${message}\n`);
