@@ -498,6 +498,46 @@ export function createCLI<
     writeSectionLine(line, stream);
   };
 
+  function log(message: string): void;
+  function log(
+    level: "info" | "warn" | "error" | "success",
+    message: string,
+  ): void;
+  function log(
+    levelOrMessage: "info" | "warn" | "error" | "success" | string,
+    maybeMessage?: string,
+  ): void {
+    if (maybeMessage === undefined) {
+      _writeLine(`${theme.layout.indent}${theme.color.value(levelOrMessage)}`);
+      return;
+    }
+
+    const level = levelOrMessage as "info" | "warn" | "error" | "success";
+    const message = maybeMessage;
+    const symbol =
+      level === "info"
+        ? theme.color.info(theme.symbols.info)
+        : level === "warn"
+          ? theme.color.warning(theme.symbols.warning)
+          : level === "error"
+            ? theme.color.error(theme.symbols.error)
+            : theme.color.success(theme.symbols.success);
+
+    const text =
+      level === "info"
+        ? theme.color.info(message)
+        : level === "warn"
+          ? theme.color.warning(message)
+          : level === "error"
+            ? theme.color.error(message)
+            : theme.color.success(message);
+
+    _writeLine(
+      `${theme.layout.indent}${symbol} ${text}`,
+      level === "error" ? "stderr" : "stdout",
+    );
+  }
+
   const exitWithMessage = (message: string, options: ExitOptions = {}): never => {
     const shouldCloseRail = isRailEnabled() && theme.symbols.outro.length > 0;
     writeLine(
@@ -739,30 +779,7 @@ export function createCLI<
         process.stdout.write("\n".repeat(resolvedTheme.layout.spacing));
       }
     },
-    log: (level: "info" | "warn" | "error" | "success", message: string) => {
-      const symbol =
-        level === "info"
-          ? theme.color.info(theme.symbols.info)
-          : level === "warn"
-            ? theme.color.warning(theme.symbols.warning)
-            : level === "error"
-              ? theme.color.error(theme.symbols.error)
-              : theme.color.success(theme.symbols.success);
-
-      const text =
-        level === "info"
-          ? theme.color.info(message)
-          : level === "warn"
-            ? theme.color.warning(message)
-            : level === "error"
-              ? theme.color.error(message)
-              : theme.color.success(message);
-
-      _writeLine(
-        `${theme.layout.indent}${symbol} ${text}`,
-        level === "error" ? "stderr" : "stdout",
-      );
-    },
+    log,
     table: (
       headers: string[],
       rows: Array<Array<string | number | boolean | null | undefined>>,

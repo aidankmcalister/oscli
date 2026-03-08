@@ -141,4 +141,28 @@ describe("createCLI", () => {
       "Flag name 'yes' is reserved by oscli. Use a different name.",
     );
   });
+
+  it("prints a plain log line with no icon or severity prefix", async () => {
+    const stdout = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
+    const cli = createCLI(() => ({
+      description: "Plain log",
+      prompts: {},
+    }));
+
+    await withArgv(["node", "oscli"], async () => {
+      await cli.run(async () => {
+        cli.log("Working directory ready");
+      });
+    });
+
+    const rendered = stdout.mock.calls.map((call) => String(call[0])).join("");
+    expect(rendered).toContain("Working directory ready");
+    expect(rendered).not.toContain("ℹ");
+    expect(rendered).not.toContain("✓");
+    expect(rendered).not.toContain("✗");
+    expect(rendered).not.toContain("⚠");
+  });
 });

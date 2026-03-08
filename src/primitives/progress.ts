@@ -1,4 +1,4 @@
-import { finalizeLiveLine, writeLine, writeLiveLine } from "../output";
+import { finalizeLiveLine, isRailEnabled, writeLine, writeLiveLine } from "../output";
 import {
   activeTheme as theme,
   padVisibleEnd,
@@ -155,8 +155,12 @@ function fitTrackWidth(
   tailWidth: number,
 ): number {
   const columns = process.stdout.columns ?? 120;
+  const prefixWidth =
+    isRailEnabled() && theme.symbols.pipe.length > 0
+      ? visibleLength(`${theme.symbols.pipe}  `)
+      : theme.layout.indent.length;
   const fixedWidth =
-    theme.layout.indent.length +
+    prefixWidth +
     1 +
     1 +
     labelWidth +
@@ -165,7 +169,12 @@ function fitTrackWidth(
     TIMER_WIDTH +
     (tailWidth > 0 ? 2 + tailWidth : 0);
 
-  const maxTrack = Math.max(MIN_TRACK_WIDTH, columns - fixedWidth - 2);
+  const barFrameWidth = 2;
+  const safetyWidth = 2;
+  const maxTrack = Math.max(
+    MIN_TRACK_WIDTH,
+    columns - fixedWidth - barFrameWidth - safetyWidth,
+  );
   return Math.max(MIN_TRACK_WIDTH, Math.min(requested, maxTrack));
 }
 

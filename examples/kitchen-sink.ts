@@ -67,6 +67,8 @@ await cli.run(async () => {
     },
   );
 
+  cli.log("test");
+
   cli.success("Workspace ready");
   cli.outro("All done.");
 });

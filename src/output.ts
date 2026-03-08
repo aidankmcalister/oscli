@@ -1,7 +1,12 @@
-import * as readline from "node:readline";
-import { activeNoColor, activeTheme as theme, stripAnsi } from "./theme";
+import {
+  activeNoColor,
+  activeTheme as theme,
+  stripAnsi,
+  visibleLength,
+} from "./theme";
 
 let railEnabled = false;
+let lastLiveLineWidth = 0;
 
 function normalizeLine(line: string): string {
   return line.startsWith(theme.layout.indent)
@@ -84,15 +89,17 @@ export function writeLiveLine(line: string): void {
     return;
   }
 
-  readline.clearLine(process.stdout, 0);
-  readline.cursorTo(process.stdout, 0);
-  process.stdout.write(formatted);
+  const width = visibleLength(formatted);
+  const padding = " ".repeat(Math.max(0, lastLiveLineWidth - width));
+  process.stdout.write(`\r${formatted}${padding}`);
+  lastLiveLineWidth = Math.max(lastLiveLineWidth, width);
 }
 
 export function finalizeLiveLine(line: string): void {
   writeLiveLine(line);
   if (process.stdout.isTTY) {
     process.stdout.write("\n");
+    lastLiveLineWidth = 0;
   }
   writeSectionGap();
 }

@@ -124,9 +124,9 @@ const cli = createCLI((b) => ({
 }));
 
 await cli.run(async () => {
-  cli.log("info", `env: ${cli.flags.env}`);
-  cli.log("info", `json: ${cli.flags.json}`);
-  cli.log("info", `ttl: ${cli.flags.ttl}`);
+  cli.log(`env: ${cli.flags.env}`);
+  cli.log(`json: ${cli.flags.json}`);
+  cli.log(`ttl: ${cli.flags.ttl}`);
 
   // --name bypasses the prompt and writes into storage.
   await cli.prompt.name();
@@ -330,7 +330,8 @@ render theme.
 | `cli.suggest(input, candidates)` | Returns the closest command or value match |
 | `cli.intro(message)` | Intro line |
 | `cli.outro(message)` | Outro line |
-| `cli.log(level, message)` | Colored log (`info`, `warn`, `error`, `success`) |
+| `cli.log(message)` | Plain inline log line using the standard CLI flow |
+| `cli.log(level, message)` | Colored severity log (`info`, `warn`, `error`, `success`) |
 | `cli.success(message)` | Success log shortcut |
 | `cli.exit(message, options?)` | Error log with optional hint and semantic exit code |
 | `cli.confirm(label, defaultValue?)` | One-off inline confirm prompt |

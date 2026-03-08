@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createProgressGroup, renderProgressLine } from "../src/primitives/progress";
+import { decorateLine, setRailEnabled } from "../src/output";
+import { visibleLength } from "../src/theme";
 
 describe("progress formatting", () => {
   it("keeps timer and percent columns aligned across a group", () => {
@@ -55,5 +57,40 @@ describe("progress formatting", () => {
     expect(line).toContain("validate ▶ prepare ▶ [write] ▷ finalize");
     expect(line).toContain("[00:04]");
     expect(line.includes("%")).toBe(false);
+  });
+
+  it("keeps a rail-decorated progress line inside terminal width", () => {
+    const originalColumns = process.stdout.columns;
+
+    Object.defineProperty(process.stdout, "columns", {
+      configurable: true,
+      value: 80,
+    });
+
+    setRailEnabled(true);
+
+    try {
+      const context = createProgressGroup([{ label: "Running steps" }], {
+        style: "hash",
+        width: 20,
+      });
+
+      const line = renderProgressLine({
+        icon: "✓",
+        label: "Running steps",
+        elapsedMs: 0,
+        percent: 100,
+        context,
+      });
+
+      expect(visibleLength(decorateLine(line))).toBeLessThan(80);
+    } finally {
+      setRailEnabled(false);
+
+      Object.defineProperty(process.stdout, "columns", {
+        configurable: true,
+        value: originalColumns,
+      });
+    }
   });
 });
