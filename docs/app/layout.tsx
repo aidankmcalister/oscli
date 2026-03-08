@@ -1,5 +1,6 @@
 import { RootProvider } from "fumadocs-ui/provider/next";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import type { Metadata } from "next";
 import "./global.css";
 import { Fraunces, Montserrat } from "next/font/google";
@@ -46,6 +47,7 @@ export default function Layout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-screen flex-col bg-fd-background font-sans text-fd-foreground">
         <Analytics />
+        <SpeedInsights />
         <RootProvider>{children}</RootProvider>
       </body>
     </html>
