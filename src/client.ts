@@ -226,6 +226,12 @@ export function createCLI<TPrompts extends PromptDefinitions>(
     ) => {
       await runProgress(label, steps, fn);
     },
+    confirm: async (label: string, defaultValue?: boolean) => {
+      return renderConfirmPrompt({
+        label,
+        defaultValue,
+      });
+    },
     success: (message: string) => {
       process.stdout.write(`${pc.green("success")} ${message}\n`);
     },
