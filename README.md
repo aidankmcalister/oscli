@@ -169,6 +169,35 @@ await cli.run(async () => {
 });
 ```
 
+## Theme overrides
+
+You can override the default terminal theme per CLI instance. `oscli` deep
+merges your override with the defaults, so you only specify the parts you want
+to change.
+
+```ts
+import { createCLI } from "oscli";
+
+const cli = createCLI((b) => ({
+  description: "styled cli",
+  theme: {
+    cursor: "cyan",
+    active: "cyan",
+    success: "green",
+    border: "gray",
+    sidebar: "rounded",
+    symbols: {
+      cursor: "❯",
+      success: "✔",
+    },
+    spacing: 2,
+  },
+  prompts: {
+    project: b.text().label("Project").default("my-app"),
+  },
+}));
+```
+
 ## API reference
 
 `oscli` currently exports these functions from the package root.
@@ -186,7 +215,7 @@ await cli.run(async () => {
 | `description` | `string` | No | Commander description text |
 | `prompts` | `Record<string, PromptBuilder>` | No | Prompt definitions map |
 | `flags` | `Record<string, FlagBuilder>` | No | Flag definitions map |
-| `theme` | `{ spacing?: number }` | No | Reserved theme config |
+| `theme` | `ThemeOverride` | No | Deep-merged CLI theme override |
 | `emojis` | `boolean` | No | Reserved emoji toggle |
 
 ### Prompt builders
@@ -236,6 +265,24 @@ Built-in global flag:
 
 - `-y, --yes`: auto-answers all confirm prompts as `true`
 - `yes` is reserved and cannot be defined in `flags`
+
+### Theme override
+
+`theme` overrides are applied at the CLI level and deep merge with the default
+render theme.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `cursor` | `"black" \| "red" \| "green" \| "yellow" \| "blue" \| "magenta" \| "cyan" \| "white" \| "gray"` | Overrides the cursor color |
+| `active` | `ColorName` | Overrides active accent color |
+| `success` | `ColorName` | Overrides success color |
+| `error` | `ColorName` | Overrides error color |
+| `warning` | `ColorName` | Overrides warning color |
+| `info` | `ColorName` | Overrides info color |
+| `border` | `ColorName` | Overrides rail and border color |
+| `sidebar` | `false \| "square" \| "rounded"` | Controls the intro/outro corners and left rail |
+| `symbols` | `Partial<typeof theme.symbols>` | Overrides individual terminal glyphs |
+| `spacing` | `0 \| 1 \| 2` | Controls blank rail lines between sections |
 
 ### CLI instance methods
 

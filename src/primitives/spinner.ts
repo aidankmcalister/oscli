@@ -1,24 +1,44 @@
-import {
-  SPINNER_FRAMES,
-  createProgressGroup,
-  renderProgressLine,
-  writeProgressLine,
-  type ProgressGroupContext,
-  type ProgressStyle,
-} from "./progress";
+import type { ProgressGroupContext, ProgressStyle } from "./progress";
+import { SPINNER_FRAMES } from "./progress";
+import { finalizeLiveLine, writeLiveLine } from "../output";
+import { activeTheme as theme } from "../theme";
 
 export type SpinnerOptions = {
   style?: ProgressStyle;
   width?: number;
   context?: ProgressGroupContext;
   percent?: number;
+  doneLabel?: string;
 };
 
-function finalizeSpinnerLine(line: string): void {
-  writeProgressLine(line);
-  if (process.stdout.isTTY) {
-    process.stdout.write("\n");
+function formatElapsed(elapsedMs: number): string {
+  if (elapsedMs < 60_000) {
+    return `${(elapsedMs / 1000).toFixed(1)}s`;
   }
+
+  const totalSeconds = Math.floor(elapsedMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+}
+
+function renderSpinnerLine(
+  icon: string,
+  label: string,
+  elapsedMs: number,
+  state: "running" | "done" | "error",
+): string {
+  const coloredIcon =
+    state === "running"
+      ? theme.color.active(icon)
+      : state === "done"
+        ? theme.color.success(icon)
+        : theme.color.error(icon);
+
+  const coloredLabel =
+    state === "error" ? theme.color.error(label) : theme.color.value(label);
+
+  return `${theme.layout.indent}${coloredIcon} ${coloredLabel}  ${theme.color.timer(formatElapsed(elapsedMs))}`;
 }
 
 export async function spin<T>(
@@ -26,28 +46,44 @@ export async function spin<T>(
   fn: () => Promise<T>,
   options: SpinnerOptions = {},
 ): Promise<T> {
-  const style = options.style === "steps" ? "hash" : options.style;
-
-  const context =
-    options.context ??
-    createProgressGroup([{ label }], {
-      style,
-      width: options.width,
-    });
-
   const startedAt = Date.now();
-  const runningPercent = options.percent ?? 0;
   let frameIndex = 0;
+  const runningLabel = `${label}...`;
+  const doneLabel = options.doneLabel ?? label;
+
+  if (!process.stdout.isTTY) {
+    try {
+      const result = await fn();
+      finalizeLiveLine(
+        renderSpinnerLine(
+          theme.symbols.success,
+          doneLabel,
+          Date.now() - startedAt,
+          "done",
+        ),
+      );
+      return result;
+    } catch (error) {
+      finalizeLiveLine(
+        renderSpinnerLine(
+          theme.symbols.error,
+          "Failed",
+          Date.now() - startedAt,
+          "error",
+        ),
+      );
+      throw error;
+    }
+  }
 
   const renderRunning = () => {
-    writeProgressLine(
-      renderProgressLine({
-        icon: SPINNER_FRAMES[frameIndex],
-        label,
-        elapsedMs: Date.now() - startedAt,
-        percent: runningPercent,
-        context,
-      }),
+    writeLiveLine(
+      renderSpinnerLine(
+        SPINNER_FRAMES[frameIndex],
+        runningLabel,
+        Date.now() - startedAt,
+        "running",
+      ),
     );
   };
 
@@ -61,31 +97,25 @@ export async function spin<T>(
   try {
     const result = await fn();
     clearInterval(timer);
-
-    finalizeSpinnerLine(
-      renderProgressLine({
-        icon: "✓",
-        label,
-        elapsedMs: Date.now() - startedAt,
-        percent: 100,
-        context,
-      }),
+    finalizeLiveLine(
+      renderSpinnerLine(
+        theme.symbols.success,
+        doneLabel,
+        Date.now() - startedAt,
+        "done",
+      ),
     );
-
     return result;
   } catch (error) {
     clearInterval(timer);
-
-    finalizeSpinnerLine(
-      renderProgressLine({
-        icon: "✗",
-        label,
-        elapsedMs: Date.now() - startedAt,
-        percent: runningPercent,
-        context,
-      }),
+    finalizeLiveLine(
+      renderSpinnerLine(
+        theme.symbols.error,
+        "Failed",
+        Date.now() - startedAt,
+        "error",
+      ),
     );
-
     throw error;
   }
 }

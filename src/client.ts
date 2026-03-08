@@ -1,19 +1,32 @@
 import { createBuilder } from "./builder";
 import { createStorage } from "./storage";
 import {
+  type PromptSubmitResult,
   renderConfirmPrompt,
   renderMultiselectPrompt,
   renderNumberPrompt,
   renderPasswordPrompt,
   renderSelectPrompt,
   renderTextPrompt,
+  writePromptSummary,
 } from "./primitives/prompt";
 import { table as renderTable } from "./primitives/table";
 import { box as renderBox } from "./primitives/box";
 import { spin as runSpinner } from "./primitives/spinner";
 import { progress as runProgress } from "./primitives/progress";
 import { Command, Option } from "commander";
-import pc from "picocolors";
+import {
+  setRailEnabled,
+  writeLine,
+  writeSectionLine,
+  writeSectionLines,
+  writeSectionGap,
+} from "./output";
+import {
+  activeTheme as theme,
+  applyTheme,
+  type ThemeOverride,
+} from "./theme";
 
 type PromptLike<TValue = unknown> = {
   readonly __valueType: TValue;
@@ -54,7 +67,7 @@ type CLIConfig<
   description?: string;
   prompts?: TPrompts;
   flags?: TFlags;
-  theme?: { spacing?: number };
+  theme?: ThemeOverride;
   emojis?: boolean;
 };
 
@@ -69,6 +82,7 @@ type RuntimePromptConfig = {
   transform?: (value: unknown) => unknown;
   theme?: string;
   choices?: readonly string[];
+  rules?: Partial<Record<string, string>>;
   min?: number;
   max?: number;
   prefix?: string;
@@ -244,33 +258,54 @@ function resolveFlagValue(
 async function renderByType(
   config: RuntimePromptConfig,
   fallbackLabel: string,
+  summaryWidth?: number,
 ): Promise<unknown> {
   const label = config.label ?? fallbackLabel;
+  const resolve = async (value: unknown): Promise<PromptSubmitResult<unknown>> => {
+    const result = await resolvePromptValue(config, value);
+    if (!result.ok) {
+      return result;
+    }
+
+    return {
+      ok: true,
+      value: result.value,
+      summaryValue: formatPromptSummaryValue(config, result.value),
+    };
+  };
 
   switch (config.type) {
     case "text":
       return renderTextPrompt({
         label,
+        describe: config.describe,
+        summaryWidth,
         placeholder: config.placeholder,
         defaultValue:
           typeof config.defaultValue === "string"
             ? config.defaultValue
             : undefined,
+        resolve,
       });
 
     case "password":
       return renderPasswordPrompt({
         label,
+        describe: config.describe,
+        summaryWidth,
         placeholder: config.placeholder,
         defaultValue:
           typeof config.defaultValue === "string"
             ? config.defaultValue
             : undefined,
+        resolve,
       });
 
     case "number":
       return renderNumberPrompt({
         label,
+        describe: config.describe,
+        summaryWidth,
         min: config.min,
         max: config.max,
         prefix: config.prefix,
@@ -279,6 +314,7 @@ async function renderByType(
           typeof config.defaultValue === "number"
             ? config.defaultValue
             : undefined,
+        resolve,
       });
 
     case "select":
@@ -286,7 +322,11 @@ async function renderByType(
         throw new Error(`Select prompt "${label}" missing choices.`);
       return renderSelectPrompt({
         label,
+        describe: config.describe,
+        summaryWidth,
         choices: config.choices,
+        rules: config.rules,
+        resolve,
       });
 
     case "multiselect":
@@ -295,22 +335,44 @@ async function renderByType(
       }
       return renderMultiselectPrompt({
         label,
+        describe: config.describe,
+        summaryWidth,
         choices: config.choices,
         min: config.min,
         max: config.max,
+        resolve,
       });
 
     case "confirm":
       return renderConfirmPrompt({
         label,
+        describe: config.describe,
+        summaryWidth,
         defaultValue:
           typeof config.defaultValue === "boolean"
             ? config.defaultValue
             : undefined,
+        resolve,
       });
 
     default:
       throw new Error(`Unknown prompt type for "${label}".`);
+  }
+}
+
+function formatPromptSummaryValue(
+  config: RuntimePromptConfig,
+  value: unknown,
+): string {
+  switch (config.type) {
+    case "password":
+      return typeof value === "string" ? "*".repeat(value.length) : "";
+    case "multiselect":
+      return Array.isArray(value) ? value.join(", ") : String(value ?? "");
+    case "confirm":
+      return value ? "yes" : "no";
+    default:
+      return String(value ?? "");
   }
 }
 
@@ -321,6 +383,7 @@ export function createCLI<
   configFn: (b: ReturnType<typeof createBuilder>) => CLIConfig<TPrompts, TFlags>,
 ) {
   const config = configFn(createBuilder());
+  const resolvedTheme = applyTheme(config.theme ?? {});
   const promptDefs = (config.prompts ?? {}) as TPrompts;
   const flagDefs = (config.flags ?? {}) as TFlags;
 
@@ -332,6 +395,14 @@ export function createCLI<
   const prompt = {} as PromptFns<TPrompts>;
   const flags = {} as FlagsShape<TFlags>;
   const promptBypassValues = new Map<keyof TPrompts, unknown>();
+  const spacing = resolvedTheme.layout.spacing;
+  const summaryWidth = Math.max(
+    0,
+    ...Object.keys(promptDefs).map((key) => {
+      const runtimeConfig = promptDefs[key].config() as RuntimePromptConfig;
+      return (runtimeConfig.label ?? key).length;
+    }),
+  );
   let autoYes = false;
 
   for (const key of Object.keys(flagDefs) as Array<keyof TFlags>) {
@@ -354,43 +425,54 @@ export function createCLI<
     const builder = promptDefs[key];
 
     prompt[key] = (async () => {
+      const runtimeConfig = builder.config() as RuntimePromptConfig;
+      const label = runtimeConfig.label ?? String(key);
+
       if (promptBypassValues.has(key)) {
         const bypassValue = promptBypassValues.get(
           key,
         ) as StorageShape<TPrompts>[typeof key];
+        promptBypassValues.delete(key);
         storage.set(key, bypassValue);
+        writePromptSummary(
+          label,
+          formatPromptSummaryValue(runtimeConfig, bypassValue),
+          summaryWidth,
+        );
         return bypassValue;
       }
 
-      while (true) {
-        const runtimeConfig = builder.config() as RuntimePromptConfig;
-
-        if (runtimeConfig.type === "confirm" && autoYes) {
-          const value = true as StorageShape<TPrompts>[typeof key];
-          storage.set(key, value);
-          process.stdout.write(`✓ ${String(key)}  (--yes)\n`);
-          return value;
-        }
-
-        const rawValue = await renderByType(runtimeConfig, String(key));
-        const resolved = await resolvePromptValue(runtimeConfig, rawValue);
-
-        if (!resolved.ok) {
-          process.stdout.write(`${resolved.error}\n`);
-          continue;
-        }
-
-        const finalValue = resolved.value as StorageShape<TPrompts>[typeof key];
-        storage.set(key, finalValue);
-        return finalValue;
+      if (runtimeConfig.type === "confirm" && autoYes) {
+        const value = true as StorageShape<TPrompts>[typeof key];
+        storage.set(key, value);
+        writePromptSummary(label, "(--yes)", summaryWidth);
+        return value;
       }
+
+      const finalValue = (await renderByType(
+        runtimeConfig,
+        String(key),
+        summaryWidth,
+      )) as StorageShape<TPrompts>[typeof key];
+
+      storage.set(key, finalValue);
+      return finalValue;
     }) as PromptFns<TPrompts>[typeof key];
   }
+
+  const _writeLine = (
+    line: string,
+    stream: "stdout" | "stderr" = "stdout",
+  ) => {
+    writeSectionLine(line, stream);
+  };
 
   return {
     storage: storage.data as Partial<StorageShape<TPrompts>>,
     flags,
     prompt,
+    _theme: resolvedTheme,
+    _writeLine,
     run: async (fn?: () => Promise<void> | void) => {
       const program = new Command();
       const runtimeFlagConfigs = new Map<keyof TFlags, RuntimeFlagConfig>();
@@ -470,7 +552,7 @@ export function createCLI<
             : coercePromptBypassValue(name, runtimeConfig, rawValue);
 
           const resolved = await resolvePromptValue(runtimeConfig, bypassRaw);
-          if (!resolved.ok) {
+          if (resolved.ok === false) {
             throw new Error(`Invalid value for --${name}: ${resolved.error}`);
           }
 
@@ -490,22 +572,45 @@ export function createCLI<
       await program.parseAsync(process.argv);
     },
     intro: (message: string) => {
-      process.stdout.write(`${pc.cyan("○")} ${message}\n`);
+      setRailEnabled(false);
+      if (spacing > 0) {
+        process.stdout.write("\n".repeat(spacing));
+      }
+      process.stdout.write(
+        `${theme.color.border(theme.symbols.intro)}  ${theme.color.title(message)}\n`,
+      );
+      setRailEnabled(true);
+      writeSectionGap();
     },
     outro: (message: string) => {
-      process.stdout.write(`${pc.cyan("●")} ${message}\n`);
+      setRailEnabled(false);
+      process.stdout.write(
+        `${theme.color.border(theme.symbols.outro)}  ${theme.color.title(message)}\n`,
+      );
+      if (spacing > 0) {
+        process.stdout.write("\n".repeat(spacing));
+      }
     },
     log: (level: "info" | "warn" | "error" | "success", message: string) => {
-      const prefix =
+      const symbol =
         level === "info"
-          ? pc.blue("info")
+          ? theme.color.info(theme.symbols.info)
           : level === "warn"
-            ? pc.yellow("warn")
+            ? theme.color.warning(theme.symbols.warning)
             : level === "error"
-              ? pc.red("error")
-              : pc.green("success");
+              ? theme.color.error(theme.symbols.error)
+              : theme.color.success(theme.symbols.success);
 
-      process.stdout.write(`${prefix} ${message}\n`);
+      const text =
+        level === "info"
+          ? theme.color.info(message)
+          : level === "warn"
+            ? theme.color.warning(message)
+            : level === "error"
+              ? theme.color.error(message)
+              : theme.color.success(message);
+
+      _writeLine(`${theme.layout.indent}${symbol} ${text}`);
     },
     table: (
       headers: string[],
@@ -514,10 +619,14 @@ export function createCLI<
       return renderTable(headers, rows);
     },
     box: (options: { title?: string; content: string }) => {
-      process.stdout.write(`${renderBox(options)}\n`);
+      writeSectionLines(renderBox(options));
     },
-    spin: async <T>(label: string, fn: () => Promise<T>) => {
-      return runSpinner(label, fn);
+    spin: async <T>(
+      label: string,
+      fn: () => Promise<T>,
+      options?: Parameters<typeof runSpinner>[2],
+    ) => {
+      return runSpinner(label, fn, options);
     },
     progress: async <TStep extends string>(
       label: string,
@@ -528,7 +637,7 @@ export function createCLI<
     },
     confirm: async (label: string, defaultValue?: boolean) => {
       if (autoYes) {
-        process.stdout.write(`✓ ${label}  (--yes)\n`);
+        writePromptSummary(label, "(--yes)");
         return true;
       }
 
@@ -538,10 +647,15 @@ export function createCLI<
       });
     },
     success: (message: string) => {
-      process.stdout.write(`${pc.green("success")} ${message}\n`);
+      _writeLine(
+        `${theme.color.success(theme.symbols.success)} ${theme.color.success(message)}`,
+      );
     },
     exit: (message: string): never => {
-      process.stderr.write(`${pc.red("error")} ${message}\n`);
+      _writeLine(
+        `${theme.layout.indent}${theme.color.error(theme.symbols.error)} ${theme.color.error(message)}`,
+        "stderr",
+      );
       process.exit(1);
     },
   };

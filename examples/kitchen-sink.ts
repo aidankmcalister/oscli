@@ -1,19 +1,48 @@
 import { createCLI } from "../src";
 
-const cli = createCLI(() => ({
+const cli = createCLI((b) => ({
   description: "oscli kitchen sink",
-  prompts: {},
+  prompts: {
+    project: b
+      .text()
+      .label("Project")
+      .placeholder("my-app")
+      .default("my-app")
+      .describe("Name for the new workspace"),
+    mode: b
+      .select({ choices: ["personal", "work"] as const })
+      .label("Mode")
+      .rule("personal", "solo build")
+      .rule("work", "shared team project"),
+    tags: b
+      .multiselect({ choices: ["api", "ui", "docs", "tests"] as const })
+      .label("Tags")
+      .min(1)
+      .max(3),
+    approved: b.confirm().label("Continue?").default(true),
+  },
 }));
 
 await cli.run(async () => {
-  cli.intro("oscli demo");
+  cli.intro("oscli kitchen sink");
+
+  await cli.prompt.project();
+  await cli.prompt.mode();
+  await cli.prompt.tags();
+  await cli.prompt.approved();
+
+  if (!cli.storage.approved) {
+    cli.exit("Run cancelled.");
+  }
+
+  cli.log("info", `Project: ${cli.storage.project}`);
 
   const summary = cli.table(
     ["Field", "Value"],
     [
-      ["framework", "oscli"],
-      ["runtime", "bun"],
-      ["status", "ready"],
+      ["project", cli.storage.project],
+      ["mode", cli.storage.mode],
+      ["tags", cli.storage.tags?.join(", ") ?? ""],
     ],
   );
 
@@ -22,13 +51,22 @@ await cli.run(async () => {
     content: summary,
   });
 
-  await cli.spin("Running quick check", async () => {
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  });
+  await cli.spin(
+    "Generating files",
+    async () => {
+      await new Promise((resolve) => setTimeout(resolve, 450));
+    },
+    { doneLabel: "Generated files" },
+  );
 
-  await cli.progress("Pipeline", ["Validate", "Build", "Finalize"], async () => {
-    await new Promise((resolve) => setTimeout(resolve, 120));
-  });
+  await cli.progress(
+    "Running steps",
+    ["Scaffold", "Install", "Finalize"],
+    async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    },
+  );
 
-  cli.outro("Done");
+  cli.success("Workspace ready");
+  cli.outro("All done.");
 });
