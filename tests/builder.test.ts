@@ -69,4 +69,38 @@ describe("createBuilder", () => {
       max: 2,
     });
   });
+
+  it("builds flag configs with choices and defaults", () => {
+    const b = createBuilder();
+
+    const envFlag = b
+      .flag()
+      .string()
+      .choices(["dev", "staging", "prod"] as const)
+      .label("Environment")
+      .default("dev")
+      .config();
+
+    const jsonFlag = b.flag().boolean().default(false).config();
+    const ttlFlag = b.flag().number().optional().config();
+
+    expect(envFlag).toMatchObject({
+      type: "string",
+      label: "Environment",
+      defaultValue: "dev",
+      hasDefault: true,
+      choices: ["dev", "staging", "prod"],
+    });
+
+    expect(jsonFlag).toMatchObject({
+      type: "boolean",
+      defaultValue: false,
+      hasDefault: true,
+    });
+
+    expect(ttlFlag).toMatchObject({
+      type: "number",
+      optional: true,
+    });
+  });
 });

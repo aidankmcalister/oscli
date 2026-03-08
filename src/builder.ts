@@ -1,4 +1,5 @@
 export type Validator<T> = (value: T) => true | string | Promise<true | string>;
+export type FlagType = "string" | "boolean" | "number";
 
 export class PromptBuilder<T> {
   declare readonly __valueType: T;
@@ -179,8 +180,72 @@ export class MultiselectBuilder<T extends string> extends PromptBuilder<T[]> {
   }
 }
 
+export class FlagDefinitionBuilder<T> {
+  declare readonly __valueType: T;
+
+  private readonly _type: FlagType;
+  private _label?: string;
+  private _defaultValue?: T;
+  private _hasDefault = false;
+  private _optional = false;
+  private _choices?: readonly T[];
+
+  constructor(type: FlagType) {
+    this._type = type;
+  }
+
+  label(value: string): this {
+    this._label = value;
+    return this;
+  }
+
+  default(value: T): this {
+    this._defaultValue = value;
+    this._hasDefault = true;
+    return this;
+  }
+
+  optional(): FlagDefinitionBuilder<T | undefined> {
+    this._optional = true;
+    return this as unknown as FlagDefinitionBuilder<T | undefined>;
+  }
+
+  choices<const C extends readonly T[]>(
+    values: C,
+  ): FlagDefinitionBuilder<C[number]> {
+    this._choices = values as unknown as readonly T[];
+    return this as unknown as FlagDefinitionBuilder<C[number]>;
+  }
+
+  config() {
+    return {
+      type: this._type,
+      label: this._label,
+      defaultValue: this._defaultValue,
+      hasDefault: this._hasDefault,
+      optional: this._optional,
+      choices: this._choices,
+    };
+  }
+}
+
+export class FlagBuilder {
+  string(): FlagDefinitionBuilder<string> {
+    return new FlagDefinitionBuilder<string>("string");
+  }
+
+  boolean(): FlagDefinitionBuilder<boolean> {
+    return new FlagDefinitionBuilder<boolean>("boolean");
+  }
+
+  number(): FlagDefinitionBuilder<number> {
+    return new FlagDefinitionBuilder<number>("number");
+  }
+}
+
 export function createBuilder() {
   return {
+    flag: () => new FlagBuilder(),
     text: () => new TextBuilder(),
     number: () => new NumberBuilder(),
     password: () => new PasswordBuilder(),

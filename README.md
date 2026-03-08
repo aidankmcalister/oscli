@@ -5,7 +5,8 @@ The last CLI framework you'll reach for.
 `oscli` is a Bun-first TypeScript CLI framework built with
 [`commander`](https://www.npmjs.com/package/commander) and
 [`picocolors`](https://www.npmjs.com/package/picocolors). You define prompts
-once, run your flow, and read typed values from `cli.storage`.
+once, define flags once, run your flow, and read typed values from
+`cli.storage` and `cli.flags`.
 
 ## Current status
 
@@ -13,7 +14,10 @@ This repository currently supports a strong single-command workflow with:
 
 - Typed prompt builders (`text`, `number`, `password`, `select`,
   `multiselect`, `confirm`)
+- Typed flag builders (`string`, `boolean`, `number`, `choices`, `default`)
 - Built-in prompt rendering in the terminal
+- Automatic prompt bypass when matching flags are passed
+- Global `--yes` / `-y` confirmation bypass
 - CLI primitives for logs, table, box, spinner, and progress
 - Vitest test coverage for core behavior
 
@@ -91,6 +95,43 @@ await cli.run(async () => {
 });
 ```
 
+## Flags example
+
+This example shows typed `cli.flags`, choice inference, and prompt bypass.
+
+```ts
+import { createCLI } from "oscli";
+
+const cli = createCLI((b) => ({
+  description: "create-db",
+  flags: {
+    env: b
+      .flag()
+      .string()
+      .choices(["dev", "staging", "prod"] as const)
+      .default("dev"),
+    json: b.flag().boolean().default(false),
+    ttl: b.flag().string().default("1h"),
+  },
+  prompts: {
+    name: b.text().label("Database name").default("mydb"),
+    approved: b.confirm().label("Continue?").default(true),
+  },
+}));
+
+await cli.run(async () => {
+  cli.log("info", `env: ${cli.flags.env}`);
+  cli.log("info", `json: ${cli.flags.json}`);
+  cli.log("info", `ttl: ${cli.flags.ttl}`);
+
+  // --name bypasses the prompt and writes into storage.
+  await cli.prompt.name();
+
+  // --yes / -y auto-answers all confirms as true.
+  await cli.prompt.approved();
+});
+```
+
 ## Visual primitives example
 
 This example shows table, box, spinner, and progress.
@@ -143,7 +184,8 @@ await cli.run(async () => {
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `description` | `string` | No | Commander description text |
-| `prompts` | `Record<string, PromptBuilder>` | Yes | Prompt definitions map (use `{}` for none) |
+| `prompts` | `Record<string, PromptBuilder>` | No | Prompt definitions map |
+| `flags` | `Record<string, FlagBuilder>` | No | Flag definitions map |
 | `theme` | `{ spacing?: number }` | No | Reserved theme config |
 | `emojis` | `boolean` | No | Reserved emoji toggle |
 
@@ -171,6 +213,30 @@ await cli.run(async () => {
 | `.transform(fn)` | Transforms value before storage |
 | `.theme(string)` | Sets per-prompt theme metadata |
 
+### Flag builder
+
+Use `b.flag()` first, then choose a type.
+
+| Builder call | Result type | Notes |
+| --- | --- | --- |
+| `b.flag().string()` | `string` | Registers `--name <value>` style flag |
+| `b.flag().boolean()` | `boolean` | Registers `--name` style flag |
+| `b.flag().number()` | `number` | Parses numeric values |
+
+Shared flag methods:
+
+| Method | Effect |
+| --- | --- |
+| `.label(string)` | Sets Commander help description |
+| `.default(value)` | Sets default value when flag is omitted |
+| `.choices([...])` | Restricts values and infers literal union type |
+| `.optional()` | Marks value as `T \| undefined` when omitted |
+
+Built-in global flag:
+
+- `-y, --yes`: auto-answers all confirm prompts as `true`
+- `yes` is reserved and cannot be defined in `flags`
+
 ### CLI instance methods
 
 | Method | Description |
@@ -178,6 +244,7 @@ await cli.run(async () => {
 | `cli.run(fn)` | Runs your action through Commander |
 | `cli.prompt.<name>()` | Runs a configured prompt and stores the value |
 | `cli.storage` | Partial typed storage object |
+| `cli.flags` | Typed parsed flag values available before prompts run |
 | `cli.intro(message)` | Intro line |
 | `cli.outro(message)` | Outro line |
 | `cli.log(level, message)` | Colored log (`info`, `warn`, `error`, `success`) |
