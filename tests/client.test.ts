@@ -19,7 +19,7 @@ describe("createCLI", () => {
     }));
 
     let called = false;
-    await withArgv(["node", "clios"], async () => {
+    await withArgv(["node", "oscli"], async () => {
       await cli.run(async () => {
         called = true;
       });
@@ -34,7 +34,7 @@ describe("createCLI", () => {
       prompts: {},
     }));
 
-    const t = cli.table(["Field", "Value"], [["project", "clios"]]);
+    const t = cli.table(["Field", "Value"], [["project", "oscli"]]);
 
     expect(t).toContain("┌");
     expect(t).toContain("project");
@@ -46,7 +46,7 @@ describe("createCLI", () => {
     try {
       cli.box({
         title: "Summary",
-        content: "project: clios",
+        content: "project: oscli",
       });
 
       expect(stdout).toHaveBeenCalled();
@@ -71,7 +71,7 @@ describe("createCLI", () => {
     }));
 
     await withArgv(
-      ["node", "clios", "--env", "staging", "--json"],
+      ["node", "oscli", "--env", "staging", "--json"],
       async () => {
         await cli.run(async () => {
           expect(cli.flags.env).toBe("staging");
@@ -90,7 +90,7 @@ describe("createCLI", () => {
       },
     }));
 
-    await withArgv(["node", "clios", "--name", "from-flag"], async () => {
+    await withArgv(["node", "oscli", "--name", "from-flag"], async () => {
       await cli.run(async () => {
         const name = await cli.prompt.name();
 
@@ -113,7 +113,7 @@ describe("createCLI", () => {
         },
       }));
 
-      await withArgv(["node", "clios", "--yes"], async () => {
+      await withArgv(["node", "oscli", "--yes"], async () => {
         await cli.run(async () => {
           expect(await cli.prompt.approved()).toBe(true);
           expect(await cli.confirm("Continue?")).toBe(true);
@@ -138,7 +138,7 @@ describe("createCLI", () => {
         prompts: {},
       })),
     ).toThrowError(
-      "Flag name 'yes' is reserved by clios. Use a different name.",
+      "Flag name 'yes' is reserved by oscli. Use a different name.",
     );
   });
 });

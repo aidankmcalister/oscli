@@ -1,7 +1,7 @@
 import { createCLI } from "../src";
 
 const cli = createCLI((b) => ({
-  description: "clios kitchen sink",
+  description: "oscli kitchen sink",
   prompts: {
     project: b
       .text()
@@ -24,7 +24,7 @@ const cli = createCLI((b) => ({
 }));
 
 await cli.run(async () => {
-  cli.intro("clios kitchen sink");
+  cli.intro("oscli kitchen sink");
 
   await cli.prompt.project();
   await cli.prompt.mode();

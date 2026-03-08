@@ -448,11 +448,11 @@ export function createCLI<
   let resolvedTheme = applyTheme(config.theme ?? {}, noColor);
 
   if (Object.prototype.hasOwnProperty.call(flagDefs, "yes")) {
-    throw new Error("Flag name 'yes' is reserved by clios. Use a different name.");
+    throw new Error("Flag name 'yes' is reserved by oscli. Use a different name.");
   }
 
   if (Object.prototype.hasOwnProperty.call(flagDefs, "no-color")) {
-    throw new Error("Flag 'no-color' is reserved by clios.");
+    throw new Error("Flag 'no-color' is reserved by oscli.");
   }
 
   const storage = createStorage<StorageShape<TPrompts>>();
@@ -556,7 +556,7 @@ export function createCLI<
       cli._isTTY = isTTY;
       cli._noColor = noColor;
 
-      program.name("clios");
+      program.name("oscli");
       if (config.description) {
         program.description(config.description);
       }

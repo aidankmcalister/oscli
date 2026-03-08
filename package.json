@@ -1,5 +1,5 @@
 {
-  "name": "clios",
+  "name": "@oscli-dev/oscli",
   "version": "0.1.0",
   "description": "The last CLI framework you'll reach for.",
   "type": "module",
@@ -34,9 +34,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aidankmcalister/clios"
+    "url": "https://github.com/aidankmcalister/oscli"
   },
-  "homepage": "https://github.com/aidankmcalister/clios#readme",
+  "homepage": "https://github.com/aidankmcalister/oscli#readme",
   "engines": {
     "node": ">=18"
   },
