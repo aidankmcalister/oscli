@@ -35,7 +35,7 @@ type PromptFns<TPrompts extends PromptDefinitions> = {
 
 type CLIConfig<TPrompts extends PromptDefinitions> = {
   description?: string;
-  prompts: TPrompts;
+  prompts?: TPrompts;
   theme?: { spacing?: number };
   emojis?: boolean;
 };
@@ -129,15 +129,16 @@ async function renderByType(
   }
 }
 
-export function createCLI<TPrompts extends PromptDefinitions>(
+export function createCLI<TPrompts extends PromptDefinitions = {}>(
   configFn: (b: ReturnType<typeof createBuilder>) => CLIConfig<TPrompts>,
 ) {
   const config = configFn(createBuilder());
+  const promptDefs = (config.prompts ?? {}) as TPrompts;
   const storage = createStorage<StorageShape<TPrompts>>();
   const prompt = {} as PromptFns<TPrompts>;
 
-  for (const key of Object.keys(config.prompts) as Array<keyof TPrompts>) {
-    const builder = config.prompts[key];
+  for (const key of Object.keys(promptDefs) as Array<keyof TPrompts>) {
+    const builder = promptDefs[key];
 
     prompt[key] = (async () => {
       while (true) {
