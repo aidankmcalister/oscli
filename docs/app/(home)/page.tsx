@@ -20,7 +20,7 @@ export default function HomePage() {
 
   return (
     <section className="grid min-h-[calc(100svh-4rem)] flex-1 px-[clamp(1rem,2vw,1.75rem)] py-6 text-center">
-      <div className="animate-rise mx-auto my-auto grid w-full max-w-3xl justify-items-center gap-[clamp(0.9rem,2vw,1.5rem)] text-center">
+      <div className="mx-auto my-auto grid w-full max-w-3xl justify-items-center gap-[clamp(0.9rem,2vw,1.35rem)] text-center">
         <div className="space-y-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-fd-muted-foreground">
             oscli
@@ -35,7 +35,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="w-full max-w-2xl rounded-[1.15rem] border border-fd-border bg-fd-card/70 p-3">
+        <div className="w-full max-w-2xl rounded-[1rem] border border-fd-border bg-fd-card p-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <code className="overflow-x-auto text-left text-sm font-medium text-fd-foreground sm:text-[0.95rem]">
               {installCommand}
@@ -43,7 +43,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={copyInstallCommand}
-              className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full border border-fd-border bg-fd-background px-[1.02rem] py-[0.64rem] text-[0.9rem] leading-none font-[500] text-fd-muted-foreground transition-[transform,border-color,background-color,color] duration-150 ease-out hover:-translate-y-px hover:border-fd-primary hover:text-fd-primary"
+              className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full border border-fd-border bg-fd-background px-[1.02rem] py-[0.64rem] text-[0.9rem] leading-none font-[500] text-fd-muted-foreground transition-colors duration-75 hover:border-fd-foreground hover:text-fd-foreground"
             >
               {copied ? "Copied" : "Copy"}
             </button>
@@ -53,7 +53,7 @@ export default function HomePage() {
         <div className="mt-[0.1rem] flex flex-wrap items-center justify-center gap-[0.62rem]">
           <Link
             href="/docs"
-            className="inline-flex cursor-pointer items-center justify-center rounded-full border border-fd-foreground bg-fd-foreground px-[1.02rem] py-[0.64rem] text-[0.9rem] leading-none font-[500] text-fd-background transition-[transform,border-color,background-color,color,opacity] duration-150 ease-out hover:-translate-y-px hover:opacity-90"
+            className="inline-flex cursor-pointer items-center justify-center rounded-full border border-fd-foreground bg-fd-foreground px-[1.02rem] py-[0.64rem] text-[0.9rem] leading-none font-[500] text-fd-background transition-colors duration-75 hover:bg-fd-card hover:text-fd-foreground"
           >
             Getting Started
           </Link>
@@ -61,7 +61,7 @@ export default function HomePage() {
             href="https://github.com/aidankmcalister/oscli"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex cursor-pointer items-center justify-center rounded-full border border-fd-border bg-fd-card px-[1.02rem] py-[0.64rem] text-[0.9rem] leading-none font-[500] text-fd-foreground transition-[transform,border-color,background-color,color] duration-150 ease-out hover:-translate-y-px hover:border-fd-primary hover:text-fd-primary"
+            className="inline-flex cursor-pointer items-center justify-center rounded-full border border-fd-border bg-fd-card px-[1.02rem] py-[0.64rem] text-[0.9rem] leading-none font-[500] text-fd-foreground transition-colors duration-75 hover:border-fd-foreground hover:bg-fd-accent"
           >
             GitHub
           </Link>
