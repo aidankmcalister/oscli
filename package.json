@@ -1,0 +1,21 @@
+{
+  "name": "oscli",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run examples/kitchen-sink.ts",
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "typecheck": "bun tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "picocolors": "^1.1.1"
+  }
+}
