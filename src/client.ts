@@ -33,8 +33,8 @@ import {
 import { box as renderBox } from "./primitives/box";
 import { diff as renderDiff } from "./primitives/diff";
 import { renderDivider } from "./primitives/divider";
-import { progress as runProgress } from "./primitives/progress";
-import { spin as runSpinner } from "./primitives/spinner";
+import type { ProgressRenderOptions } from "./primitives/progress";
+import type { SpinnerOptions } from "./primitives/spinner";
 import { table as renderTable } from "./primitives/table";
 import { tree as renderTree, type TreeNode } from "./primitives/tree";
 import { createStorage } from "./storage";
@@ -157,6 +157,19 @@ export interface TestResult<
   exitCode: number;
 }
 
+let spinnerModulePromise: Promise<typeof import("./primitives/spinner")> | null = null;
+let progressModulePromise: Promise<typeof import("./primitives/progress")> | null = null;
+
+function loadSpinnerModule() {
+  spinnerModulePromise ??= import("./primitives/spinner");
+  return spinnerModulePromise;
+}
+
+function loadProgressModule() {
+  progressModulePromise ??= import("./primitives/progress");
+  return progressModulePromise;
+}
+
 const EXIT_CODE_MAP: Record<ExitCode, number> = {
   usage: 2,
   auth: 3,
@@ -263,7 +276,7 @@ function promptFlagUsage(
   return `--${promptName} <value>`;
 }
 
-export function resolveExitCode(code: number | ExitCode | undefined): number {
+function resolveExitCode(code: number | ExitCode | undefined): number {
   if (typeof code === "number") {
     return code;
   }
@@ -663,12 +676,9 @@ export function createCLI<
   let testFlagOverrides: Partial<FlagsShape<TFlags>> | null = null;
   let mainHandler: CommandHandler | undefined;
   let autoYes = false;
-  let isTTY = process.stdout.isTTY === true;
-  let noColor =
-    process.env.NO_COLOR !== undefined ||
-    process.env.TERM === "dumb" ||
-    process.argv.includes("--no-color");
-  let resolvedTheme = applyTheme(resolvedThemeOverride, noColor);
+  let isTTY = false;
+  let noColor = false;
+  let resolvedTheme = applyTheme(resolvedThemeOverride, false);
   let exitInterceptor: ((code: number) => never) | null = null;
   let jsonMode = false;
   let resultValue: unknown;
@@ -1225,8 +1235,9 @@ export function createCLI<
     spin: async <T>(
       label: string,
       fn: () => Promise<T>,
-      options?: Parameters<typeof runSpinner>[2],
+      options?: SpinnerOptions,
     ) => {
+      const { spin: runSpinner } = await loadSpinnerModule();
       return runSpinner(label, fn, {
         ...options,
         isTTY: cli._isTTY,
@@ -1238,6 +1249,7 @@ export function createCLI<
       steps: readonly TStep[],
       fn: (step: TStep, index: number) => Promise<void>,
     ) => {
+      const { progress: runProgress } = await loadProgressModule();
       await runProgress(label, steps, fn, {
         isTTY: cli._isTTY,
         noColor: cli._noColor,

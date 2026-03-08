@@ -59,11 +59,14 @@ type ProgressLineState = {
 };
 
 const DEFAULT_STYLE: ProgressStyle = "hash";
-const DEFAULT_TRACK_WIDTH = theme.layout.progressWidth;
 const MIN_TRACK_WIDTH = 8;
 const TIMER_WIDTH = 7;
 const PERCENT_WIDTH = 4;
 const ASCII_SPINNER_FRAMES = ["-", "\\", "|", "/"] as const;
+
+function getDefaultTrackWidth(): number {
+  return theme.layout.progressWidth;
+}
 
 function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -205,7 +208,7 @@ export function createProgressGroup(
   }
 
   const tailWidth = PERCENT_WIDTH;
-  const requested = options.width ?? DEFAULT_TRACK_WIDTH;
+  const requested = options.width ?? getDefaultTrackWidth();
   const trackWidth = fitTrackWidth(requested, labelWidth, tailWidth);
 
   return {
@@ -255,7 +258,7 @@ export function renderProgressLine(state: ProgressLineState): string {
   return `${theme.layout.indent}${renderIcon(state.icon)} ${label}  ${bar}  ${timer}${tail}`;
 }
 
-export function writeProgressLine(line: string): void {
+function writeProgressLine(line: string): void {
   writeLiveLine(line);
 }
 

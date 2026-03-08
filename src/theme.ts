@@ -97,6 +97,7 @@ export const themePresets: Record<ThemePreset, ThemeOverride> = {
   },
 };
 
+/** @internal */
 export const colorFormatters: Record<ColorName, (value: string) => string> = {
   black: pc.black,
   red: pc.red,
@@ -109,14 +110,34 @@ export const colorFormatters: Record<ColorName, (value: string) => string> = {
   gray: pc.gray,
 };
 
+let defaultTheme: ResolvedTheme | null = null;
+let _shouldColor: boolean | null = null;
+const colorFormatterCache = new Map<ColorName, (value: string) => string>();
+
+function shouldColor(): boolean {
+  if (_shouldColor === null) {
+    _shouldColor = !activeNoColor && process.stdout.isTTY === true;
+  }
+
+  return _shouldColor;
+}
+
 function paint(value: string, formatter: (input: string) => string): string {
-  return activeNoColor || process.stdout.isTTY !== true ? value : formatter(value);
+  return shouldColor() ? formatter(value) : value;
 }
 
 function byColorName(name: ColorName): (value: string) => string {
-  return (value: string) => paint(value, colorFormatters[name]);
+  const cached = colorFormatterCache.get(name);
+  if (cached) {
+    return cached;
+  }
+
+  const formatter = (value: string) => paint(value, colorFormatters[name]);
+  colorFormatterCache.set(name, formatter);
+  return formatter;
 }
 
+/** @internal */
 export function themedColor(name: ColorName): (value: string) => string {
   return byColorName(name);
 }
@@ -150,8 +171,34 @@ function createDefaultTheme(): ResolvedTheme {
   };
 }
 
-export const theme: ResolvedTheme = createDefaultTheme();
+function getDefaultTheme(): ResolvedTheme {
+  defaultTheme ??= createDefaultTheme();
+  return defaultTheme;
+}
+
+/** @internal */
+export const theme: ResolvedTheme = new Proxy({} as ResolvedTheme, {
+  get(_target, property) {
+    return getDefaultTheme()[property as keyof ResolvedTheme];
+  },
+  ownKeys() {
+    return Reflect.ownKeys(getDefaultTheme());
+  },
+  getOwnPropertyDescriptor(_target, property) {
+    return (
+      Object.getOwnPropertyDescriptor(getDefaultTheme(), property) ?? {
+        configurable: true,
+        enumerable: true,
+        writable: false,
+        value: getDefaultTheme()[property as keyof ResolvedTheme],
+      }
+    );
+  },
+});
+
+/** @internal */
 export let activeTheme: ResolvedTheme = theme;
+/** @internal */
 export let activeNoColor = false;
 
 function resolveSidebarSymbols(
@@ -188,13 +235,15 @@ export function applyTheme(
   override: ThemeOverride = {},
   noColor = false,
 ): ResolvedTheme {
-  const baseSymbols = resolveSidebarSymbols(theme.symbols, override.sidebar);
+  const baseTheme = getDefaultTheme();
+  const baseSymbols = resolveSidebarSymbols(baseTheme.symbols, override.sidebar);
   const mergedSymbols = {
     ...baseSymbols,
     ...(override.symbols ?? {}),
   };
 
   activeNoColor = noColor;
+  _shouldColor = null;
 
   const color = noColor
     ? {
@@ -215,7 +264,7 @@ export function applyTheme(
         hint: (s: string) => s,
       }
     : {
-        ...theme.color,
+        ...baseTheme.color,
         ...(override.cursor ? { cursor: byColorName(override.cursor) } : {}),
         ...(override.active ? { active: byColorName(override.active) } : {}),
         ...(override.success ? { success: byColorName(override.success) } : {}),
@@ -229,8 +278,8 @@ export function applyTheme(
     symbols: mergedSymbols,
     color,
     layout: {
-      ...theme.layout,
-      spacing: override.spacing ?? theme.layout.spacing,
+      ...baseTheme.layout,
+      spacing: override.spacing ?? baseTheme.layout.spacing,
     },
   };
 
@@ -242,18 +291,22 @@ const ANSI_PATTERN =
   // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI stripping helper
   /\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g;
 
+/** @internal */
 export function stripAnsi(value: string): string {
   return value.replace(ANSI_PATTERN, "");
 }
 
+/** @internal */
 export function visibleLength(value: string): number {
   return stripAnsi(value).length;
 }
 
+/** @internal */
 export function padVisibleEnd(value: string, width: number): string {
   return `${value}${" ".repeat(Math.max(0, width - visibleLength(value)))}`;
 }
 
+/** @internal */
 export function stripSharedIndent(lines: string[]): string[] {
   const indent = activeTheme.layout.indent;
   const nonEmptyLines = lines.filter((line) => line.length > 0);

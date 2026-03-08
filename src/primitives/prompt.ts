@@ -94,29 +94,31 @@ export type ConfirmPromptOptions<TValue = boolean> = SharedPromptOptions<
   defaultValue?: boolean;
 };
 
-const INDENT = theme.layout.indent;
+function currentIndent(): string {
+  return theme.layout.indent;
+}
 let completedPromptLabelWidth = 0;
 
-export function enableRawMode(): void {
+function enableRawMode(): void {
   if (process.stdin.isTTY) {
     process.stdin.setRawMode(true);
   }
   process.stdin.resume();
 }
 
-export function disableRawMode(): void {
+function disableRawMode(): void {
   if (process.stdin.isTTY) {
     process.stdin.setRawMode(false);
   }
   process.stdin.pause();
 }
 
-export function clearLine(): void {
+function clearLine(): void {
   readline.clearLine(process.stdout, 0);
   readline.cursorTo(process.stdout, 0);
 }
 
-export function moveCursorUp(lines: number): void {
+function moveCursorUp(lines: number): void {
   readline.moveCursor(process.stdout, 0, -lines);
 }
 
@@ -166,7 +168,7 @@ export function writePromptSummary(
   const paddedLabel = padVisibleEnd(theme.color.key(summaryLabel), width);
 
   writeSectionLine(
-    `${INDENT}${theme.color.success(theme.symbols.success)} ${paddedLabel}  ${theme.color.value(value)}`,
+    `${currentIndent()}${theme.color.success(theme.symbols.success)} ${paddedLabel}  ${theme.color.value(value)}`,
   );
 }
 
@@ -214,10 +216,10 @@ async function renderTextLikePrompt<TValue>(
   let renderedLines = 0;
 
   const render = () => {
-    const lines = [`${INDENT}${promptLabel(label, promptColor)}`];
+    const lines = [`${currentIndent()}${promptLabel(label, promptColor)}`];
 
     if (describe) {
-      lines.push(`${INDENT}${theme.color.hint(describe)}`);
+      lines.push(`${currentIndent()}${theme.color.hint(describe)}`);
     }
 
     const emptyPreview = buildEmptyPreview(
@@ -242,14 +244,14 @@ async function renderTextLikePrompt<TValue>(
     const caret = theme.color.cursor("_");
 
     lines.push(
-      `${INDENT}${prefixText}${cursor} ${
+      `${currentIndent()}${prefixText}${cursor} ${
         display.length > 0 ? `${display}${caret}` : caret
       }`,
     );
 
     if (errorMessage) {
       lines.push(
-        `${INDENT}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
+        `${currentIndent()}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
       );
     }
 
@@ -404,7 +406,7 @@ function renderChoiceRow(
     : theme.color.muted(theme.symbols.radio_off);
   const text = active ? theme.color.value(label) : theme.color.muted(label);
   const suffix = rule ? `  ${theme.color.dim(rule)}` : "";
-  return `${INDENT}${cursor}${icon} ${text}${suffix}`;
+  return `${currentIndent()}${cursor}${icon} ${text}${suffix}`;
 }
 
 export function renderSelectPrompt<T extends string, TValue = T>(
@@ -428,10 +430,10 @@ export function renderSelectPrompt<T extends string, TValue = T>(
   let renderedLines = 0;
 
   const render = () => {
-    const lines = [`${INDENT}${promptLabel(label, promptColor)}`];
+    const lines = [`${currentIndent()}${promptLabel(label, promptColor)}`];
 
     if (describe) {
-      lines.push(`${INDENT}${theme.color.hint(describe)}`);
+      lines.push(`${currentIndent()}${theme.color.hint(describe)}`);
     }
 
     lines.push(
@@ -445,11 +447,11 @@ export function renderSelectPrompt<T extends string, TValue = T>(
       ),
     );
 
-    lines.push(`${INDENT}${theme.color.dim("↑↓ navigate   enter select")}`);
+    lines.push(`${currentIndent()}${theme.color.dim("↑↓ navigate   enter select")}`);
 
     if (errorMessage) {
       lines.push(
-        `${INDENT}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
+        `${currentIndent()}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
       );
     }
 
@@ -560,17 +562,17 @@ export function renderSearchPrompt<T extends string, TValue = T>(
       : `${theme.color.muted(placeholder)}${caret}`;
 
     const lines = [
-      `${INDENT}${promptLabel(label, promptColor)}`,
+      `${currentIndent()}${promptLabel(label, promptColor)}`,
     ];
 
     if (describe) {
-      lines.push(`${INDENT}${theme.color.hint(describe)}`);
+      lines.push(`${currentIndent()}${theme.color.hint(describe)}`);
     }
 
-    lines.push(`${INDENT}${cursor} ${input}`);
+    lines.push(`${currentIndent()}${cursor} ${input}`);
 
     if (filteredChoices.length === 0) {
-      lines.push(`${INDENT}${theme.color.muted("No matches")}`);
+      lines.push(`${currentIndent()}${theme.color.muted("No matches")}`);
     } else {
       lines.push(
         ...filteredChoices.map((choice, index) =>
@@ -585,12 +587,12 @@ export function renderSearchPrompt<T extends string, TValue = T>(
     }
 
     lines.push(
-      `${INDENT}${theme.color.dim("type to filter   ↑↓ navigate   enter select")}`,
+      `${currentIndent()}${theme.color.dim("type to filter   ↑↓ navigate   enter select")}`,
     );
 
     if (errorMessage) {
       lines.push(
-        `${INDENT}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
+        `${currentIndent()}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
       );
     }
 
@@ -714,10 +716,10 @@ export function renderMultiselectPrompt<T extends string, TValue = T[]>(
       ? `${promptLabel(label, promptColor)}  ${theme.color.muted(`(${rangeHint})`)}`
       : promptLabel(label, promptColor);
 
-    const lines = [`${INDENT}${title}`];
+    const lines = [`${currentIndent()}${title}`];
 
     if (describe) {
-      lines.push(`${INDENT}${theme.color.hint(describe)}`);
+      lines.push(`${currentIndent()}${theme.color.hint(describe)}`);
     }
 
     lines.push(
@@ -732,17 +734,17 @@ export function renderMultiselectPrompt<T extends string, TValue = T[]>(
           ? theme.color.value(choice)
           : theme.color.muted(choice);
 
-        return `${INDENT}${cursor}${icon} ${text}`;
+        return `${currentIndent()}${cursor}${icon} ${text}`;
       }),
     );
 
     lines.push(
-      `${INDENT}${theme.color.dim("↑↓ navigate   space toggle   enter confirm")}`,
+      `${currentIndent()}${theme.color.dim("↑↓ navigate   space toggle   enter confirm")}`,
     );
 
     if (errorMessage) {
       lines.push(
-        `${INDENT}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
+        `${currentIndent()}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
       );
     }
 
@@ -869,23 +871,23 @@ export function renderListPrompt<TValue = string[]>(
       ? `${theme.color.value(current)}${caret}`
       : `${theme.color.muted(placeholder)}${caret}`;
     const title = `${promptLabel(label, promptColor)}  ${theme.color.muted(`(${countHint()})`)}`;
-    const lines = [`${INDENT}${title}`];
+    const lines = [`${currentIndent()}${title}`];
 
     if (describe) {
-      lines.push(`${INDENT}${theme.color.hint(describe)}`);
+      lines.push(`${currentIndent()}${theme.color.hint(describe)}`);
     }
 
-    lines.push(`${INDENT}${cursor} ${input}`);
+    lines.push(`${currentIndent()}${cursor} ${input}`);
 
     if (items.length > 0) {
       lines.push(
-        ...items.map((item) => `${INDENT}${theme.color.dim("•")} ${theme.color.value(item)}`),
+        ...items.map((item) => `${currentIndent()}${theme.color.dim("•")} ${theme.color.value(item)}`),
       );
     }
 
     if (errorMessage) {
       lines.push(
-        `${INDENT}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
+        `${currentIndent()}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
       );
     }
 
@@ -1101,17 +1103,17 @@ export async function renderConfirmPrompt<TValue = boolean>(
       const no = !selected
         ? theme.color.active(`${theme.symbols.radio_on} No`)
         : theme.color.muted(`${theme.symbols.radio_off} No`);
-      const lines = [`${INDENT}${promptLabel(label, promptColor)}`];
+      const lines = [`${currentIndent()}${promptLabel(label, promptColor)}`];
 
       if (describe) {
-        lines.push(`${INDENT}${theme.color.hint(describe)}`);
+        lines.push(`${currentIndent()}${theme.color.hint(describe)}`);
       }
 
-      lines.push(`${INDENT}${yes}${theme.color.muted("  /  ")}${no}`);
+      lines.push(`${currentIndent()}${yes}${theme.color.muted("  /  ")}${no}`);
 
       if (errorMessage) {
         lines.push(
-          `${INDENT}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
+          `${currentIndent()}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
         );
       }
 
