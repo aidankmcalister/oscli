@@ -1,0 +1,309 @@
+---
+title: Prompts
+description: Define prompts once, infer types automatically, and read values from cli.storage.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+export const sharedPromptMethods = {
+  label: {
+    type: "(value: string) => this",
+    description: "Sets the label shown above the prompt.",
+  },
+  describe: {
+    type: "(value: string) => this",
+    description: "Adds helper text below the label.",
+  },
+  placeholder: {
+    type: "(value: string) => this",
+    description: "Adds placeholder text for text-like prompts.",
+  },
+  default: {
+    type: "(value: T) => this",
+    description: "Uses a default value in interactive and non-interactive runs.",
+  },
+  optional: {
+    type: "() => PromptBuilder<T | undefined>",
+    description: "Stores undefined when the prompt is skipped.",
+  },
+  validate: {
+    type: "(fn: Validator<T>) => this",
+    description: "Runs sync or async validation before the value is stored.",
+  },
+  transform: {
+    type: "<U>(fn: (value: T) => U) => PromptBuilder<U>",
+    description: "Changes the stored type to the transform return value.",
+  },
+  color: {
+    type: "(name: ColorName) => this",
+    description: "Overrides the rendered prompt label color.",
+  },
+  theme: {
+    type: "(value: string) => this",
+    description: "Stores a per-prompt theme tag for future use.",
+  },
+};
+
+export const promptFactories = {
+  text: {
+    type: "b.text()",
+    description: "Plain text input stored as string.",
+  },
+  password: {
+    type: "b.password()",
+    description: "Masked text input stored as string.",
+  },
+  number: {
+    type: "b.number()",
+    description: "Numeric input stored as number.",
+    typeDescription: ".min(n), .max(n), .prefix(string)",
+  },
+  select: {
+    type: "b.select({ choices })",
+    description: "Single-choice prompt stored as a literal union.",
+    typeDescription: ".rule(choice, description)",
+  },
+  multiselect: {
+    type: "b.multiselect({ choices })",
+    description: "Multi-choice prompt stored as an array of literal values.",
+    typeDescription: ".min(n), .max(n)",
+  },
+  confirm: {
+    type: "b.confirm()",
+    description: "Boolean confirm prompt. Toggle mode is the default.",
+  },
+  search: {
+    type: "b.search({ choices })",
+    description: "Filterable select prompt stored as a literal union.",
+    typeDescription: ".rule(choice, description)",
+  },
+  list: {
+    type: "b.list()",
+    description: "Repeated free-form input stored as string[].",
+    typeDescription: ".min(n), .max(n)",
+  },
+  date: {
+    type: "b.date()",
+    description: "Validated date input stored as Date.",
+    typeDescription: ".format(string)",
+  },
+};
+
+`oscli` prompt builders are the center of the framework. You define the input
+shape once, resolve prompts with `cli.prompt.<name>()`, then read typed values
+from `cli.storage`.
+
+## Canonical chain order
+
+Use the same chain order for every prompt builder so definitions stay easy to
+scan.
+
+```ts title="Prompt chain order"
+b.<type>()
+  .label()
+  .describe()
+  .placeholder()
+  .default()
+  .optional()
+  .validate()
+  .transform()
+  .color()
+```
+
+## Shared methods
+
+These methods exist on every prompt builder.
+
+<TypeTable type={sharedPromptMethods} />
+
+## Prompt builders
+
+These are the available prompt factories.
+
+<TypeTable type={promptFactories} />
+
+## Text
+
+Use `b.text()` for plain string input.
+
+```ts title="src/cli.ts"
+export const cli = createCLI((b) => ({
+  description: "text prompt",
+  prompts: {
+    project: b
+      .text()
+      .label("Project")
+      .placeholder("my-app")
+      .default("my-app")
+      .validate((value) =>
+        value.length >= 2 ? true : "Use at least 2 characters.",
+      )
+      .transform((value) => value.trim()),
+  },
+}));
+```
+
+## Password
+
+Use `b.password()` when the user types sensitive text.
+
+```ts title="src/cli.ts"
+export const cli = createCLI((b) => ({
+  description: "password prompt",
+  prompts: {
+    token: b.password().label("API token"),
+  },
+}));
+```
+
+## Number
+
+Use `b.number()` when the stored value must be a number.
+
+```ts title="src/cli.ts"
+export const cli = createCLI((b) => ({
+  description: "number prompt",
+  prompts: {
+    retries: b.number().label("Retries").min(0).max(5),
+    budget: b.number().label("Budget").prefix("$").min(0),
+  },
+}));
+```
+
+## Select
+
+Use `b.select()` for one choice from a fixed list.
+
+```ts title="src/cli.ts"
+export const cli = createCLI((b) => ({
+  description: "select prompt",
+  prompts: {
+    mode: b
+      .select({ choices: ["personal", "team"] as const })
+      .label("Mode")
+      .rule("personal", "single-user setup")
+      .rule("team", "shared project"),
+  },
+}));
+```
+
+## Multiselect
+
+Use `b.multiselect()` when the user can choose multiple values.
+
+```ts title="src/cli.ts"
+export const cli = createCLI((b) => ({
+  description: "multiselect prompt",
+  prompts: {
+    features: b
+      .multiselect({ choices: ["api", "ui", "docs", "tests"] as const })
+      .label("Features")
+      .min(1)
+      .max(3),
+  },
+}));
+```
+
+## Confirm
+
+Use `b.confirm()` for boolean input. Toggle is the default. Simple keeps the
+older typed `y/n` flow.
+
+<Tabs items={["Toggle", "Simple"]}>
+  <Tab value="Toggle">
+
+```ts title="src/cli.ts"
+approved: b.confirm().label("Continue?").default(true)
+```
+
+This mode renders an inline Yes or No selector and confirms with Enter.
+  </Tab>
+  <Tab value="Simple">
+
+```ts title="src/cli.ts"
+approved: b.confirm("simple").label("Continue?").default(false)
+```
+
+This mode renders the typed `y/n` prompt.
+  </Tab>
+</Tabs>
+
+## Search
+
+Use `b.search()` when the choice list is fixed, but the user needs to filter it
+while typing.
+
+```ts title="src/cli.ts"
+export const cli = createCLI((b) => ({
+  description: "search prompt",
+  prompts: {
+    framework: b
+      .search({ choices: ["react", "vue", "svelte", "solid"] as const })
+      .label("Framework")
+      .rule("react", "large ecosystem")
+      .rule("svelte", "minimal runtime"),
+  },
+}));
+```
+
+## List
+
+Use `b.list()` for repeated free-form input. The prompt ends on an empty Enter.
+
+```ts title="src/cli.ts"
+export const cli = createCLI((b) => ({
+  description: "list prompt",
+  prompts: {
+    tags: b.list().label("Tags").min(1).max(5),
+  },
+}));
+```
+
+## Date
+
+Use `b.date()` for validated date input stored as `Date`.
+
+```ts title="src/cli.ts"
+export const cli = createCLI((b) => ({
+  description: "date prompt",
+  prompts: {
+    deadline: b.date().label("Deadline").format("YYYY-MM-DD"),
+  },
+}));
+```
+
+<Callout type="info">
+  If you do not set a placeholder for `b.date()`, `oscli` uses the configured
+  format as the placeholder.
+</Callout>
+
+## Resolution behavior
+
+Prompt builders share the same runtime rules once a value is submitted.
+
+<Accordions type="multiple">
+  <Accordion title="Validation and transform order">
+    <p>
+      <code>transform()</code> runs before <code>validate()</code>. The stored
+      value is the transformed value when validation passes.
+    </p>
+  </Accordion>
+  <Accordion title="Summary values">
+    <p>
+      Password prompts summarize as masked text, confirm prompts summarize as
+      <code>yes</code> or <code>no</code>, list and multiselect prompts join
+      values with commas, and date prompts summarize with their configured
+      format.
+    </p>
+  </Accordion>
+  <Accordion title="Non-interactive runs">
+    <p>
+      In non-TTY environments, prompts use matching flags, defaults, or
+      <code>undefined</code> for optional prompts. If none of those exist,
+      <code>oscli</code> exits with usage code <code>2</code>.
+    </p>
+  </Accordion>
+</Accordions>

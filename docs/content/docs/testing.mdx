@@ -1,0 +1,118 @@
+---
+title: Testing
+description: Run oscli flows in Vitest without touching stdin or process.exit.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+export const testOptions = {
+  inputs: {
+    type: "Partial<Record<keyof TPrompts, unknown>>",
+    description: "Injects prompt values directly without rendering prompts.",
+  },
+  flags: {
+    type: "Partial<FlagsShape<TFlags>>",
+    description: "Overrides parsed flag values in test mode.",
+  },
+  argv: {
+    type: "string[]",
+    description: "Passes raw argv segments for command and flag parsing.",
+  },
+};
+
+export const testResult = {
+  storage: {
+    type: "Partial<StorageShape<TPrompts>>",
+    description: "Captured prompt values after the run.",
+  },
+  flags: {
+    type: "FlagsShape<TFlags>",
+    description: "Resolved flag values after parsing and defaults.",
+  },
+  output: {
+    type: "string",
+    description: "Captured stdout and stderr with ANSI stripped.",
+  },
+  exitCode: {
+    type: "number",
+    description: "Recorded exit code. Test mode never calls process.exit().",
+  },
+};
+
+`cli.test()` gives you a programmatic harness for the real CLI. It runs the
+same code paths, but replaces stdin, stdout, stderr, and process exit behavior
+so your tests stay deterministic.
+
+## Vitest example
+
+```ts title="tests/cli.test.ts"
+import { describe, expect, it } from "vitest";
+import { createCLI } from "@oscli-dev/oscli";
+
+describe("init flow", () => {
+  it("stores the provided project name", async () => {
+    const cli = createCLI((b) => ({
+      description: "test",
+      prompts: {
+        name: b.text().label("Name"),
+      },
+    }));
+
+    cli.command("init", async () => {
+      await cli.prompt.name();
+      cli.success(`Created ${cli.storage.name}`);
+    });
+
+    const result = await cli.test({
+      argv: ["init"],
+      inputs: { name: "my-app" },
+    });
+
+    expect(result.storage.name).toBe("my-app");
+    expect(result.output).toContain("Created my-app");
+    expect(result.exitCode).toBe(0);
+  });
+});
+```
+
+## TestOptions
+
+<TypeTable type={testOptions} />
+
+## TestResult
+
+<TypeTable type={testResult} />
+
+## Test flow
+
+Use this order when writing tests around a CLI.
+
+<Steps>
+  <Step>
+    <h3>Create the CLI in the test</h3>
+    <p>
+      Build the same CLI object you use in production code.
+    </p>
+  </Step>
+  <Step>
+    <h3>Run <code>cli.test()</code></h3>
+    <p>
+      Pass <code>inputs</code>, <code>flags</code>, and <code>argv</code> to
+      drive the flow.
+    </p>
+  </Step>
+  <Step>
+    <h3>Assert on the result</h3>
+    <p>
+      Check <code>storage</code>, <code>flags</code>, <code>output</code>, and
+      <code>exitCode</code> directly.
+    </p>
+  </Step>
+</Steps>
+
+<Callout type="info">
+  Test mode always behaves like non-TTY output. Prompt summary lines are still
+  written to the captured buffer so you can assert on them.
+</Callout>

@@ -1,28 +1,55 @@
 ---
-title: oscli overview
-description: Build terminal workflows with typed prompts, flags, themes, and test helpers.
+title: Getting started
+description: Install oscli, define one flow, and ship a typed CLI in a few lines.
 ---
 
-`oscli` gives you a typed CLI runtime for Bun and TypeScript. This page gives
-you the shortest path to a working CLI and points you to the parts of the API
-that matter most in daily use.
+import { Callout } from "fumadocs-ui/components/callout";
+import { Card, Cards } from "fumadocs-ui/components/card";
+import { File, Files, Folder } from "fumadocs-ui/components/files";
+import { Step, Steps } from "fumadocs-ui/components/steps";
 
-## Start here
+`oscli` is a TypeScript-first CLI framework for Bun. You define prompts and
+flags once with a builder API, run your flow, then read typed values from
+`cli.storage` and `cli.flags`.
 
-Use this example to define prompts, run one flow, and emit a JSON result when
-you want machine-readable output.
+## Install
 
-```ts
+Use the package manager you already use.
+
+```package-install title="Install oscli"
+@oscli-dev/oscli
+```
+
+## Your first CLI
+
+Start with the smallest possible CLI. This example stays under 10 lines and is
+complete.
+
+```ts title="src/cli.ts"
+import { createCLI } from "@oscli-dev/oscli";
+
+const cli = createCLI(() => ({ description: "my tool", prompts: {} }));
+
+await cli.run(async () => {
+  cli.success("Done.");
+});
+```
+
+Use this shape when you want a single-command CLI with no prompts yet.
+
+## Build a prompt-driven CLI
+
+Add prompts, run them once, and read the resolved values from `cli.storage`.
+
+```ts title="src/cli.ts"
 import { createCLI } from "@oscli-dev/oscli";
 
 const cli = createCLI((b) => ({
   description: "project setup",
-  json: true,
-  theme: "rounded",
   prompts: {
     project: b.text().label("Project").default("my-app"),
     framework: b
-      .search({ choices: ["react", "vue", "svelte"] as const })
+      .select({ choices: ["react", "vue", "svelte"] as const })
       .label("Framework"),
     approved: b.confirm().label("Continue?").default(true),
   },
@@ -34,84 +61,111 @@ await cli.run(async () => {
   await cli.prompt.framework();
   await cli.prompt.approved();
 
-  cli.setResult({
-    project: cli.storage.project,
-    framework: cli.storage.framework,
-    approved: cli.storage.approved,
-  });
-
   cli.success(`Created ${cli.storage.project}`);
   cli.outro("Done.");
 });
 ```
 
-## Core ideas
+## Grow the same CLI
 
-These are the main concepts to keep in mind as you build with `oscli`.
+You can add JSON mode and return a machine-readable result without changing the
+rest of the flow.
 
-- **Prompt builders** define the input shape once, then infer the stored type.
-- **Flag builders** parse values before your handler runs and populate
-  `cli.flags`.
-- **Theme presets** give you a fast way to switch the visual tone of a CLI.
-- **JSON mode** lets you suppress decorative output and emit a single result.
-- **`cli.test()`** runs the same CLI in non-interactive mode for Vitest.
+```ts title="src/cli.ts"
+const cli = createCLI((b) => ({
+  description: "project setup",
+  prompts: {
+    project: b.text().label("Project"),
+  },
+  json: true, // [!code ++]
+}));
 
-## Prompt builders
-
-Use the builder chain to define prompts in a consistent order.
-
-```ts
-b.<type>()
-  .label()
-  .describe()
-  .placeholder()
-  .default()
-  .optional()
-  .validate()
-  .transform()
-  .color()
+await cli.run(async () => {
+  await cli.prompt.project();
+  cli.setResult({ project: cli.storage.project }); // [!code ++]
+});
 ```
 
-Available prompt factories:
+Run that command with `--json` to suppress decorative output and print only the
+JSON result.
 
-- `b.text()`
-- `b.password()`
-- `b.number()`
-- `b.select({ choices })`
-- `b.search({ choices })`
-- `b.multiselect({ choices })`
-- `b.list()`
-- `b.date()`
-- `b.confirm()` for the default toggle confirm
-- `b.confirm("simple")` for typed `y/n` input
+## Suggested layout
 
-## Flags and non-interactive execution
+You do not need a special folder structure, but this is a clean starting point.
 
-`oscli` lets you bypass prompts with matching flags and run safely in CI or
-piped output.
+<Files>
+  <Folder name="src" defaultOpen>
+    <File name="cli.ts" />
+  </Folder>
+  <File name="package.json" />
+  <File name="tsconfig.json" />
+</Files>
 
-- Use `b.flag().string()`, `b.flag().boolean()`, or `b.flag().number()`.
-- Keep the chain order as `b.flag().type().label().choices().default().optional()`.
-- Use `--yes` to auto-approve confirmation prompts.
-- Use `--no-color` or `NO_COLOR=1` to strip ANSI output.
-- Enable `json: true` to register `--json` and print only the value passed to
-  `cli.setResult()`.
+## Setup flow
 
-## Theme presets
+Use this order when you are starting a new CLI.
 
-Use a preset name when you want a fast, consistent starting point.
+<Steps>
+  <Step>
+    <h3>Install the package</h3>
+    <p>
+      Add <code>@oscli-dev/oscli</code> to your project.
+    </p>
+  </Step>
+  <Step>
+    <h3>Define prompts and flags</h3>
+    <p>
+      Put your builder definitions inside <code>createCLI()</code> so types are
+      inferred once and reused everywhere.
+    </p>
+  </Step>
+  <Step>
+    <h3>Run the flow</h3>
+    <p>
+      Call <code>await cli.run(...)</code>, resolve prompts, and read values
+      from <code>cli.storage</code> and <code>cli.flags</code>.
+    </p>
+  </Step>
+</Steps>
 
-| Preset | Description |
-| --- | --- |
-| `default` | Square corners, `│` rail, spacing `1` |
-| `basic` | No intro or outro corners, `│` rail kept, spacing `0`, cyan cursor and active color |
-| `rounded` | Rounded `╭` and `╰` corners, `│` rail, spacing `1` |
+<Callout type="info">
+  <code>oscli</code> is Bun-native, but the published package works in Node 18+
+  at runtime because the output bundle targets Node.
+</Callout>
 
-## Next steps
+## Read next
 
-Use these docs pages next.
+Use these pages next.
 
-- Open [API reference](/docs/api-reference) for the full client and builder
-  surface.
-- Read the package `README.md` for longer walkthrough examples that combine
-  prompts, flags, JSON mode, and visual primitives.
+<Cards>
+  <Card
+    title="Prompts"
+    href="/docs/prompts"
+    description="All prompt builders, confirm modes, validation, and transforms."
+  />
+  <Card
+    title="Flags"
+    href="/docs/flags"
+    description="Typed flags, prompt bypass, and reserved globals."
+  />
+  <Card
+    title="Theme"
+    href="/docs/theme"
+    description="Theme presets, overrides, and per-prompt color."
+  />
+  <Card
+    title="Visual primitives"
+    href="/docs/visual-primitives"
+    description="Boxes, tables, progress, links, trees, and diffs."
+  />
+  <Card
+    title="Testing"
+    href="/docs/testing"
+    description="Run the same CLI in Vitest without touching stdin."
+  />
+  <Card
+    title="Non-interactive and CI"
+    href="/docs/non-interactive-and-ci"
+    description="TTY detection, no-color behavior, exit codes, and automation."
+  />
+</Cards>

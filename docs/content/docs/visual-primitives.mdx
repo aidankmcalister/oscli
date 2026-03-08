@@ -1,0 +1,176 @@
+---
+title: Visual primitives
+description: Compose boxes, tables, spinners, progress, links, trees, and diffs with the same output system.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+export const primitiveMethods = {
+  box: {
+    type: "cli.box({ title?, content })",
+    description: "Prints boxed content as a section.",
+  },
+  table: {
+    type: "cli.table(headers, rows)",
+    description: "Returns a table string for printing or boxing.",
+  },
+  spin: {
+    type: "cli.spin(label, fn, options?)",
+    description: "Wraps async work in a spinner with elapsed time.",
+  },
+  progress: {
+    type: "cli.progress(label, steps, fn)",
+    description: "Runs a multi-step progress flow.",
+  },
+  divider: {
+    type: "cli.divider(label?)",
+    description: "Prints a horizontal divider across the available width.",
+  },
+  link: {
+    type: "cli.link(label, url)",
+    description: "Prints a clickable OSC 8 link or a plain fallback.",
+  },
+  tree: {
+    type: "cli.tree(data)",
+    description: "Returns a file-tree string for composition.",
+  },
+  diff: {
+    type: "cli.diff(before, after)",
+    description: "Prints a line diff with added, removed, and unchanged lines.",
+  },
+};
+
+Visual primitives are small on purpose. Some return strings for composition.
+Others print directly through the shared output system.
+
+## Primitive overview
+
+<TypeTable type={primitiveMethods} />
+
+## Box and table
+
+Use `cli.table()` when you want aligned text, then pass that string into
+`cli.box()` when you want framing.
+
+```ts title="src/cli.ts"
+await cli.run(async () => {
+  const summary = cli.table(
+    ["Field", "Value"],
+    [
+      ["project", "oscli"],
+      ["teamSize", 3],
+      ["approved", true],
+    ],
+  );
+
+  cli.box({
+    title: "Summary",
+    content: summary,
+  });
+});
+```
+
+## Spinner
+
+Use `cli.spin()` around one async operation.
+
+```ts title="src/cli.ts"
+await cli.run(async () => {
+  await cli.spin("Installing packages", async () => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  });
+});
+```
+
+If you do not pass `doneLabel`, `oscli` tries to convert common gerunds to a
+past-tense completion label.
+
+## Progress
+
+Use `cli.progress()` when your work already has named steps.
+
+```ts title="src/cli.ts"
+await cli.run(async () => {
+  const steps = ["Validate", "Build", "Finalize"] as const;
+
+  await cli.progress("Running steps", steps, async (step) => {
+    if (step === "Validate") {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+
+    if (step === "Build") {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+
+    if (step === "Finalize") {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+  });
+});
+```
+
+## Divider and link
+
+Use dividers for section boundaries and links for docs or support URLs.
+
+```ts title="src/cli.ts"
+await cli.run(async () => {
+  cli.divider("Results");
+  cli.link("oscli docs", "https://github.com/aidankmcalister/oscli");
+});
+```
+
+## Tree
+
+Use `cli.tree()` when you want to render directory-style output inside another
+primitive.
+
+```ts title="src/cli.ts"
+export const structure = cli.tree({
+  src: {
+    "index.ts": null,
+    "client.ts": null,
+  },
+  "package.json": null,
+});
+
+cli.box({
+  title: "Project",
+  content: structure,
+});
+```
+
+## Diff
+
+Use `cli.diff()` when you want to show a text change without pulling in an
+external diff library.
+
+```ts title="src/cli.ts"
+await cli.run(async () => {
+  cli.diff("hello\nworld", "hello\noscli");
+});
+```
+
+<Callout type="info">
+  `cli.table()` and `cli.tree()` return strings. `cli.box()`, `cli.diff()`,
+  `cli.divider()`, and `cli.link()` print immediately.
+</Callout>
+
+<Accordions type="multiple">
+  <Accordion title="TTY fallback behavior">
+    <p>
+      In non-TTY output, spinners stop animating, progress prints sequential
+      lines, links fall back to <code>label (url)</code>, and ANSI styles are
+      stripped.
+    </p>
+  </Accordion>
+  <Accordion title="Composing primitives">
+    <p>
+      The most common composition is <code>cli.table()</code> inside
+      <code>cli.box()</code>, but any string-returning primitive can be reused
+      that way.
+    </p>
+  </Accordion>
+</Accordions>

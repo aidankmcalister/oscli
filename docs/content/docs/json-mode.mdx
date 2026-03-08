@@ -1,0 +1,98 @@
+---
+title: JSON mode
+description: Suppress decorative output and return a single machine-readable result.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+export const jsonModeFields = {
+  json: {
+    type: "json: true",
+    description: "Registers the global --json flag for this CLI.",
+  },
+  setResult: {
+    type: "cli.setResult(data)",
+    description: "Stores the object printed at the end of the run.",
+  },
+  output: {
+    type: "JSON.stringify(data, null, 2)",
+    description: "Printed directly to stdout when --json is active.",
+  },
+};
+
+JSON mode is for scripts and integrations. Turn it on in `createCLI()`, then
+store one final value with `cli.setResult()`.
+
+## Enable JSON mode
+
+```ts title="src/cli.ts"
+import { createCLI } from "@oscli-dev/oscli";
+
+export const cli = createCLI((b) => ({
+  description: "json demo",
+  json: true,
+  prompts: {
+    name: b.text().label("Name").default("my-app"),
+  },
+}));
+
+await cli.run(async () => {
+  await cli.prompt.name();
+  cli.setResult({ name: cli.storage.name, created: true });
+});
+```
+
+## What changes under --json
+
+Use `--json` only when you want raw output for another process.
+
+<Tabs items={["Normal run", "JSON run"]}>
+  <Tab value="Normal run">
+
+```bash title="Shell"
+bun run src/cli.ts
+```
+
+Prompts, logs, intro, outro, boxes, progress, and success lines render as
+normal.
+  </Tab>
+  <Tab value="JSON run">
+
+```bash title="Shell"
+bun run src/cli.ts --json
+```
+
+Only the value from `cli.setResult()` is printed.
+  </Tab>
+</Tabs>
+
+## Minimal diff
+
+This is the only code you need to add to support JSON mode.
+
+```ts title="src/cli.ts"
+export const cli = createCLI((b) => ({
+  description: "json demo",
+  prompts: {
+    name: b.text().label("Name"),
+  },
+  json: true, // [!code ++]
+}));
+
+await cli.run(async () => {
+  await cli.prompt.name();
+  cli.setResult({ name: cli.storage.name }); // [!code ++]
+});
+```
+
+## Reference
+
+<TypeTable type={jsonModeFields} />
+
+<Callout type="warn">
+  When `--json` is active, `oscli` suppresses decorative output. That includes
+  prompt summary lines, intro and outro lines, logs, boxes, spinners, and
+  progress output.
+</Callout>

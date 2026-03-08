@@ -1,0 +1,81 @@
+---
+title: Multi-command
+description: Register subcommands with Commander while reusing the same oscli runtime.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+export const commandBehavior = {
+  command: {
+    type: "cli.command(name, fn)",
+    description: "Registers a Commander subcommand handler.",
+  },
+  run: {
+    type: "await cli.run()",
+    description: "Parses argv, routes to the matching subcommand, or prints help.",
+  },
+  storage: {
+    type: "cli.storage",
+    description: "The same storage object is reused and cleared before each command run.",
+  },
+  suggest: {
+    type: "cli.suggest(input, candidates)",
+    description: "Returns the closest candidate for unknown command handling.",
+  },
+};
+
+Use subcommands when one executable needs multiple entry points. `oscli` keeps
+Commander in charge of parsing and routing, while prompts, flags, output, and
+themes stay consistent across commands.
+
+## Example
+
+```ts title="src/cli.ts"
+import { createCLI } from "@oscli-dev/oscli";
+
+export const cli = createCLI((b) => ({
+  description: "workspace tool",
+  prompts: {
+    name: b.text().label("Name").default("my-app"),
+  },
+}));
+
+cli.command("init", async () => {
+  await cli.prompt.name();
+  cli.success(`Initialized ${cli.storage.name}`);
+});
+
+cli.command("deploy", async () => {
+  cli.log("info", "Deploying...");
+});
+
+await cli.run();
+```
+
+## Behavior
+
+<TypeTable type={commandBehavior} />
+
+## Help and suggestions
+
+If no subcommand is provided, Commander prints generated help output. If the
+user enters an unknown subcommand, `oscli` formats the error and uses the
+suggestion helper when a close match exists.
+
+```bash title="Shell"
+oscli depoy
+```
+
+That prints an error like this:
+
+```text title="Output"
+Unknown command: "depoy"
+→ Did you mean: deploy?
+```
+
+<Callout type="info">
+  `cli.command()` does not create command-specific prompt definitions. The same
+  prompt and flag builders are shared across commands, and storage is cleared
+  before each command handler runs.
+</Callout>

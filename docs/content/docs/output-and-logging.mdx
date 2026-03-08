@@ -1,0 +1,140 @@
+---
+title: Output and logging
+description: Write lines through the shared output system and reuse styles where needed.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+export const outputMethods = {
+  logPlain: {
+    type: "cli.log(message)",
+    description: "Prints a plain line through the shared output system.",
+  },
+  logLevel: {
+    type: 'cli.log("info" | "warn" | "error" | "success", message)',
+    description: "Prints a leveled line with the matching symbol and color.",
+  },
+  style: {
+    type: "cli.style()",
+    description: "Creates a reusable style builder that returns strings.",
+  },
+  intro: {
+    type: "cli.intro(message)",
+    description: "Prints the opening line and enables the rail.",
+  },
+  outro: {
+    type: "cli.outro(message)",
+    description: "Prints the closing line and ends the rail.",
+  },
+  success: {
+    type: "cli.success(message)",
+    description: "Prints a success line.",
+  },
+  exit: {
+    type: "cli.exit(message, options?)",
+    description: "Prints an error, optional hint, and exits.",
+  },
+  confirm: {
+    type: "cli.confirm(label, defaultValue?)",
+    description: "Runs the inline simple confirm prompt.",
+  },
+};
+
+export const styleMethods = {
+  color: {
+    type: "(name: ColorName) => StyleBuilder",
+    description: "Sets the color transform. Last color wins.",
+  },
+  bold: {
+    type: "() => StyleBuilder",
+    description: "Adds bold styling.",
+  },
+  italic: {
+    type: "() => StyleBuilder",
+    description: "Adds italic styling.",
+  },
+  underline: {
+    type: "() => StyleBuilder",
+    description: "Adds underline styling.",
+  },
+  dim: {
+    type: "() => StyleBuilder",
+    description: "Adds dim styling.",
+  },
+  render: {
+    type: "(text: string) => string",
+    description: "Returns a styled string without writing output.",
+  },
+};
+
+`oscli` routes user-facing output through one output layer so logs, prompts,
+boxes, progress, and links all stay visually aligned.
+
+## Logging
+
+Use `cli.log()` when you want one line in the normal output flow.
+
+```ts title="src/cli.ts"
+await cli.run(async () => {
+  cli.log("ready");
+  cli.log("warn", "review this before production").bold().underline().flush();
+  cli.success("Done.");
+});
+```
+
+If you call `cli.log(level, message)`, the returned chain lets you apply text
+modifiers before the message is written.
+
+<TypeTable type={outputMethods} />
+
+## Reusable styles
+
+Use `cli.style()` when you want to build a style once and reuse it across
+multiple writes.
+
+```ts title="src/cli.ts"
+await cli.run(async () => {
+  const callout = cli.style().color("cyan").bold();
+
+  cli.log("info", callout.render("important"));
+  cli.log(callout.render("plain line with shared styling"));
+});
+```
+
+<TypeTable type={styleMethods} />
+
+## Exit with hints
+
+Use `cli.exit()` when the command cannot continue and you want a concrete next
+step in the error output.
+
+```ts title="src/cli.ts"
+cli.exit("package.json not found.", {
+  hint: "Run this command from the project root.",
+  code: "not_found",
+});
+```
+
+<Callout type="info">
+  `cli.exit()` writes to stderr. `cli.log("error", ...)` also writes to stderr.
+  Other output stays on stdout.
+</Callout>
+
+<Accordions type="multiple">
+  <Accordion title="LogChain behavior">
+    <p>
+      <code>flush()</code> is the explicit way to print a chained log message.
+      The current implementation also auto-flushes at the end of the current
+      microtask so plain <code>cli.log(...)</code> calls still work without a
+      manual flush.
+    </p>
+  </Accordion>
+  <Accordion title="No-color behavior">
+    <p>
+      Log modifiers and reusable styles become no-ops when the process is not a
+      TTY or color is disabled.
+    </p>
+  </Accordion>
+</Accordions>

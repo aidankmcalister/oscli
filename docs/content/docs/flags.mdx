@@ -1,0 +1,181 @@
+---
+title: Flags
+description: Parse typed flags before your handler runs and bypass prompts in CI.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+export const flagBuilders = {
+  string: {
+    type: "b.flag().string()",
+    description: "Stores a string flag value.",
+    typeDescription: ".label(), .choices(), .default(), .optional()",
+  },
+  boolean: {
+    type: "b.flag().boolean()",
+    description: "Stores a boolean flag value from presence or absence.",
+    typeDescription: ".label(), .default(), .optional()",
+  },
+  number: {
+    type: "b.flag().number()",
+    description: "Stores a parsed number flag value.",
+    typeDescription: ".label(), .default(), .optional()",
+  },
+};
+
+export const globalFlags = {
+  yes: {
+    type: "--yes, -y",
+    description: "Auto-approves all confirm prompts and inline cli.confirm() calls.",
+  },
+  noColor: {
+    type: "--no-color",
+    description: "Disables ANSI styling. NO_COLOR and TERM=dumb do the same.",
+  },
+  json: {
+    type: "--json",
+    description: "Enabled only when json: true is set in createCLI().",
+  },
+};
+
+export const promptBypassMap = {
+  text: {
+    type: "--name <value>",
+    description: "Applies to text, password, select, search, and date prompts.",
+  },
+  number: {
+    type: "--count <value>",
+    description: "Parses the value as a number before validation runs.",
+  },
+  multiselect: {
+    type: "--tags <value...>",
+    description: "Accepts repeated values or multiple values after one flag.",
+  },
+  confirm: {
+    type: "--approved",
+    description: "Sets the matching confirm prompt to true.",
+  },
+};
+
+Flags are resolved before your handler runs. Define them once in
+`createCLI()`, then read typed values from `cli.flags` anywhere in the flow.
+
+## Chain order
+
+Set the type first, then add metadata and defaults.
+
+```ts title="Flag chain order"
+b.flag()
+  .string() // or .boolean() or .number()
+  .label()
+  .choices()
+  .default()
+  .optional()
+```
+
+## Builder types
+
+These are the available flag builders.
+
+<TypeTable type={flagBuilders} />
+
+## Define typed flags
+
+Use literal choices when you want a union type in `cli.flags`.
+
+```ts title="src/cli.ts"
+import { createCLI } from "@oscli-dev/oscli";
+
+export const cli = createCLI((b) => ({
+  description: "create-db",
+  flags: {
+    ttl: b.flag().string().label("TTL").default("1h"),
+    json: b
+      .flag()
+      .boolean()
+      .label("JSON output")
+      .default(false),
+    env: b
+      .flag()
+      .string()
+      .choices(["dev", "staging", "prod"] as const)
+      .label("Environment"),
+  },
+  prompts: {
+    name: b.text().label("Database name"),
+  },
+}));
+
+await cli.run(async () => {
+  cli.log("info", `env: ${cli.flags.env ?? "dev"}`);
+  await cli.prompt.name();
+});
+```
+
+## Prompt bypass
+
+Every prompt can be bypassed with a matching flag. Validation still runs.
+
+```ts title="src/cli.ts"
+export const cli = createCLI((b) => ({
+  description: "prompt bypass",
+  prompts: {
+    project: b.text().label("Project").default("my-app"),
+    teamSize: b.number().label("Team size").min(1).max(10),
+    approved: b.confirm().label("Continue?"),
+  },
+}));
+
+await cli.run(async () => {
+  await cli.prompt.project();
+  await cli.prompt.teamSize();
+  await cli.prompt.approved();
+});
+```
+
+This command runs without interactive input:
+
+```bash title="Shell"
+bun run src/cli.ts --project oscli --teamSize 3 --approved
+```
+
+## Global flags
+
+These flags are reserved by `oscli`.
+
+<TypeTable type={globalFlags} />
+
+<Callout type="warn">
+  Do not define custom flags named <code>yes</code>, <code>no-color</code>, or
+  <code>json</code>. Those names are reserved by <code>oscli</code>.
+</Callout>
+
+## Prompt bypass shapes
+
+Prompt bypass flags are generated automatically from your prompt definitions.
+
+<TypeTable type={promptBypassMap} />
+
+<Accordions type="multiple">
+  <Accordion title="Bypass resolution order">
+    <p>
+      Prompt resolution checks matching CLI flags first, then prompt defaults,
+      then <code>optional()</code>. If none apply and the process is not a TTY,
+      <code>oscli</code> exits with usage code <code>2</code>.
+    </p>
+  </Accordion>
+  <Accordion title="Password prompts in help output">
+    <p>
+      Password bypass flags are registered so automation still works, but they
+      are hidden from Commander help output.
+    </p>
+  </Accordion>
+  <Accordion title="Flags in tests">
+    <p>
+      Use <code>cli.test({`{ flags, argv }`})</code> when you want to assert on
+      parsed flags or prompt bypass behavior in Vitest.
+    </p>
+  </Accordion>
+</Accordions>

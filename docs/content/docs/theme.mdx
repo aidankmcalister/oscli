@@ -1,0 +1,192 @@
+---
+title: Theme
+description: Use presets for fast defaults or override only the parts you want.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+export const themeOverrideFields = {
+  cursor: {
+    type: "ColorName",
+    description: "Overrides the cursor color used by text-like prompts.",
+  },
+  active: {
+    type: "ColorName",
+    description: "Overrides the active highlight color.",
+  },
+  success: {
+    type: "ColorName",
+    description: "Overrides success styling.",
+  },
+  error: {
+    type: "ColorName",
+    description: "Overrides error styling.",
+  },
+  warning: {
+    type: "ColorName",
+    description: "Overrides warning styling.",
+  },
+  info: {
+    type: "ColorName",
+    description: "Overrides info styling.",
+  },
+  border: {
+    type: "ColorName",
+    description: "Overrides rails, dividers, and box borders.",
+  },
+  sidebar: {
+    type: 'false | "square" | "rounded"',
+    description: "Controls intro and outro corners and the left rail.",
+  },
+  symbols: {
+    type: "Partial<ThemeSymbols>",
+    description: "Overrides individual symbols without replacing the full theme.",
+  },
+  spacing: {
+    type: "0 | 1 | 2",
+    description: "Controls blank lines between rendered sections.",
+  },
+};
+
+export const promptColorFields = {
+  black: { type: '"black"', description: "Black formatter." },
+  red: { type: '"red"', description: "Red formatter." },
+  green: { type: '"green"', description: "Green formatter." },
+  yellow: { type: '"yellow"', description: "Yellow formatter." },
+  blue: { type: '"blue"', description: "Blue formatter." },
+  magenta: { type: '"magenta"', description: "Magenta formatter." },
+  cyan: { type: '"cyan"', description: "Cyan formatter." },
+  white: { type: '"white"', description: "White formatter." },
+  gray: { type: '"gray"', description: "Gray formatter." },
+};
+
+export const symbolKeys = {
+  cursor: { type: "string", description: "Prompt cursor symbol." },
+  radio_on: { type: "string", description: "Active select symbol." },
+  radio_off: { type: "string", description: "Inactive select symbol." },
+  check_on: { type: "string", description: "Selected multiselect symbol." },
+  check_off: { type: "string", description: "Unselected multiselect symbol." },
+  success: { type: "string", description: "Success symbol." },
+  error: { type: "string", description: "Error symbol." },
+  warning: { type: "string", description: "Warning symbol." },
+  info: { type: "string", description: "Info symbol." },
+  intro_square: { type: "string", description: "Square intro corner." },
+  intro_rounded: { type: "string", description: "Rounded intro corner." },
+  outro_square: { type: "string", description: "Square outro corner." },
+  outro_rounded: { type: "string", description: "Rounded outro corner." },
+  pipe: { type: "string", description: "Sidebar rail symbol." },
+  bar_fill: { type: "string", description: "Progress fill symbol." },
+  bar_empty: { type: "string", description: "Progress empty symbol." },
+};
+
+The theme system is shallow to use and deep enough to be practical. Use a
+preset name when you want a fast default. Use a `theme` object when you only
+need to override a few colors or symbols.
+
+## Presets
+
+These are the built-in presets.
+
+<Tabs items={["default", "basic", "rounded"]}>
+  <Tab value="default">
+
+```ts title="src/cli.ts"
+export const cli = createCLI(() => ({
+  description: "default theme",
+  theme: "default",
+  prompts: {},
+}));
+```
+
+Square corners, `│` rail, and spacing `1`.
+  </Tab>
+  <Tab value="basic">
+
+```ts title="src/cli.ts"
+export const cli = createCLI(() => ({
+  description: "basic theme",
+  theme: "basic",
+  prompts: {},
+}));
+```
+
+No intro or outro corners, rail kept, spacing `0`, cyan cursor, and cyan active
+state.
+  </Tab>
+  <Tab value="rounded">
+
+```ts title="src/cli.ts"
+export const cli = createCLI(() => ({
+  description: "rounded theme",
+  theme: "rounded",
+  prompts: {},
+}));
+```
+
+Rounded `╭` and `╰` corners with the standard rail and spacing `1`.
+  </Tab>
+</Tabs>
+
+## Theme overrides
+
+Use `ThemeOverride` when you want to change only a few fields.
+
+```ts title="src/cli.ts"
+export const cli = createCLI((b) => ({
+  description: "themed tool",
+  theme: {
+    active: "cyan",
+    success: "green",
+    symbols: {
+      cursor: "❯",
+      success: "✔",
+    },
+    spacing: 0,
+  },
+  prompts: {
+    project: b.text().label("Project"),
+  },
+}));
+```
+
+<TypeTable type={themeOverrideFields} />
+
+## Per-prompt color
+
+Use `.color()` when you want one prompt label to stand out without changing the
+rest of the theme.
+
+```ts title="src/cli.ts"
+export const cli = createCLI((b) => ({
+  description: "prompt colors",
+  prompts: {
+    project: b.text().label("Project").color("cyan"),
+    owner: b.text().label("Owner").color("yellow"),
+  },
+}));
+```
+
+These are the accepted color names.
+
+<TypeTable type={promptColorFields} />
+
+<Callout type="info">
+  Presets are only shortcuts. Internally, they resolve to the same
+  `ThemeOverride` shape you can pass manually.
+</Callout>
+
+<Accordions type="multiple">
+  <Accordion title="Available symbol keys">
+    <TypeTable type={symbolKeys} />
+  </Accordion>
+  <Accordion title="No-color behavior">
+    <p>
+      If <code>--no-color</code>, <code>NO_COLOR</code>, or
+      <code>TERM=dumb</code> is active, theme formatters fall back to plain
+      strings automatically.
+    </p>
+  </Accordion>
+</Accordions>

@@ -1,0 +1,121 @@
+---
+title: Non-interactive and CI
+description: Understand TTY detection, no-color behavior, exit codes, and autocomplete hints.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+export const exitCodes = {
+  usage: {
+    type: '"usage"',
+    description: "Resolves to exit code 2.",
+  },
+  auth: {
+    type: '"auth"',
+    description: "Resolves to exit code 3.",
+  },
+  notFound: {
+    type: '"not_found"',
+    description: "Resolves to exit code 4.",
+  },
+  network: {
+    type: '"network"',
+    description: "Resolves to exit code 5.",
+  },
+  error: {
+    type: '"error"',
+    description: "Resolves to exit code 1.",
+  },
+};
+
+export const runtimeControls = {
+  noColorFlag: {
+    type: "--no-color",
+    description: "Disables ANSI output and colored formatting.",
+  },
+  noColorEnv: {
+    type: "NO_COLOR=1",
+    description: "Disables ANSI output for the full process.",
+  },
+  termDumb: {
+    type: "TERM=dumb",
+    description: "Also disables ANSI formatting.",
+  },
+  autocompleteHint: {
+    type: "autocompleteHint: string",
+    description: "Prints a secondary hint for unknown commands or options.",
+  },
+};
+
+This page covers the runtime behavior that matters in CI, scripts, and piped
+output. These rules are automatic. You do not need a separate mode switch.
+
+## TTY detection
+
+`oscli` checks stdout at runtime and switches behavior when output is not a TTY.
+That covers CI, pipes, and test harnesses.
+
+<Callout type="warn">
+  In non-TTY mode, prompts use matching flags, defaults, or optional values.
+  If a required prompt has no value, `oscli` exits with usage code `2`. Spinner
+  animation stops, progress prints sequential lines, and ANSI styling is
+  stripped automatically.
+</Callout>
+
+## Disable color explicitly
+
+Use these controls when you want plain output even in an interactive terminal.
+
+<TypeTable type={runtimeControls} />
+
+## Semantic exit codes
+
+Use named exit codes when other tooling needs to branch on failure type.
+
+```ts title="src/cli.ts"
+cli.exit("Not authenticated.", { code: "auth" });
+cli.exit("File not found.", { code: "not_found" });
+cli.exit("Network request failed.", { code: "network" });
+```
+
+<TypeTable type={exitCodes} />
+
+## Autocomplete hint
+
+If you expose a completion command elsewhere, you can guide users when they hit
+unknown commands or flags.
+
+```ts title="src/cli.ts"
+export const cli = createCLI(() => ({
+  description: "workspace tool",
+  autocompleteHint: "Run `oscli completion` to enable tab completion",
+  prompts: {},
+}));
+```
+
+That hint prints as a secondary line under the main error.
+
+<Accordions type="multiple">
+  <Accordion title="What happens to prompts in non-TTY mode?">
+    <p>
+      Prompt resolution checks matching flags first, then prompt defaults, then
+      <code>optional()</code>. If no value is available, the run exits with code
+      <code>2</code> and a usage hint.
+    </p>
+  </Accordion>
+  <Accordion title="What happens to links, spinners, and progress?">
+    <p>
+      Links fall back to <code>label (url)</code>. Spinners stop animating and
+      print sequential status lines. Progress output prints step completion lines
+      and a final summary line instead of redrawing in place.
+    </p>
+  </Accordion>
+  <Accordion title="What happens to stderr?">
+    <p>
+      `cli.exit()` and <code>cli.log("error", ...)</code> write to stderr. All
+      other output goes to stdout.
+    </p>
+  </Accordion>
+</Accordions>
