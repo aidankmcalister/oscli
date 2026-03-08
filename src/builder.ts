@@ -63,3 +63,48 @@ export class PromptBuilder<T> {
     };
   }
 }
+
+export class TextBuilder extends PromptBuilder<string> {}
+
+export class PasswordBuilder extends PromptBuilder<string> {}
+
+export class ConfirmBuilder extends PromptBuilder<boolean> {}
+
+export class NumberBuilder extends PromptBuilder<number> {
+  private _min?: number;
+  private _max?: number;
+  private _prefix?: string;
+
+  min(value: number): this {
+    this._min = value;
+    return this;
+  }
+
+  max(value: number): this {
+    this._max = value;
+    return this;
+  }
+
+  prefix(value: string): this {
+    this._prefix = value;
+    return this;
+  }
+
+  config() {
+    return {
+      ...super.config(),
+      min: this._min,
+      max: this._max,
+      prefix: this._prefix,
+    };
+  }
+}
+
+export function createBuilder() {
+  return {
+    text: () => new TextBuilder(),
+    number: () => new NumberBuilder(),
+    password: () => new PasswordBuilder(),
+    confirm: () => new ConfirmBuilder(),
+  };
+}
