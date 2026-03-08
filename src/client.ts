@@ -1,34 +1,47 @@
+import { Command, CommanderError, Option } from "commander";
 import { createBuilder } from "./builder";
-import { createStorage } from "./storage";
 import {
-  type PromptSubmitResult,
+  createLogChain,
+  createStyleBuilder,
+  isRailEnabled,
+  renderLink,
+  setRailEnabled,
+  type LogChain,
+  type LogLevel,
+  type StyleBuilder,
+  writeLine,
+  writeSectionGap,
+  writeSectionLine,
+  writeSectionLines,
+} from "./output";
+import {
   renderConfirmPrompt,
+  renderDatePrompt,
+  renderListPrompt,
   renderMultiselectPrompt,
   renderNumberPrompt,
   renderPasswordPrompt,
+  renderSearchPrompt,
   renderSelectPrompt,
   renderTextPrompt,
+  type PromptSubmitResult,
   writePromptSummary,
 } from "./primitives/prompt";
-import { table as renderTable } from "./primitives/table";
 import { box as renderBox } from "./primitives/box";
-import { spin as runSpinner } from "./primitives/spinner";
+import { diff as renderDiff } from "./primitives/diff";
+import { renderDivider } from "./primitives/divider";
 import { progress as runProgress } from "./primitives/progress";
-import { Command, CommanderError, Option } from "commander";
-import {
-  isRailEnabled,
-  setRailEnabled,
-  writeLine,
-  writeSectionLine,
-  writeSectionLines,
-  writeSectionGap,
-} from "./output";
+import { spin as runSpinner } from "./primitives/spinner";
+import { table as renderTable } from "./primitives/table";
+import { tree as renderTree, type TreeNode } from "./primitives/tree";
+import { createStorage } from "./storage";
+import { suggest as suggestValue } from "./suggest";
 import {
   activeTheme as theme,
   applyTheme,
+  type ColorName,
   type ThemeOverride,
 } from "./theme";
-import { suggest as suggestValue } from "./suggest";
 
 type PromptLike<TValue = unknown> = {
   readonly __valueType: TValue;
@@ -84,11 +97,13 @@ type RuntimePromptConfig = {
   validate?: (value: unknown) => true | string | Promise<true | string>;
   transform?: (value: unknown) => unknown;
   theme?: string;
+  promptColor?: ColorName;
   choices?: readonly string[];
   rules?: Partial<Record<string, string>>;
   min?: number;
   max?: number;
   prefix?: string;
+  format?: string;
 };
 
 type RuntimeFlagConfig = {
@@ -104,11 +119,34 @@ type PromptResolution =
   | { ok: true; value: unknown }
   | { ok: false; error: string };
 
+type CommandHandler = () => Promise<void> | void;
+
+type StreamName = "stdout" | "stderr";
+
 export type ExitCode = "usage" | "auth" | "not_found" | "network" | "error";
 
 export interface ExitOptions {
   hint?: string;
   code?: number | ExitCode;
+}
+
+export interface TestOptions<
+  TPrompts extends PromptDefinitions,
+  TFlags extends FlagDefinitions,
+> {
+  inputs?: Partial<Record<keyof TPrompts, unknown>>;
+  flags?: Partial<FlagsShape<TFlags>>;
+  argv?: string[];
+}
+
+export interface TestResult<
+  TPrompts extends PromptDefinitions,
+  TFlags extends FlagDefinitions,
+> {
+  storage: Partial<StorageShape<TPrompts>>;
+  flags: FlagsShape<TFlags>;
+  output: string;
+  exitCode: number;
 }
 
 const EXIT_CODE_MAP: Record<ExitCode, number> = {
@@ -150,6 +188,58 @@ function hasPromptDefault(config: RuntimePromptConfig): boolean {
   return config.hasDefault === true;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function parseDateByFormat(input: string, format: string): Date | null {
+  const tokens: string[] = [];
+  const pattern = `^${escapeRegExp(format).replace(/YYYY|MM|DD/g, (token) => {
+    tokens.push(token);
+    return token === "YYYY" ? "(\\d{4})" : "(\\d{2})";
+  })}$`;
+  const match = input.match(new RegExp(pattern));
+
+  if (!match) {
+    return null;
+  }
+
+  let year = 0;
+  let month = 1;
+  let day = 1;
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const value = Number(match[index + 1]);
+    if (tokens[index] === "YYYY") {
+      year = value;
+    } else if (tokens[index] === "MM") {
+      month = value;
+    } else if (tokens[index] === "DD") {
+      day = value;
+    }
+  }
+
+  const parsed = new Date(year, month - 1, day);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function formatDateValue(date: Date, format: string): string {
+  const year = String(date.getFullYear()).padStart(4, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return format.replace(/YYYY/g, year).replace(/MM/g, month).replace(/DD/g, day);
+}
+
 function promptFlagUsage(
   promptName: string,
   config: RuntimePromptConfig,
@@ -158,7 +248,7 @@ function promptFlagUsage(
     return `--${promptName}`;
   }
 
-  if (config.type === "multiselect") {
+  if (config.type === "multiselect" || config.type === "list") {
     return `--${promptName} <value...>`;
   }
 
@@ -190,11 +280,14 @@ function createPromptBypassOption(
     case "confirm":
       return new Option(`--${promptName}`, "");
     case "multiselect":
+    case "list":
       return new Option(`--${promptName} <value...>`, "");
     case "number":
     case "text":
     case "password":
     case "select":
+    case "search":
+    case "date":
       return new Option(`--${promptName} <value>`, "");
     default:
       return null;
@@ -217,25 +310,35 @@ function coercePromptBypassValue(
     }
 
     case "confirm":
-      if (typeof rawValue === "boolean") return rawValue;
+      if (typeof rawValue === "boolean") {
+        return rawValue;
+      }
       if (typeof rawValue === "string") {
         const normalized = rawValue.trim().toLowerCase();
-        if (["1", "true", "t", "y", "yes"].includes(normalized)) return true;
-        if (["0", "false", "f", "n", "no"].includes(normalized)) return false;
+        if (["1", "true", "t", "y", "yes"].includes(normalized)) {
+          return true;
+        }
+        if (["0", "false", "f", "n", "no"].includes(normalized)) {
+          return false;
+        }
       }
       throw new Error(`Invalid value for --${promptName}: expected y/n.`);
 
-    case "multiselect": {
-      const source =
-        Array.isArray(rawValue) ? rawValue.join(",") : String(rawValue ?? "");
-      const values = source
-        .split(",")
-        .map((value) => value.trim())
-        .filter((value) => value.length > 0);
+    case "multiselect":
+    case "list": {
+      const values = Array.isArray(rawValue)
+        ? rawValue.map((value) => String(value).trim()).filter(Boolean)
+        : String(rawValue ?? "")
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean);
 
-      if (config.choices && values.some((value) => !config.choices?.includes(value))) {
+      if (
+        config.choices &&
+        values.some((value) => !config.choices?.includes(value))
+      ) {
         throw new Error(
-          `Invalid value for --${promptName}. Expected comma-separated values from: ${config.choices.join(", ")}.`,
+          `Invalid value for --${promptName}. Expected values from: ${config.choices.join(", ")}.`,
         );
       }
 
@@ -243,6 +346,7 @@ function coercePromptBypassValue(
     }
 
     case "select":
+    case "search":
       if (typeof rawValue !== "string") {
         throw new Error(`Invalid value for --${promptName}: expected a string.`);
       }
@@ -252,6 +356,15 @@ function coercePromptBypassValue(
         );
       }
       return rawValue;
+
+    case "date": {
+      const format = config.format ?? "YYYY-MM-DD";
+      const parsed = parseDateByFormat(String(rawValue ?? "").trim(), format);
+      if (!parsed) {
+        throw new Error(`Invalid value for --${promptName}. Expected ${format}.`);
+      }
+      return parsed;
+    }
 
     case "text":
     case "password":
@@ -270,7 +383,7 @@ function resolveFlagValue(
 ): unknown {
   let value: unknown;
 
-  if (source === "cli") {
+  if (source === "cli" || source === "test") {
     value = rawValue;
   } else if (config.hasDefault) {
     value = config.defaultValue;
@@ -334,12 +447,11 @@ async function renderByType(
       return renderTextPrompt({
         label,
         describe: config.describe,
+        promptColor: config.promptColor,
         summaryWidth,
         placeholder: config.placeholder,
         defaultValue:
-          typeof config.defaultValue === "string"
-            ? config.defaultValue
-            : undefined,
+          typeof config.defaultValue === "string" ? config.defaultValue : undefined,
         resolve,
       });
 
@@ -347,12 +459,11 @@ async function renderByType(
       return renderPasswordPrompt({
         label,
         describe: config.describe,
+        promptColor: config.promptColor,
         summaryWidth,
         placeholder: config.placeholder,
         defaultValue:
-          typeof config.defaultValue === "string"
-            ? config.defaultValue
-            : undefined,
+          typeof config.defaultValue === "string" ? config.defaultValue : undefined,
         resolve,
       });
 
@@ -360,27 +471,43 @@ async function renderByType(
       return renderNumberPrompt({
         label,
         describe: config.describe,
+        promptColor: config.promptColor,
         summaryWidth,
         min: config.min,
         max: config.max,
         prefix: config.prefix,
         placeholder: config.placeholder,
         defaultValue:
-          typeof config.defaultValue === "number"
-            ? config.defaultValue
-            : undefined,
+          typeof config.defaultValue === "number" ? config.defaultValue : undefined,
         resolve,
       });
 
     case "select":
-      if (!config.choices)
+      if (!config.choices) {
         throw new Error(`Select prompt "${label}" missing choices.`);
+      }
       return renderSelectPrompt({
         label,
         describe: config.describe,
+        promptColor: config.promptColor,
         summaryWidth,
         choices: config.choices,
         rules: config.rules,
+        resolve,
+      });
+
+    case "search":
+      if (!config.choices) {
+        throw new Error(`Search prompt "${label}" missing choices.`);
+      }
+      return renderSearchPrompt({
+        label,
+        describe: config.describe,
+        promptColor: config.promptColor,
+        summaryWidth,
+        choices: config.choices,
+        rules: config.rules,
+        placeholder: config.placeholder,
         resolve,
       });
 
@@ -391,6 +518,7 @@ async function renderByType(
       return renderMultiselectPrompt({
         label,
         describe: config.describe,
+        promptColor: config.promptColor,
         summaryWidth,
         choices: config.choices,
         min: config.min,
@@ -398,15 +526,39 @@ async function renderByType(
         resolve,
       });
 
+    case "list":
+      return renderListPrompt({
+        label,
+        describe: config.describe,
+        promptColor: config.promptColor,
+        summaryWidth,
+        min: config.min,
+        max: config.max,
+        placeholder: config.placeholder,
+        resolve,
+      });
+
+    case "date":
+      return renderDatePrompt({
+        label,
+        describe: config.describe,
+        promptColor: config.promptColor,
+        summaryWidth,
+        format: config.format,
+        placeholder: config.placeholder,
+        defaultValue:
+          config.defaultValue instanceof Date ? config.defaultValue : undefined,
+        resolve,
+      });
+
     case "confirm":
       return renderConfirmPrompt({
         label,
         describe: config.describe,
+        promptColor: config.promptColor,
         summaryWidth,
         defaultValue:
-          typeof config.defaultValue === "boolean"
-            ? config.defaultValue
-            : undefined,
+          typeof config.defaultValue === "boolean" ? config.defaultValue : undefined,
         resolve,
       });
 
@@ -423,11 +575,22 @@ function formatPromptSummaryValue(
     case "password":
       return typeof value === "string" ? "*".repeat(value.length) : "";
     case "multiselect":
+    case "list":
       return Array.isArray(value) ? value.join(", ") : String(value ?? "");
     case "confirm":
       return value ? "yes" : "no";
+    case "date":
+      return value instanceof Date
+        ? formatDateValue(value, config.format ?? "YYYY-MM-DD")
+        : String(value ?? "");
     default:
       return String(value ?? "");
+  }
+}
+
+function clearStorage<T extends Record<string, unknown>>(storage: Partial<T>): void {
+  for (const key of Object.keys(storage) as Array<keyof T>) {
+    delete storage[key];
   }
 }
 
@@ -440,12 +603,8 @@ export function createCLI<
   const config = configFn(createBuilder());
   const promptDefs = (config.prompts ?? {}) as TPrompts;
   const flagDefs = (config.flags ?? {}) as TFlags;
-  let isTTY = process.stdout.isTTY === true;
-  let noColor =
-    process.env.NO_COLOR !== undefined ||
-    process.env.TERM === "dumb" ||
-    process.argv.includes("--no-color");
-  let resolvedTheme = applyTheme(config.theme ?? {}, noColor);
+  const runtimePromptConfigs = new Map<keyof TPrompts, RuntimePromptConfig>();
+  const runtimeFlagConfigs = new Map<keyof TFlags, RuntimeFlagConfig>();
 
   if (Object.prototype.hasOwnProperty.call(flagDefs, "yes")) {
     throw new Error("Flag name 'yes' is reserved by oscli. Use a different name.");
@@ -455,88 +614,80 @@ export function createCLI<
     throw new Error("Flag 'no-color' is reserved by oscli.");
   }
 
-  const storage = createStorage<StorageShape<TPrompts>>();
-  const prompt = {} as PromptFns<TPrompts>;
-  const flags = {} as FlagsShape<TFlags>;
-  const promptBypassValues = new Map<keyof TPrompts, unknown>();
-  const runtimePromptConfigs = new Map<keyof TPrompts, RuntimePromptConfig>();
-  const runtimeFlagConfigs = new Map<keyof TFlags, RuntimeFlagConfig>();
-  const summaryWidth = Math.max(
-    0,
-    ...Object.keys(promptDefs).map((key) => {
-      const runtimeConfig = promptDefs[key].config() as RuntimePromptConfig;
-      return (runtimeConfig.label ?? key).length;
-    }),
-  );
-  let autoYes = false;
-
   for (const key of Object.keys(promptDefs) as Array<keyof TPrompts>) {
     runtimePromptConfigs.set(key, promptDefs[key].config() as RuntimePromptConfig);
   }
 
   for (const key of Object.keys(flagDefs) as Array<keyof TFlags>) {
-    const runtimeConfig = flagDefs[key].config() as RuntimeFlagConfig;
-    runtimeFlagConfigs.set(key, runtimeConfig);
-
-    if (runtimeConfig.hasDefault) {
-      (flags as Record<string, unknown>)[String(key)] = runtimeConfig.defaultValue;
-      continue;
-    }
-
-    if (runtimeConfig.type === "boolean" && !runtimeConfig.optional) {
-      (flags as Record<string, unknown>)[String(key)] = false;
-      continue;
-    }
-
-    (flags as Record<string, unknown>)[String(key)] = undefined;
+    runtimeFlagConfigs.set(key, flagDefs[key].config() as RuntimeFlagConfig);
   }
+
+  const summaryWidth = Math.max(
+    0,
+    ...Object.keys(promptDefs).map((key) => {
+      const runtimeConfig = runtimePromptConfigs.get(key as keyof TPrompts);
+      return (runtimeConfig?.label ?? key).length;
+    }),
+  );
+
+  const storage = createStorage<StorageShape<TPrompts>>();
+  const prompt = {} as PromptFns<TPrompts>;
+  const flags = {} as FlagsShape<TFlags>;
+  const promptBypassValues = new Map<keyof TPrompts, unknown>();
+  const commandHandlers = new Map<string, CommandHandler>();
+  const testInputs = new Map<keyof TPrompts, unknown>();
+  let testFlagOverrides: Partial<FlagsShape<TFlags>> | null = null;
+  let mainHandler: CommandHandler | undefined;
+  let autoYes = false;
+  let isTTY = process.stdout.isTTY === true;
+  let noColor =
+    process.env.NO_COLOR !== undefined ||
+    process.env.TERM === "dumb" ||
+    process.argv.includes("--no-color");
+  let resolvedTheme = applyTheme(config.theme ?? {}, noColor);
+  let exitInterceptor: ((code: number) => never) | null = null;
+
+  function initializeFlags(): void {
+    for (const key of Object.keys(flagDefs) as Array<keyof TFlags>) {
+      const runtimeConfig = runtimeFlagConfigs.get(key);
+      if (!runtimeConfig) {
+        continue;
+      }
+
+      const name = String(key);
+      if (runtimeConfig.hasDefault) {
+        (flags as Record<string, unknown>)[name] = runtimeConfig.defaultValue;
+      } else if (runtimeConfig.type === "boolean" && !runtimeConfig.optional) {
+        (flags as Record<string, unknown>)[name] = false;
+      } else {
+        (flags as Record<string, unknown>)[name] = undefined;
+      }
+    }
+  }
+
+  initializeFlags();
 
   const _writeLine = (
     line: string,
-    stream: "stdout" | "stderr" = "stdout",
+    stream: StreamName = "stdout",
   ) => {
     writeSectionLine(line, stream);
   };
 
-  function log(message: string): void;
-  function log(
-    level: "info" | "warn" | "error" | "success",
-    message: string,
-  ): void;
-  function log(
-    levelOrMessage: "info" | "warn" | "error" | "success" | string,
-    maybeMessage?: string,
-  ): void {
-    if (maybeMessage === undefined) {
-      _writeLine(`${theme.layout.indent}${theme.color.value(levelOrMessage)}`);
-      return;
+  const _writeInlineLine = (
+    line: string,
+    stream: StreamName = "stdout",
+  ) => {
+    writeLine(line, stream);
+  };
+
+  const executeExit = (code: number): never => {
+    if (exitInterceptor) {
+      return exitInterceptor(code);
     }
 
-    const level = levelOrMessage as "info" | "warn" | "error" | "success";
-    const message = maybeMessage;
-    const symbol =
-      level === "info"
-        ? theme.color.info(theme.symbols.info)
-        : level === "warn"
-          ? theme.color.warning(theme.symbols.warning)
-          : level === "error"
-            ? theme.color.error(theme.symbols.error)
-            : theme.color.success(theme.symbols.success);
-
-    const text =
-      level === "info"
-        ? theme.color.info(message)
-        : level === "warn"
-          ? theme.color.warning(message)
-          : level === "error"
-            ? theme.color.error(message)
-            : theme.color.success(message);
-
-    _writeLine(
-      `${theme.layout.indent}${symbol} ${text}`,
-      level === "error" ? "stderr" : "stdout",
-    );
-  }
+    process.exit(code);
+  };
 
   const exitWithMessage = (message: string, options: ExitOptions = {}): never => {
     const shouldCloseRail = isRailEnabled() && theme.symbols.outro.length > 0;
@@ -557,7 +708,7 @@ export function createCLI<
       writeLine(theme.color.border(theme.symbols.outro), "stderr");
     }
 
-    process.exit(resolveExitCode(options.code));
+    return executeExit(resolveExitCode(options.code));
   };
 
   const failNonInteractivePrompt = (
@@ -573,6 +724,197 @@ export function createCLI<
     );
   };
 
+  const registerOptions = (target: Command): void => {
+    for (const key of Object.keys(flagDefs) as Array<keyof TFlags>) {
+      const runtimeConfig = runtimeFlagConfigs.get(key);
+      if (!runtimeConfig) {
+        continue;
+      }
+
+      const option =
+        runtimeConfig.type === "boolean"
+          ? new Option(`--${String(key)}`, runtimeConfig.label ?? "")
+          : new Option(`--${String(key)} <value>`, runtimeConfig.label ?? "");
+
+      if (runtimeConfig.choices) {
+        option.choices(runtimeConfig.choices.map((choice) => String(choice)));
+      }
+
+      target.addOption(option);
+    }
+
+    for (const key of Object.keys(promptDefs) as Array<keyof TPrompts>) {
+      if (Object.prototype.hasOwnProperty.call(flagDefs, String(key))) {
+        continue;
+      }
+
+      if (String(key) === "yes" || String(key) === "no-color") {
+        continue;
+      }
+
+      const runtimeConfig = runtimePromptConfigs.get(key);
+      if (!runtimeConfig) {
+        continue;
+      }
+
+      const option = createPromptBypassOption(String(key), runtimeConfig);
+      if (!option) {
+        continue;
+      }
+
+      if (runtimeConfig.type === "password") {
+        option.hideHelp();
+      }
+
+      if (
+        (runtimeConfig.type === "select" ||
+          runtimeConfig.type === "search" ||
+          runtimeConfig.type === "multiselect") &&
+        runtimeConfig.choices
+      ) {
+        option.choices(runtimeConfig.choices.map((choice) => String(choice)));
+      }
+
+      target.addOption(option);
+    }
+
+    target.option("-y, --yes", "Answer yes to all confirmation prompts");
+    target.option("--no-color", "Disable ANSI colors");
+  };
+
+  const getOptionSource = (program: Command, parser: Command, name: string) => {
+    return parser.getOptionValueSource(name) ?? program.getOptionValueSource(name);
+  };
+
+  const getOptions = (parser: Command): Record<string, unknown> => {
+    if (typeof parser.optsWithGlobals === "function") {
+      return parser.optsWithGlobals() as Record<string, unknown>;
+    }
+
+    return parser.opts() as Record<string, unknown>;
+  };
+
+  const hydrateRuntime = async (program: Command, parser: Command) => {
+    clearStorage(storage.data as Partial<StorageShape<TPrompts>>);
+    initializeFlags();
+    promptBypassValues.clear();
+
+    const opts = getOptions(parser);
+    autoYes = opts.yes === true;
+
+    for (const key of Object.keys(flagDefs) as Array<keyof TFlags>) {
+      const runtimeConfig = runtimeFlagConfigs.get(key);
+      if (!runtimeConfig) {
+        continue;
+      }
+
+      const name = String(key);
+      const hasTestOverride = testFlagOverrides
+        ? Object.prototype.hasOwnProperty.call(testFlagOverrides, key)
+        : false;
+      const rawValue = hasTestOverride
+        ? (testFlagOverrides as Record<string, unknown>)[name]
+        : opts[name];
+      const source = hasTestOverride
+        ? "test"
+        : getOptionSource(program, parser, name);
+
+      let resolved: unknown;
+      try {
+        resolved = resolveFlagValue(name, runtimeConfig, rawValue, source);
+      } catch (error) {
+        if (error instanceof Error) {
+          exitWithMessage(error.message, { code: "usage" });
+        }
+        throw error;
+      }
+
+      (flags as Record<string, unknown>)[name] = resolved;
+    }
+
+    for (const key of Object.keys(promptDefs) as Array<keyof TPrompts>) {
+      const runtimeConfig = runtimePromptConfigs.get(key);
+      if (!runtimeConfig) {
+        continue;
+      }
+
+      const name = String(key);
+      const hasFlagOverride = testFlagOverrides
+        ? Object.prototype.hasOwnProperty.call(testFlagOverrides, key)
+        : false;
+      const source = hasFlagOverride
+        ? "test"
+        : getOptionSource(program, parser, name);
+
+      if (source !== "cli" && source !== "test") {
+        continue;
+      }
+
+      let bypassRaw: unknown;
+      try {
+        bypassRaw = Object.prototype.hasOwnProperty.call(flagDefs, name)
+          ? (flags as Record<string, unknown>)[name]
+          : coercePromptBypassValue(name, runtimeConfig, opts[name]);
+      } catch (error) {
+        if (error instanceof Error) {
+          exitWithMessage(error.message, { code: "usage" });
+        }
+        throw error;
+      }
+
+      const resolved = await resolvePromptValue(runtimeConfig, bypassRaw);
+      if (resolved.ok === false) {
+        exitWithMessage(resolved.error, { code: "usage" });
+      }
+
+      const finalValue = (resolved as { ok: true; value: unknown }).value;
+      storage.set(key, finalValue as StorageShape<TPrompts>[typeof key]);
+      promptBypassValues.set(key, finalValue);
+    }
+  };
+
+  function log(message: string): LogChain;
+  function log(
+    level: Exclude<LogLevel, "plain">,
+    message: string,
+  ): LogChain;
+  function log(
+    levelOrMessage: Exclude<LogLevel, "plain"> | string,
+    maybeMessage?: string,
+  ): LogChain {
+    if (maybeMessage === undefined) {
+      return createLogChain("plain", levelOrMessage, (renderedMessage) => {
+        _writeLine(`${theme.layout.indent}${theme.color.value(renderedMessage)}`);
+      });
+    }
+
+    const level = levelOrMessage as Exclude<LogLevel, "plain">;
+    const symbol =
+      level === "info"
+        ? theme.color.info(theme.symbols.info)
+        : level === "warn"
+          ? theme.color.warning(theme.symbols.warning)
+          : level === "error"
+            ? theme.color.error(theme.symbols.error)
+            : theme.color.success(theme.symbols.success);
+
+    const colorize =
+      level === "info"
+        ? theme.color.info
+        : level === "warn"
+          ? theme.color.warning
+          : level === "error"
+            ? theme.color.error
+            : theme.color.success;
+
+    return createLogChain(level, maybeMessage, (renderedMessage) => {
+      _writeLine(
+        `${theme.layout.indent}${symbol} ${colorize(renderedMessage)}`,
+        level === "error" ? "stderr" : "stdout",
+      );
+    });
+  }
+
   const cli = {
     storage: storage.data as Partial<StorageShape<TPrompts>>,
     flags,
@@ -582,9 +924,17 @@ export function createCLI<
     _noColor: noColor,
     _writeLine,
     suggest: suggestValue,
+    command: (name: string, fn: () => Promise<void> | void) => {
+      commandHandlers.set(name, fn);
+    },
     run: async (fn?: () => Promise<void> | void) => {
+      if (fn) {
+        mainHandler = fn;
+      }
+
       const program = new Command();
-      const registeredCommandNames: string[] = [];
+      const registeredCommandNames = [...commandHandlers.keys()];
+      let handled = false;
 
       isTTY = process.stdout.isTTY === true;
       noColor =
@@ -606,126 +956,38 @@ export function createCLI<
         outputError: () => {},
       });
       program.exitOverride();
+      registerOptions(program);
 
-      for (const key of Object.keys(flagDefs) as Array<keyof TFlags>) {
-        const runtimeConfig = runtimeFlagConfigs.get(key);
-        if (!runtimeConfig) continue;
+      if (commandHandlers.size === 0) {
+        program.action(async () => {
+          handled = true;
+          await hydrateRuntime(program, program);
 
-        const option =
-          runtimeConfig.type === "boolean"
-            ? new Option(`--${String(key)}`, runtimeConfig.label ?? "")
-            : new Option(`--${String(key)} <value>`, runtimeConfig.label ?? "");
+          const handler = fn ?? mainHandler;
+          if (!handler) {
+            throw new Error("run() requires a handler in single-command mode.");
+          }
 
-        if (runtimeConfig.choices) {
-          option.choices(runtimeConfig.choices.map((choice) => String(choice)));
+          await handler();
+        });
+      } else {
+        for (const [name, handler] of commandHandlers) {
+          const command = program.command(name);
+          registerOptions(command);
+          command.action(async () => {
+            handled = true;
+            await hydrateRuntime(program, command);
+            await handler();
+          });
         }
-
-        program.addOption(option);
       }
-
-      for (const key of Object.keys(promptDefs) as Array<keyof TPrompts>) {
-        const runtimeConfig = runtimePromptConfigs.get(key);
-        if (!runtimeConfig) continue;
-
-        if (Object.prototype.hasOwnProperty.call(flagDefs, String(key))) {
-          continue;
-        }
-
-        if (String(key) === "yes" || String(key) === "no-color") {
-          continue;
-        }
-
-        const option = createPromptBypassOption(String(key), runtimeConfig);
-        if (!option) continue;
-        if (runtimeConfig.type === "password") {
-          option.hideHelp();
-        }
-        if (
-          (runtimeConfig.type === "select" || runtimeConfig.type === "multiselect") &&
-          runtimeConfig.choices
-        ) {
-          option.choices(runtimeConfig.choices.map((choice) => String(choice)));
-        }
-        program.addOption(option);
-      }
-
-      program.option("-y, --yes", "Answer yes to all confirmation prompts");
-      program.option("--no-color", "Disable ANSI colors");
-      registeredCommandNames.push(...program.commands.map((command) => command.name()));
-
-      program.action(async () => {
-        const opts = program.opts() as Record<string, unknown>;
-
-        autoYes = opts.yes === true;
-
-        for (const key of Object.keys(flagDefs) as Array<keyof TFlags>) {
-          const runtimeConfig = runtimeFlagConfigs.get(key);
-          if (!runtimeConfig) continue;
-
-          const name = String(key);
-          let resolved: unknown;
-
-          try {
-            resolved = resolveFlagValue(
-              name,
-              runtimeConfig,
-              opts[name],
-              program.getOptionValueSource(name),
-            );
-          } catch (error) {
-            if (error instanceof Error) {
-              exitWithMessage(error.message, { code: "usage" });
-            }
-            throw error;
-          }
-
-          (flags as Record<string, unknown>)[name] = resolved;
-        }
-
-        promptBypassValues.clear();
-
-        for (const key of Object.keys(promptDefs) as Array<keyof TPrompts>) {
-          const name = String(key);
-          const source = program.getOptionValueSource(name);
-          if (source !== "cli") continue;
-
-          const runtimeConfig = runtimePromptConfigs.get(key);
-          if (!runtimeConfig) continue;
-
-          let bypassRaw: unknown;
-
-          try {
-            bypassRaw = Object.prototype.hasOwnProperty.call(flagDefs, name)
-              ? (flags as Record<string, unknown>)[name]
-              : coercePromptBypassValue(name, runtimeConfig, opts[name]);
-          } catch (error) {
-            if (error instanceof Error) {
-              exitWithMessage(error.message, { code: "usage" });
-            }
-            throw error;
-          }
-
-          const resolved = await resolvePromptValue(runtimeConfig, bypassRaw);
-          if (resolved.ok === false) {
-            exitWithMessage(resolved.error, { code: "usage" });
-          }
-
-          const finalValue = (resolved as { ok: true; value: unknown })
-            .value as StorageShape<TPrompts>[typeof key];
-          storage.set(key, finalValue);
-          promptBypassValues.set(key, finalValue);
-        }
-
-        if (fn) {
-          await fn();
-          return;
-        }
-
-        throw new Error("run() requires a handler in single-command mode.");
-      });
 
       try {
         await program.parseAsync(process.argv);
+
+        if (commandHandlers.size > 0 && !handled) {
+          program.outputHelp();
+        }
       } catch (error) {
         if (error instanceof CommanderError) {
           if (error.exitCode === 0) {
@@ -747,7 +1009,9 @@ export function createCLI<
               unknownCommand === null
                 ? normalizeCommanderMessage(error.message)
                 : `Unknown command: "${unknownCommand}"`,
-              hint ? { hint: `Did you mean: ${hint}?`, code: "usage" } : { code: "usage" },
+              hint
+                ? { hint: `Did you mean: ${hint}?`, code: "usage" }
+                : { code: "usage" },
             );
           }
 
@@ -758,6 +1022,81 @@ export function createCLI<
 
         throw error;
       }
+    },
+    test: async (
+      options: TestOptions<TPrompts, TFlags> = {},
+    ): Promise<TestResult<TPrompts, TFlags>> => {
+      const originalArgv = process.argv;
+      const stdoutDescriptor = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
+      const stderrDescriptor = Object.getOwnPropertyDescriptor(process.stderr, "isTTY");
+      const stdoutWrite = process.stdout.write.bind(process.stdout);
+      const stderrWrite = process.stderr.write.bind(process.stderr);
+      const originalExit = process.exit;
+      let output = "";
+      let exitCode = 0;
+      const EXIT_SENTINEL = "__OSCLI_TEST_EXIT__";
+
+      process.argv = ["node", "oscli", ...(options.argv ?? [])];
+      Object.defineProperty(process.stdout, "isTTY", {
+        configurable: true,
+        value: false,
+      });
+      Object.defineProperty(process.stderr, "isTTY", {
+        configurable: true,
+        value: false,
+      });
+
+      process.stdout.write = ((chunk: string | Uint8Array) => {
+        output += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+        return true;
+      }) as typeof process.stdout.write;
+      process.stderr.write = ((chunk: string | Uint8Array) => {
+        output += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+        return true;
+      }) as typeof process.stderr.write;
+      process.exit = ((code?: string | number | null) => {
+        exitCode = typeof code === "number" ? code : Number(code ?? 0) || 0;
+        throw new Error(EXIT_SENTINEL) as never;
+      }) as typeof process.exit;
+
+      testInputs.clear();
+      for (const [key, value] of Object.entries(options.inputs ?? {})) {
+        testInputs.set(key as keyof TPrompts, value);
+      }
+      testFlagOverrides = options.flags ?? null;
+      exitInterceptor = (code: number) => {
+        exitCode = code;
+        throw new Error(EXIT_SENTINEL);
+      };
+
+      try {
+        await cli.run();
+      } catch (error) {
+        if (!(error instanceof Error) || error.message !== EXIT_SENTINEL) {
+          throw error;
+        }
+      } finally {
+        testInputs.clear();
+        testFlagOverrides = null;
+        exitInterceptor = null;
+        process.argv = originalArgv;
+        process.stdout.write = stdoutWrite as typeof process.stdout.write;
+        process.stderr.write = stderrWrite as typeof process.stderr.write;
+        process.exit = originalExit;
+        if (stdoutDescriptor) {
+          Object.defineProperty(process.stdout, "isTTY", stdoutDescriptor);
+        }
+        if (stderrDescriptor) {
+          Object.defineProperty(process.stderr, "isTTY", stderrDescriptor);
+        }
+      }
+
+      return {
+        storage: { ...storage.data },
+        flags: { ...(flags as Record<string, unknown>) } as FlagsShape<TFlags>,
+        output,
+        exitCode,
+      };
     },
     intro: (message: string) => {
       setRailEnabled(false);
@@ -780,11 +1119,22 @@ export function createCLI<
       }
     },
     log,
+    style: (): StyleBuilder => createStyleBuilder(cli._noColor),
+    link: (label: string, url: string) => {
+      _writeInlineLine(
+        `${theme.layout.indent}${renderLink(label, url, cli._noColor, cli._isTTY)}`,
+      );
+    },
+    divider: (label?: string) => {
+      writeSectionLine(renderDivider(label, cli._noColor, cli._isTTY));
+    },
     table: (
       headers: string[],
       rows: Array<Array<string | number | boolean | null | undefined>>,
-    ) => {
-      return renderTable(headers, rows);
+    ) => renderTable(headers, rows),
+    tree: (data: TreeNode) => renderTree(data),
+    diff: (before: string, after: string) => {
+      writeSectionLines(renderDiff(before, after));
     },
     box: (options: { title?: string; content: string }) => {
       writeSectionLines(renderBox(options));
@@ -833,12 +1183,11 @@ export function createCLI<
 
       return renderConfirmPrompt({
         label,
-        defaultValue,
       });
     },
     success: (message: string) => {
       _writeLine(
-        `${theme.color.success(theme.symbols.success)} ${theme.color.success(message)}`,
+        `${theme.layout.indent}${theme.color.success(theme.symbols.success)} ${theme.color.success(message)}`,
       );
     },
     exit: (message: string, options?: ExitOptions): never => {
@@ -855,10 +1204,25 @@ export function createCLI<
 
       const label = runtimeConfig.label ?? String(key);
 
+      if (testInputs.has(key)) {
+        const inputValue = testInputs.get(key);
+        const resolved = await resolvePromptValue(runtimeConfig, inputValue);
+        if (resolved.ok === false) {
+          return exitWithMessage(resolved.error, { code: "usage" });
+        }
+
+        const finalValue = (resolved as { ok: true; value: unknown }).value as StorageShape<TPrompts>[typeof key];
+        storage.set(key, finalValue);
+        writePromptSummary(
+          label,
+          formatPromptSummaryValue(runtimeConfig, finalValue),
+          summaryWidth,
+        );
+        return finalValue;
+      }
+
       if (promptBypassValues.has(key)) {
-        const bypassValue = promptBypassValues.get(
-          key,
-        ) as StorageShape<TPrompts>[typeof key];
+        const bypassValue = promptBypassValues.get(key) as StorageShape<TPrompts>[typeof key];
         promptBypassValues.delete(key);
         storage.set(key, bypassValue);
         writePromptSummary(
@@ -887,8 +1251,7 @@ export function createCLI<
             return exitWithMessage(resolved.error, { code: "usage" });
           }
 
-          const finalValue = (resolved as { ok: true; value: unknown })
-            .value as StorageShape<TPrompts>[typeof key];
+          const finalValue = (resolved as { ok: true; value: unknown }).value as StorageShape<TPrompts>[typeof key];
           storage.set(key, finalValue);
           writePromptSummary(
             label,
@@ -904,8 +1267,7 @@ export function createCLI<
             return exitWithMessage(resolved.error, { code: "usage" });
           }
 
-          const finalValue = (resolved as { ok: true; value: unknown })
-            .value as StorageShape<TPrompts>[typeof key];
+          const finalValue = (resolved as { ok: true; value: unknown }).value as StorageShape<TPrompts>[typeof key];
           storage.set(key, finalValue);
           return finalValue;
         }

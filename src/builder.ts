@@ -1,3 +1,5 @@
+import type { ColorName } from "./theme";
+
 export type Validator<T> = (value: T) => true | string | Promise<true | string>;
 export type FlagType = "string" | "boolean" | "number";
 
@@ -13,6 +15,7 @@ export class PromptBuilder<T> {
   private _validate?: Validator<T>;
   private _transform?: (value: unknown) => unknown;
   private _theme?: string;
+  private _promptColor?: ColorName;
 
   label(value: string): this {
     this._label = value;
@@ -55,6 +58,11 @@ export class PromptBuilder<T> {
     return this;
   }
 
+  color(value: ColorName): this {
+    this._promptColor = value;
+    return this;
+  }
+
   config() {
     return {
       label: this._label,
@@ -66,6 +74,7 @@ export class PromptBuilder<T> {
       validate: this._validate,
       transform: this._transform,
       theme: this._theme,
+      promptColor: this._promptColor,
     };
   }
 }
@@ -152,6 +161,30 @@ export class SelectBuilder<T extends string> extends PromptBuilder<T> {
   }
 }
 
+export class SearchBuilder<T extends string> extends PromptBuilder<T> {
+  private readonly _choices: readonly T[];
+  private readonly _rules = new Map<T, string>();
+
+  constructor(options: { choices: readonly T[] }) {
+    super();
+    this._choices = options.choices;
+  }
+
+  rule(choice: T, description: string): this {
+    this._rules.set(choice, description);
+    return this;
+  }
+
+  config() {
+    return {
+      type: "search" as const,
+      ...super.config(),
+      choices: this._choices,
+      rules: Object.fromEntries(this._rules) as Partial<Record<T, string>>,
+    };
+  }
+}
+
 export class MultiselectBuilder<T extends string> extends PromptBuilder<T[]> {
   private readonly _choices: readonly T[];
   private _min?: number;
@@ -179,6 +212,47 @@ export class MultiselectBuilder<T extends string> extends PromptBuilder<T[]> {
       choices: this._choices,
       min: this._min,
       max: this._max,
+    };
+  }
+}
+
+export class ListBuilder extends PromptBuilder<string[]> {
+  private _min?: number;
+  private _max?: number;
+
+  min(value: number): this {
+    this._min = value;
+    return this;
+  }
+
+  max(value: number): this {
+    this._max = value;
+    return this;
+  }
+
+  config() {
+    return {
+      type: "list" as const,
+      ...super.config(),
+      min: this._min,
+      max: this._max,
+    };
+  }
+}
+
+export class DateBuilder extends PromptBuilder<Date> {
+  private _format = "YYYY-MM-DD";
+
+  format(value: string): this {
+    this._format = value;
+    return this;
+  }
+
+  config() {
+    return {
+      type: "date" as const,
+      ...super.config(),
+      format: this._format,
     };
   }
 }
@@ -254,8 +328,12 @@ export function createBuilder() {
     password: () => new PasswordBuilder(),
     select: <T extends string>(options: { choices: readonly T[] }) =>
       new SelectBuilder(options),
+    search: <T extends string>(options: { choices: readonly T[] }) =>
+      new SearchBuilder(options),
     multiselect: <T extends string>(options: { choices: readonly T[] }) =>
       new MultiselectBuilder(options),
+    list: () => new ListBuilder(),
+    date: () => new DateBuilder(),
     confirm: () => new ConfirmBuilder(),
   };
 }

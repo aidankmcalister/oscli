@@ -70,6 +70,41 @@ describe("createBuilder", () => {
     });
   });
 
+  it("builds search list and date configs with prompt colors", () => {
+    const b = createBuilder();
+
+    const searchConfig = b
+      .search({ choices: ["react", "vue"] as const })
+      .label("Framework")
+      .color("cyan")
+      .rule("react", "component model")
+      .config();
+
+    const listConfig = b.list().label("Tags").min(1).max(5).config();
+    const dateConfig = b.date().label("Deadline").format("YYYY-MM-DD").config();
+
+    expect(searchConfig).toMatchObject({
+      type: "search",
+      label: "Framework",
+      promptColor: "cyan",
+      choices: ["react", "vue"],
+      rules: { react: "component model" },
+    });
+
+    expect(listConfig).toMatchObject({
+      type: "list",
+      label: "Tags",
+      min: 1,
+      max: 5,
+    });
+
+    expect(dateConfig).toMatchObject({
+      type: "date",
+      label: "Deadline",
+      format: "YYYY-MM-DD",
+    });
+  });
+
   it("builds flag configs with choices and defaults", () => {
     const b = createBuilder();
 

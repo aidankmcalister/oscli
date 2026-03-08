@@ -36,7 +36,7 @@ export type ThemeSymbols = {
   [K in keyof typeof defaultSymbols]: string;
 };
 
-type ThemeColorFns = {
+export type ThemeColorFns = {
   cursor: (s: string) => string;
   label: (s: string) => string;
   muted: (s: string) => string;
@@ -78,7 +78,7 @@ export interface ThemeOverride {
   spacing?: 0 | 1 | 2;
 }
 
-const colorFormatters: Record<ColorName, (value: string) => string> = {
+export const colorFormatters: Record<ColorName, (value: string) => string> = {
   black: pc.black,
   red: pc.red,
   green: pc.green,
@@ -96,6 +96,10 @@ function paint(value: string, formatter: (input: string) => string): string {
 
 function byColorName(name: ColorName): (value: string) => string {
   return (value: string) => paint(value, colorFormatters[name]);
+}
+
+export function themedColor(name: ColorName): (value: string) => string {
+  return byColorName(name);
 }
 
 function createDefaultTheme(): ResolvedTheme {

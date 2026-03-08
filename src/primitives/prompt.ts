@@ -1,6 +1,11 @@
 import * as readline from "node:readline";
 import { writeLine, writeLines, writeSectionLine } from "../output";
-import { activeTheme as theme, padVisibleEnd } from "../theme";
+import {
+  activeTheme as theme,
+  padVisibleEnd,
+  themedColor,
+  type ColorName,
+} from "../theme";
 
 export type PromptSubmitResult<T> =
   | { ok: true; value: T; summaryValue?: string }
@@ -9,6 +14,7 @@ export type PromptSubmitResult<T> =
 type SharedPromptOptions<TInput, TValue> = {
   label: string;
   describe?: string;
+  promptColor?: ColorName;
   summaryWidth?: number;
   resolve?: (
     value: TInput,
@@ -48,12 +54,37 @@ export type SelectPromptOptions<T extends string, TValue = T> =
     rules?: Partial<Record<T, string>>;
   };
 
+export type SearchPromptOptions<T extends string, TValue = T> =
+  SharedPromptOptions<T, TValue> & {
+    choices: readonly T[];
+    rules?: Partial<Record<T, string>>;
+    placeholder?: string;
+  };
+
 export type MultiselectPromptOptions<T extends string, TValue = T[]> =
   SharedPromptOptions<T[], TValue> & {
     choices: readonly T[];
     min?: number;
     max?: number;
   };
+
+export type ListPromptOptions<TValue = string[]> = SharedPromptOptions<
+  string[],
+  TValue
+> & {
+  min?: number;
+  max?: number;
+  placeholder?: string;
+};
+
+export type DatePromptOptions<TValue = Date> = SharedPromptOptions<
+  Date,
+  TValue
+> & {
+  format?: string;
+  placeholder?: string;
+  defaultValue?: Date;
+};
 
 export type ConfirmPromptOptions<TValue = boolean> = SharedPromptOptions<
   boolean,
@@ -89,7 +120,10 @@ export function moveCursorUp(lines: number): void {
 }
 
 function clearRenderedBlock(lines: number): void {
-  if (!process.stdout.isTTY || lines === 0) return;
+  if (!process.stdout.isTTY || lines === 0) {
+    return;
+  }
+
   moveCursorUp(lines);
   readline.cursorTo(process.stdout, 0);
   readline.clearScreenDown(process.stdout);
@@ -103,6 +137,10 @@ function renderBlock(lines: string[], renderedLines: number): number {
 
 function defaultResolve<T>(value: T): PromptSubmitResult<T> {
   return { ok: true, value };
+}
+
+function promptLabel(label: string, promptColor?: ColorName): string {
+  return promptColor ? themedColor(promptColor)(label) : theme.color.label(label);
 }
 
 function getSummaryWidth(label: string, summaryWidth?: number): number {
@@ -135,8 +173,14 @@ function buildEmptyPreview(
   placeholder?: string,
   defaultValue?: string,
 ): string | undefined {
-  if (placeholder) return placeholder;
-  if (defaultValue !== undefined) return `(${defaultValue})`;
+  if (placeholder) {
+    return placeholder;
+  }
+
+  if (defaultValue !== undefined) {
+    return `(${defaultValue})`;
+  }
+
   return undefined;
 }
 
@@ -152,6 +196,7 @@ async function renderTextLikePrompt<TValue>(
   const {
     label,
     describe,
+    promptColor,
     summaryWidth,
     placeholder,
     defaultValue,
@@ -168,7 +213,7 @@ async function renderTextLikePrompt<TValue>(
   let renderedLines = 0;
 
   const render = () => {
-    const lines = [`${INDENT}${theme.color.label(label)}`];
+    const lines = [`${INDENT}${promptLabel(label, promptColor)}`];
 
     if (describe) {
       lines.push(`${INDENT}${theme.color.hint(describe)}`);
@@ -333,7 +378,9 @@ export async function renderNumberPrompt<TValue = number>(
       }
 
       const result = await resolve(parsed);
-      if (!result.ok) return result;
+      if (!result.ok) {
+        return result;
+      }
 
       return {
         ok: true,
@@ -344,12 +391,28 @@ export async function renderNumberPrompt<TValue = number>(
   });
 }
 
+function renderChoiceRow(
+  label: string,
+  active: boolean,
+  selected: boolean,
+  rule?: string,
+): string {
+  const cursor = active ? `${theme.color.cursor(theme.symbols.cursor)} ` : "  ";
+  const icon = selected
+    ? theme.color.active(theme.symbols.radio_on)
+    : theme.color.muted(theme.symbols.radio_off);
+  const text = active ? theme.color.value(label) : theme.color.muted(label);
+  const suffix = rule ? `  ${theme.color.dim(rule)}` : "";
+  return `${INDENT}${cursor}${icon} ${text}${suffix}`;
+}
+
 export function renderSelectPrompt<T extends string, TValue = T>(
   options: SelectPromptOptions<T, TValue>,
 ): Promise<TValue> {
   const {
     label,
     describe,
+    promptColor,
     choices,
     rules,
     summaryWidth,
@@ -364,28 +427,21 @@ export function renderSelectPrompt<T extends string, TValue = T>(
   let renderedLines = 0;
 
   const render = () => {
-    const lines = [`${INDENT}${theme.color.label(label)}`];
+    const lines = [`${INDENT}${promptLabel(label, promptColor)}`];
 
     if (describe) {
       lines.push(`${INDENT}${theme.color.hint(describe)}`);
     }
 
     lines.push(
-      ...choices.map((choice, index) => {
-        const active = index === selectedIndex;
-        const cursor = active ? `${theme.color.cursor(theme.symbols.cursor)} ` : "  ";
-        const icon = active
-          ? theme.color.active(theme.symbols.radio_on)
-          : theme.color.muted(theme.symbols.radio_off);
-        const text = active
-          ? theme.color.value(choice.padEnd(choiceWidth, " "))
-          : theme.color.muted(choice.padEnd(choiceWidth, " "));
-        const rule = rules?.[choice];
-
-        return `${INDENT}${cursor}${icon} ${text}${
-          rule ? `  ${theme.color.dim(rule)}` : ""
-        }`;
-      }),
+      ...choices.map((choice, index) =>
+        renderChoiceRow(
+          choice.padEnd(choiceWidth, " "),
+          index === selectedIndex,
+          index === selectedIndex,
+          rules?.[choice],
+        ),
+      ),
     );
 
     lines.push(`${INDENT}${theme.color.dim("↑↓ navigate   enter select")}`);
@@ -444,12 +500,175 @@ export function renderSelectPrompt<T extends string, TValue = T>(
 
         cleanup();
         clearRenderedBlock(renderedLines);
-        writePromptSummary(
-          label,
-          result.summaryValue ?? selected,
-          summaryWidth,
-        );
+        writePromptSummary(label, result.summaryValue ?? selected, summaryWidth);
         resolvePrompt(result.value);
+      }
+    };
+
+    enableRawMode();
+    process.stdin.on("data", onData);
+    render();
+  });
+}
+
+export function renderSearchPrompt<T extends string, TValue = T>(
+  options: SearchPromptOptions<T, TValue>,
+): Promise<TValue> {
+  const {
+    label,
+    describe,
+    promptColor,
+    choices,
+    rules,
+    placeholder = "Type to filter",
+    summaryWidth,
+    resolve = defaultResolve<T | TValue> as (
+      value: T,
+    ) => PromptSubmitResult<TValue> | Promise<PromptSubmitResult<TValue>>,
+  } = options;
+
+  let query = "";
+  let selectedIndex = 0;
+  let errorMessage = "";
+  let renderedLines = 0;
+
+  const filterChoices = () => {
+    const normalized = query.trim().toLowerCase();
+    const filtered = normalized.length === 0
+      ? choices
+      : choices.filter((choice) => choice.toLowerCase().includes(normalized));
+
+    if (selectedIndex >= filtered.length) {
+      selectedIndex = Math.max(0, filtered.length - 1);
+    }
+
+    return filtered;
+  };
+
+  const render = () => {
+    const filteredChoices = filterChoices();
+    const choiceWidth = Math.max(
+      0,
+      ...filteredChoices.map((choice) => choice.length),
+      ...choices.map((choice) => choice.length),
+    );
+    const cursor = theme.color.cursor(theme.symbols.cursor);
+    const caret = theme.color.cursor("_");
+    const input = query.length > 0
+      ? `${theme.color.value(query)}${caret}`
+      : `${theme.color.muted(placeholder)}${caret}`;
+
+    const lines = [
+      `${INDENT}${promptLabel(label, promptColor)}`,
+    ];
+
+    if (describe) {
+      lines.push(`${INDENT}${theme.color.hint(describe)}`);
+    }
+
+    lines.push(`${INDENT}${cursor} ${input}`);
+
+    if (filteredChoices.length === 0) {
+      lines.push(`${INDENT}${theme.color.muted("No matches")}`);
+    } else {
+      lines.push(
+        ...filteredChoices.map((choice, index) =>
+          renderChoiceRow(
+            choice.padEnd(choiceWidth, " "),
+            index === selectedIndex,
+            index === selectedIndex,
+            rules?.[choice],
+          ),
+        ),
+      );
+    }
+
+    lines.push(
+      `${INDENT}${theme.color.dim("type to filter   ↑↓ navigate   enter select")}`,
+    );
+
+    if (errorMessage) {
+      lines.push(
+        `${INDENT}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
+      );
+    }
+
+    renderedLines = renderBlock(lines, renderedLines);
+  };
+
+  return new Promise((resolvePrompt, reject) => {
+    const cleanup = () => {
+      process.stdin.off("data", onData);
+      disableRawMode();
+    };
+
+    const onData = async (chunk: Buffer | string) => {
+      const key = chunk.toString("utf8");
+      const filteredChoices = filterChoices();
+
+      if (key === "\u0003") {
+        cleanup();
+        clearRenderedBlock(renderedLines);
+        writeLine("");
+        reject(new Error("Prompt cancelled by user."));
+        return;
+      }
+
+      if (key === "\u001b[A") {
+        if (filteredChoices.length > 0) {
+          selectedIndex =
+            selectedIndex === 0 ? filteredChoices.length - 1 : selectedIndex - 1;
+        }
+        errorMessage = "";
+        render();
+        return;
+      }
+
+      if (key === "\u001b[B") {
+        if (filteredChoices.length > 0) {
+          selectedIndex =
+            selectedIndex === filteredChoices.length - 1 ? 0 : selectedIndex + 1;
+        }
+        errorMessage = "";
+        render();
+        return;
+      }
+
+      if (key === "\u007f" || key === "\b" || key === "\x08") {
+        query = query.slice(0, -1);
+        errorMessage = "";
+        render();
+        return;
+      }
+
+      if (key === "\r" || key === "\n") {
+        if (filteredChoices.length === 0) {
+          errorMessage = "No matches found.";
+          render();
+          return;
+        }
+
+        const selected = filteredChoices[selectedIndex] as T;
+        const result = await resolve(selected);
+
+        if (result.ok === false) {
+          errorMessage = result.error;
+          render();
+          return;
+        }
+
+        cleanup();
+        clearRenderedBlock(renderedLines);
+        writePromptSummary(label, result.summaryValue ?? selected, summaryWidth);
+        resolvePrompt(result.value);
+        return;
+      }
+
+      if (key >= " " && key <= "~") {
+        query += key;
+        errorMessage = "";
+        selectedIndex = 0;
+        render();
       }
     };
 
@@ -465,6 +684,7 @@ export function renderMultiselectPrompt<T extends string, TValue = T[]>(
   const {
     label,
     describe,
+    promptColor,
     choices,
     min,
     max,
@@ -490,8 +710,8 @@ export function renderMultiselectPrompt<T extends string, TValue = T[]>(
 
   const render = () => {
     const title = rangeHint
-      ? `${theme.color.label(label)}  ${theme.color.muted(`(${rangeHint})`)}`
-      : theme.color.label(label);
+      ? `${promptLabel(label, promptColor)}  ${theme.color.muted(`(${rangeHint})`)}`
+      : promptLabel(label, promptColor);
 
     const lines = [`${INDENT}${title}`];
 
@@ -612,10 +832,253 @@ export function renderMultiselectPrompt<T extends string, TValue = T[]>(
   });
 }
 
+export function renderListPrompt<TValue = string[]>(
+  options: ListPromptOptions<TValue>,
+): Promise<TValue> {
+  const {
+    label,
+    describe,
+    promptColor,
+    min,
+    max,
+    placeholder = "Add an item",
+    summaryWidth,
+    resolve = defaultResolve<string[] | TValue> as (
+      value: string[],
+    ) => PromptSubmitResult<TValue> | Promise<PromptSubmitResult<TValue>>,
+  } = options;
+
+  const items: string[] = [];
+  let current = "";
+  let errorMessage = "";
+  let renderedLines = 0;
+
+  const countHint = () => {
+    if (max !== undefined) {
+      return `${items.length} / ${max}`;
+    }
+
+    return String(items.length);
+  };
+
+  const render = () => {
+    const cursor = theme.color.cursor(theme.symbols.cursor);
+    const caret = theme.color.cursor("_");
+    const input = current.length > 0
+      ? `${theme.color.value(current)}${caret}`
+      : `${theme.color.muted(placeholder)}${caret}`;
+    const title = `${promptLabel(label, promptColor)}  ${theme.color.muted(`(${countHint()})`)}`;
+    const lines = [`${INDENT}${title}`];
+
+    if (describe) {
+      lines.push(`${INDENT}${theme.color.hint(describe)}`);
+    }
+
+    lines.push(`${INDENT}${cursor} ${input}`);
+
+    if (items.length > 0) {
+      lines.push(
+        ...items.map((item) => `${INDENT}${theme.color.dim("•")} ${theme.color.value(item)}`),
+      );
+    }
+
+    if (errorMessage) {
+      lines.push(
+        `${INDENT}${theme.color.error(`${theme.symbols.error} ${errorMessage}`)}`,
+      );
+    }
+
+    renderedLines = renderBlock(lines, renderedLines);
+  };
+
+  return new Promise((resolvePrompt, reject) => {
+    const cleanup = () => {
+      process.stdin.off("data", onData);
+      disableRawMode();
+    };
+
+    const onData = async (chunk: Buffer | string) => {
+      const key = chunk.toString("utf8");
+
+      if (key === "\u0003") {
+        cleanup();
+        clearRenderedBlock(renderedLines);
+        writeLine("");
+        reject(new Error("Prompt cancelled by user."));
+        return;
+      }
+
+      if (key === "\u007f" || key === "\b" || key === "\x08") {
+        current = current.slice(0, -1);
+        errorMessage = "";
+        render();
+        return;
+      }
+
+      if (key === "\r" || key === "\n") {
+        const next = current.trim();
+
+        if (next.length === 0) {
+          if (min !== undefined && items.length < min) {
+            errorMessage = `Add at least ${min} item${min === 1 ? "" : "s"}.`;
+            render();
+            return;
+          }
+
+          const result = await resolve([...items]);
+          if (result.ok === false) {
+            errorMessage = result.error;
+            render();
+            return;
+          }
+
+          cleanup();
+          clearRenderedBlock(renderedLines);
+          writePromptSummary(
+            label,
+            result.summaryValue ?? items.join(", "),
+            summaryWidth,
+          );
+          resolvePrompt(result.value);
+          return;
+        }
+
+        if (max !== undefined && items.length >= max) {
+          errorMessage = `Add at most ${max} items.`;
+          render();
+          return;
+        }
+
+        items.push(next);
+        current = "";
+        errorMessage = "";
+        clearRenderedBlock(renderedLines);
+        renderedLines = 0;
+        writePromptSummary(label, next, summaryWidth);
+        render();
+        return;
+      }
+
+      if (key >= " " && key <= "~") {
+        current += key;
+        errorMessage = "";
+        render();
+      }
+    };
+
+    enableRawMode();
+    process.stdin.on("data", onData);
+    render();
+  });
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function parseDateByFormat(input: string, format: string): Date | null {
+  const tokens: string[] = [];
+  const pattern = `^${escapeRegExp(format).replace(/YYYY|MM|DD/g, (token) => {
+    tokens.push(token);
+    return token === "YYYY" ? "(\\d{4})" : "(\\d{2})";
+  })}$`;
+  const match = input.match(new RegExp(pattern));
+
+  if (!match) {
+    return null;
+  }
+
+  let year = 0;
+  let month = 1;
+  let day = 1;
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const value = Number(match[index + 1]);
+    if (tokens[index] === "YYYY") {
+      year = value;
+    } else if (tokens[index] === "MM") {
+      month = value;
+    } else if (tokens[index] === "DD") {
+      day = value;
+    }
+  }
+
+  const parsed = new Date(year, month - 1, day);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function formatDateValue(date: Date, format: string): string {
+  const year = String(date.getFullYear()).padStart(4, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return format
+    .replace(/YYYY/g, year)
+    .replace(/MM/g, month)
+    .replace(/DD/g, day);
+}
+
+export async function renderDatePrompt<TValue = Date>(
+  options: DatePromptOptions<TValue>,
+): Promise<TValue> {
+  const {
+    format = "YYYY-MM-DD",
+    placeholder,
+    defaultValue,
+    resolve,
+    ...shared
+  } = options;
+
+  return renderTextLikePrompt({
+    ...shared,
+    placeholder: placeholder ?? format,
+    defaultValue:
+      defaultValue === undefined ? undefined : formatDateValue(defaultValue, format),
+    resolve: async (rawValue) => {
+      const parsed = parseDateByFormat(rawValue.trim(), format);
+
+      if (!parsed) {
+        return {
+          ok: false,
+          error: `Enter a valid date in ${format} format.`,
+        };
+      }
+
+      if (!resolve) {
+        return {
+          ok: true,
+          value: parsed as TValue,
+          summaryValue: formatDateValue(parsed, format),
+        };
+      }
+
+      const result = await resolve(parsed);
+      if (!result.ok) {
+        return result;
+      }
+
+      return {
+        ok: true,
+        value: result.value,
+        summaryValue: result.summaryValue ?? formatDateValue(parsed, format),
+      };
+    },
+  });
+}
+
 export async function renderConfirmPrompt<TValue = boolean>(
   options: ConfirmPromptOptions<TValue>,
 ): Promise<TValue> {
-  const { label, describe, defaultValue, resolve, summaryWidth } = options;
+  const { label, describe, promptColor, defaultValue, resolve, summaryWidth } = options;
 
   const hint =
     defaultValue === true ? "(Y/n)" : defaultValue === false ? "(y/N)" : "(y/n)";
@@ -626,13 +1089,19 @@ export async function renderConfirmPrompt<TValue = boolean>(
   return renderTextLikePrompt({
     label,
     describe,
+    promptColor,
     summaryWidth,
     placeholder: hint,
     defaultValue: fallbackValue,
     resolve: async (input) => {
       const normalized = input.trim().toLowerCase();
 
-      if (normalized !== "y" && normalized !== "yes" && normalized !== "n" && normalized !== "no") {
+      if (
+        normalized !== "y" &&
+        normalized !== "yes" &&
+        normalized !== "n" &&
+        normalized !== "no"
+      ) {
         return {
           ok: false,
           error: "Please enter y or n.",
@@ -650,7 +1119,9 @@ export async function renderConfirmPrompt<TValue = boolean>(
       }
 
       const result = await resolve(value);
-      if (!result.ok) return result;
+      if (!result.ok) {
+        return result;
+      }
 
       return {
         ok: true,
