@@ -18,7 +18,7 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://github.com/aidankmcalister/oscli"),
-  title: "oscli docs",
+  title: "oscli",
   description: "Documentation for oscli, a Bun-first TypeScript CLI framework.",
 };
 
