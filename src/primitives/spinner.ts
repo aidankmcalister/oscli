@@ -1,34 +1,91 @@
-export async function spin<T>(label: string, fn: () => Promise<T>): Promise<T> {
-  const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+import {
+  SPINNER_FRAMES,
+  createProgressGroup,
+  renderProgressLine,
+  writeProgressLine,
+  type ProgressGroupContext,
+  type ProgressStyle,
+} from "./progress";
 
-  if (!process.stdout.isTTY) {
-    process.stdout.write(`... ${label}\n`);
-    try {
-      const result = await fn();
-      process.stdout.write(`✓ ${label}\n`);
-      return result;
-    } catch (error) {
-      process.stdout.write(`✗ ${label}\n`);
-      throw error;
-    }
+export type SpinnerOptions = {
+  style?: ProgressStyle;
+  width?: number;
+  context?: ProgressGroupContext;
+  percent?: number;
+};
+
+function finalizeSpinnerLine(line: string): void {
+  writeProgressLine(line);
+  if (process.stdout.isTTY) {
+    process.stdout.write("\n");
   }
+}
 
-  let index = 0;
-  process.stdout.write(`${frames[index]} ${label}`);
+export async function spin<T>(
+  label: string,
+  fn: () => Promise<T>,
+  options: SpinnerOptions = {},
+): Promise<T> {
+  const style = options.style === "steps" ? "hash" : options.style;
+
+  const context =
+    options.context ??
+    createProgressGroup([{ label }], {
+      style,
+      width: options.width,
+    });
+
+  const startedAt = Date.now();
+  const runningPercent = options.percent ?? 0;
+  let frameIndex = 0;
+
+  const renderRunning = () => {
+    writeProgressLine(
+      renderProgressLine({
+        icon: SPINNER_FRAMES[frameIndex],
+        label,
+        elapsedMs: Date.now() - startedAt,
+        percent: runningPercent,
+        context,
+      }),
+    );
+  };
+
+  renderRunning();
 
   const timer = setInterval(() => {
-    index = (index + 1) % frames.length;
-    process.stdout.write(`\r${frames[index]} ${label}`);
+    frameIndex = (frameIndex + 1) % SPINNER_FRAMES.length;
+    renderRunning();
   }, 80);
 
   try {
     const result = await fn();
     clearInterval(timer);
-    process.stdout.write(`\r✓ ${label}\n`);
+
+    finalizeSpinnerLine(
+      renderProgressLine({
+        icon: "✓",
+        label,
+        elapsedMs: Date.now() - startedAt,
+        percent: 100,
+        context,
+      }),
+    );
+
     return result;
   } catch (error) {
     clearInterval(timer);
-    process.stdout.write(`\r✗ ${label}\n`);
+
+    finalizeSpinnerLine(
+      renderProgressLine({
+        icon: "✗",
+        label,
+        elapsedMs: Date.now() - startedAt,
+        percent: runningPercent,
+        context,
+      }),
+    );
+
     throw error;
   }
 }
