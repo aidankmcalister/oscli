@@ -4,7 +4,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run examples/kitchen-sink.ts",
+    "dev": "bun run examples/test-create-builder.ts",
+    "dev:builder": "bun run examples/test-create-builder.ts",
+    "dev:storage": "bun run examples/test-create-storage.ts",
     "build": "bun build src/index.ts --outdir dist --target node",
     "typecheck": "bun tsc --noEmit"
   },
