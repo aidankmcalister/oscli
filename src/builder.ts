@@ -64,11 +64,32 @@ export class PromptBuilder<T> {
   }
 }
 
-export class TextBuilder extends PromptBuilder<string> {}
+export class TextBuilder extends PromptBuilder<string> {
+  config() {
+    return {
+      type: "text" as const,
+      ...super.config(),
+    };
+  }
+}
 
-export class PasswordBuilder extends PromptBuilder<string> {}
+export class PasswordBuilder extends PromptBuilder<string> {
+  config() {
+    return {
+      type: "password" as const,
+      ...super.config(),
+    };
+  }
+}
 
-export class ConfirmBuilder extends PromptBuilder<boolean> {}
+export class ConfirmBuilder extends PromptBuilder<boolean> {
+  config() {
+    return {
+      type: "confirm" as const,
+      ...super.config(),
+    };
+  }
+}
 
 export class NumberBuilder extends PromptBuilder<number> {
   private _min?: number;
@@ -92,6 +113,7 @@ export class NumberBuilder extends PromptBuilder<number> {
 
   config() {
     return {
+      type: "number" as const,
       ...super.config(),
       min: this._min,
       max: this._max,
@@ -116,9 +138,10 @@ export class SelectBuilder<T extends string> extends PromptBuilder<T> {
 
   config() {
     return {
+      type: "select" as const,
       ...super.config(),
       choices: this._choices,
-      rules: Object.fromEntries(this._rules),
+      rules: Object.fromEntries(this._rules) as Partial<Record<T, string>>,
     };
   }
 }
@@ -145,6 +168,7 @@ export class MultiselectBuilder<T extends string> extends PromptBuilder<T[]> {
 
   config() {
     return {
+      type: "multiselect" as const,
       ...super.config(),
       choices: this._choices,
       min: this._min,
