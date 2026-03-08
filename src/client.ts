@@ -8,6 +8,7 @@ import {
   renderSelectPrompt,
   renderTextPrompt,
 } from "./primitives/prompt";
+import { Command } from "commander";
 
 type PromptLike<TValue = unknown> = {
   readonly __valueType: TValue;
@@ -163,8 +164,25 @@ export function createCLI<TPrompts extends PromptDefinitions>(
   return {
     storage: storage.data as Partial<StorageShape<TPrompts>>,
     prompt,
-    run: async (fn: () => Promise<void> | void) => {
-      await fn();
+    run: async (fn?: () => Promise<void> | void) => {
+      const program = new Command();
+
+      program.name("oscli");
+      if (config.description) {
+        program.description(config.description);
+      }
+
+      if (fn) {
+        program.action(async () => {
+          await fn();
+        });
+      } else {
+        program.action(() => {
+          throw new Error("run() requires a handler in single-command mode.");
+        });
+      }
+
+      await program.parseAsync(process.argv);
     },
     exit: (message: string): never => {
       process.stderr.write(`${message}\n`);
