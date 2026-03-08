@@ -8,6 +8,7 @@ import {
   renderSelectPrompt,
   renderTextPrompt,
 } from "./primitives/prompt";
+import { table as renderTable } from "./primitives/table";
 import { Command } from "commander";
 import pc from "picocolors";
 
@@ -202,6 +203,12 @@ export function createCLI<TPrompts extends PromptDefinitions>(
               : pc.green("success");
 
       process.stdout.write(`${prefix} ${message}\n`);
+    },
+    table: (
+      headers: string[],
+      rows: Array<Array<string | number | boolean | null | undefined>>,
+    ) => {
+      return renderTable(headers, rows);
     },
     success: (message: string) => {
       process.stdout.write(`${pc.green("success")} ${message}\n`);
