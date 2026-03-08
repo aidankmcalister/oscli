@@ -1,6 +1,8 @@
 export type Validator<T> = (value: T) => true | string | Promise<true | string>;
 
 export class PromptBuilder<T> {
+  declare readonly __valueType: T;
+
   private _label?: string;
   private _describe?: string;
   private _placeholder?: string;
