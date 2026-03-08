@@ -1,6 +1,6 @@
 {
   "name": "@oscli-dev/oscli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The last CLI framework you'll reach for.",
   "type": "module",
   "main": "./dist/index.js",
