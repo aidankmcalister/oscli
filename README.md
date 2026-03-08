@@ -18,7 +18,11 @@ This repository currently supports a strong single-command workflow with:
 - Built-in prompt rendering in the terminal
 - Automatic prompt bypass when matching flags are passed
 - Global `--yes` / `-y` confirmation bypass
+- Global `--no-color` and `NO_COLOR` support
+- Non-interactive fallback for piped output and CI
+- Exit hints and semantic exit codes
 - CLI primitives for logs, table, box, spinner, and progress
+- Closest-match suggestions with `cli.suggest(...)`
 - Vitest test coverage for core behavior
 
 > **Note:** Multi-command routing (`cli.command(...)`) is not implemented yet
@@ -132,6 +136,27 @@ await cli.run(async () => {
 });
 ```
 
+## Runtime behavior
+
+`oscli` adapts to interactive terminals, pipes, and CI by changing only its
+runtime behavior, not your CLI definition.
+
+- `stdout` non-TTY: prompts use defaults or matching flags, spinners stop
+  animating, progress prints sequential step lines, and ANSI styling is
+  removed.
+- `stderr` non-TTY: error output stays on `stderr`, but ANSI styling is
+  removed.
+- `--no-color` and `NO_COLOR`: force plain output even in a TTY.
+- `cli.exit(message, { hint, code })`: prints a red error line, an optional
+  hint, and exits with either a numeric code or a semantic code.
+
+```ts
+cli.exit("package.json not found.", {
+  hint: "Are you running this command from the right directory?",
+  code: "not_found",
+});
+```
+
 ## Visual primitives example
 
 This example shows table, box, spinner, and progress.
@@ -207,6 +232,8 @@ const cli = createCLI((b) => ({
 | `createCLI` | Creates a CLI instance with prompts and runtime helpers |
 | `createBuilder` | Creates a standalone prompt builder factory |
 | `createStorage` | Creates typed key/value storage |
+| `suggest` | Returns the closest string match within edit distance 3 |
+| `levenshtein` | Returns the edit distance between two strings |
 
 ### `createCLI` config
 
@@ -264,7 +291,15 @@ Shared flag methods:
 Built-in global flag:
 
 - `-y, --yes`: auto-answers all confirm prompts as `true`
+- `--no-color`: disables ANSI colors and styled output
 - `yes` is reserved and cannot be defined in `flags`
+- `no-color` is reserved and cannot be defined in `flags`
+
+Prompt definitions also register matching bypass flags automatically:
+
+- `text`, `number`, `select`, and `password`: `--name <value>`
+- `multiselect`: `--name <value...>`
+- `confirm`: `--name`
 
 ### Theme override
 
@@ -292,15 +327,16 @@ render theme.
 | `cli.prompt.<name>()` | Runs a configured prompt and stores the value |
 | `cli.storage` | Partial typed storage object |
 | `cli.flags` | Typed parsed flag values available before prompts run |
+| `cli.suggest(input, candidates)` | Returns the closest command or value match |
 | `cli.intro(message)` | Intro line |
 | `cli.outro(message)` | Outro line |
 | `cli.log(level, message)` | Colored log (`info`, `warn`, `error`, `success`) |
 | `cli.success(message)` | Success log shortcut |
-| `cli.exit(message)` | Error log + `process.exit(1)` |
+| `cli.exit(message, options?)` | Error log with optional hint and semantic exit code |
 | `cli.confirm(label, defaultValue?)` | One-off inline confirm prompt |
 | `cli.table(headers, rows)` | Returns bordered table string |
 | `cli.box({ title, content })` | Prints boxed content |
-| `cli.spin(label, fn)` | Spinner around async work |
+| `cli.spin(label, fn, options?)` | Spinner around async work |
 | `cli.progress(label, steps, fn)` | Step progress with timer and aligned columns |
 
 ## Testing

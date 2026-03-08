@@ -8,6 +8,7 @@ export class PromptBuilder<T> {
   private _describe?: string;
   private _placeholder?: string;
   private _default?: T;
+  private _hasDefault = false;
   private _optional = false;
   private _validate?: Validator<T>;
   private _transform?: (value: unknown) => unknown;
@@ -30,6 +31,7 @@ export class PromptBuilder<T> {
 
   default(value: T): this {
     this._default = value;
+    this._hasDefault = true;
     return this;
   }
 
@@ -59,6 +61,7 @@ export class PromptBuilder<T> {
       describe: this._describe,
       placeholder: this._placeholder,
       defaultValue: this._default,
+      hasDefault: this._hasDefault,
       optional: this._optional,
       validate: this._validate,
       transform: this._transform,

@@ -91,7 +91,7 @@ const colorFormatters: Record<ColorName, (value: string) => string> = {
 };
 
 function paint(value: string, formatter: (input: string) => string): string {
-  return process.stdout.isTTY ? formatter(value) : value;
+  return activeNoColor || process.stdout.isTTY !== true ? value : formatter(value);
 }
 
 function byColorName(name: ColorName): (value: string) => string {
@@ -129,6 +129,7 @@ function createDefaultTheme(): ResolvedTheme {
 
 export const theme: ResolvedTheme = createDefaultTheme();
 export let activeTheme: ResolvedTheme = theme;
+export let activeNoColor = false;
 
 function resolveSidebarSymbols(
   symbols: ThemeSymbols,
@@ -160,24 +161,49 @@ function resolveSidebarSymbols(
   };
 }
 
-export function applyTheme(override: ThemeOverride = {}): ResolvedTheme {
+export function applyTheme(
+  override: ThemeOverride = {},
+  noColor = false,
+): ResolvedTheme {
   const mergedSymbols = {
     ...theme.symbols,
     ...(override.symbols ?? {}),
   };
 
+  activeNoColor = noColor;
+
+  const color = noColor
+    ? {
+        cursor: (s: string) => s,
+        label: (s: string) => s,
+        muted: (s: string) => s,
+        dim: (s: string) => s,
+        active: (s: string) => s,
+        success: (s: string) => s,
+        error: (s: string) => s,
+        warning: (s: string) => s,
+        info: (s: string) => s,
+        value: (s: string) => s,
+        key: (s: string) => s,
+        title: (s: string) => s,
+        border: (s: string) => s,
+        timer: (s: string) => s,
+        hint: (s: string) => s,
+      }
+    : {
+        ...theme.color,
+        ...(override.cursor ? { cursor: byColorName(override.cursor) } : {}),
+        ...(override.active ? { active: byColorName(override.active) } : {}),
+        ...(override.success ? { success: byColorName(override.success) } : {}),
+        ...(override.error ? { error: byColorName(override.error) } : {}),
+        ...(override.warning ? { warning: byColorName(override.warning) } : {}),
+        ...(override.info ? { info: byColorName(override.info) } : {}),
+        ...(override.border ? { border: byColorName(override.border) } : {}),
+      };
+
   const resolved: ResolvedTheme = {
     symbols: resolveSidebarSymbols(mergedSymbols, override.sidebar),
-    color: {
-      ...theme.color,
-      ...(override.cursor ? { cursor: byColorName(override.cursor) } : {}),
-      ...(override.active ? { active: byColorName(override.active) } : {}),
-      ...(override.success ? { success: byColorName(override.success) } : {}),
-      ...(override.error ? { error: byColorName(override.error) } : {}),
-      ...(override.warning ? { warning: byColorName(override.warning) } : {}),
-      ...(override.info ? { info: byColorName(override.info) } : {}),
-      ...(override.border ? { border: byColorName(override.border) } : {}),
-    },
+    color,
     layout: {
       ...theme.layout,
       spacing: override.spacing ?? theme.layout.spacing,

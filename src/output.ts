@@ -1,5 +1,5 @@
 import * as readline from "node:readline";
-import { activeTheme as theme } from "./theme";
+import { activeNoColor, activeTheme as theme, stripAnsi } from "./theme";
 
 let railEnabled = false;
 
@@ -11,6 +11,10 @@ function normalizeLine(line: string): string {
 
 export function setRailEnabled(enabled: boolean): void {
   railEnabled = enabled;
+}
+
+export function isRailEnabled(): boolean {
+  return railEnabled;
 }
 
 export function decorateLine(line: string): string {
@@ -29,7 +33,10 @@ export function decorateLine(line: string): string {
 
 export function writeLine(line: string, stream: "stdout" | "stderr" = "stdout"): void {
   const target = stream === "stdout" ? process.stdout : process.stderr;
-  target.write(`${decorateLine(line)}\n`);
+  const decorated = decorateLine(line);
+  const formatted =
+    activeNoColor || target.isTTY !== true ? stripAnsi(decorated) : decorated;
+  target.write(`${formatted}\n`);
 }
 
 export function writeSectionLine(
@@ -67,15 +74,19 @@ export function writeSectionGap(
 
 export function writeLiveLine(line: string): void {
   const decorated = decorateLine(line);
+  const formatted =
+    activeNoColor || process.stdout.isTTY !== true
+      ? stripAnsi(decorated)
+      : decorated;
 
   if (!process.stdout.isTTY) {
-    process.stdout.write(`${decorated}\n`);
+    process.stdout.write(`${formatted}\n`);
     return;
   }
 
   readline.clearLine(process.stdout, 0);
   readline.cursorTo(process.stdout, 0);
-  process.stdout.write(decorated);
+  process.stdout.write(formatted);
 }
 
 export function finalizeLiveLine(line: string): void {

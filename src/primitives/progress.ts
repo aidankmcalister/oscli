@@ -1,4 +1,4 @@
-import { finalizeLiveLine, writeLiveLine } from "../output";
+import { finalizeLiveLine, writeLine, writeLiveLine } from "../output";
 import {
   activeTheme as theme,
   padVisibleEnd,
@@ -44,6 +44,8 @@ export type ProgressRenderOptions = {
   style?: ProgressStyle;
   width?: number;
   context?: ProgressGroupContext;
+  isTTY?: boolean;
+  noColor?: boolean;
 };
 
 type ProgressLineState = {
@@ -61,6 +63,7 @@ const DEFAULT_TRACK_WIDTH = theme.layout.progressWidth;
 const MIN_TRACK_WIDTH = 8;
 const TIMER_WIDTH = 7;
 const PERCENT_WIDTH = 4;
+const ASCII_SPINNER_FRAMES = ["-", "\\", "|", "/"] as const;
 
 function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -266,6 +269,9 @@ export async function progress<TStep extends string>(
 
   const total = steps.length;
   const startedAt = Date.now();
+  const isTTY = options.isTTY ?? (process.stdout.isTTY === true);
+  const frames =
+    options.noColor === true ? ASCII_SPINNER_FRAMES : SPINNER_FRAMES;
 
   if (total === 0) {
     finalizeProgressLine(
@@ -280,22 +286,42 @@ export async function progress<TStep extends string>(
     return;
   }
 
-  if (!process.stdout.isTTY) {
+  if (!isTTY) {
     for (let index = 0; index < steps.length; index += 1) {
       const step = steps[index] as TStep;
-      await fn(step, index);
-      finalizeProgressLine(
-        renderProgressLine({
-          icon: theme.symbols.success,
-          label,
-          elapsedMs: Date.now() - startedAt,
-          percent: ((index + 1) / total) * 100,
-          steps,
-          currentStepIndex: index,
-          context,
-        }),
+      try {
+        await fn(step, index);
+      } catch (error) {
+        finalizeProgressLine(
+          renderProgressLine({
+            icon: theme.symbols.error,
+            label,
+            elapsedMs: Date.now() - startedAt,
+            percent: (index / total) * 100,
+            steps,
+            currentStepIndex: index,
+            context,
+          }),
+        );
+        throw error;
+      }
+
+      writeLine(
+        `${theme.layout.indent}[${index + 1}/${total}] ${theme.color.value(String(step))}`,
       );
     }
+
+    finalizeProgressLine(
+      renderProgressLine({
+        icon: theme.symbols.success,
+        label,
+        elapsedMs: Date.now() - startedAt,
+        percent: 100,
+        steps,
+        currentStepIndex: steps.length - 1,
+        context,
+      }),
+    );
     return;
   }
 
@@ -306,7 +332,7 @@ export async function progress<TStep extends string>(
     const renderRunning = () => {
       writeProgressLine(
         renderProgressLine({
-          icon: SPINNER_FRAMES[frameIndex],
+          icon: frames[frameIndex],
           label,
           elapsedMs: Date.now() - startedAt,
           percent: (index / total) * 100,
@@ -320,7 +346,7 @@ export async function progress<TStep extends string>(
     renderRunning();
 
     const timer = setInterval(() => {
-      frameIndex = (frameIndex + 1) % SPINNER_FRAMES.length;
+      frameIndex = (frameIndex + 1) % frames.length;
       renderRunning();
     }, 80);
 

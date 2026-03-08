@@ -1,6 +1,6 @@
 import type { ProgressGroupContext, ProgressStyle } from "./progress";
 import { SPINNER_FRAMES } from "./progress";
-import { finalizeLiveLine, writeLiveLine } from "../output";
+import { finalizeLiveLine, writeLine, writeLiveLine } from "../output";
 import { activeTheme as theme } from "../theme";
 
 export type SpinnerOptions = {
@@ -9,7 +9,11 @@ export type SpinnerOptions = {
   context?: ProgressGroupContext;
   percent?: number;
   doneLabel?: string;
+  isTTY?: boolean;
+  noColor?: boolean;
 };
+
+const ASCII_SPINNER_FRAMES = ["-", "\\", "|", "/"] as const;
 
 function formatElapsed(elapsedMs: number): string {
   if (elapsedMs < 60_000) {
@@ -41,6 +45,42 @@ function renderSpinnerLine(
   return `${theme.layout.indent}${coloredIcon} ${coloredLabel}  ${theme.color.timer(formatElapsed(elapsedMs))}`;
 }
 
+function resolveDoneLabel(label: string, explicitDoneLabel?: string): string {
+  if (explicitDoneLabel) {
+    return explicitDoneLabel;
+  }
+
+  const trimmed = label.trim().replace(/\.\.\.$/, "");
+  const [head, ...rest] = trimmed.split(/\s+/);
+
+  if (!head) {
+    return trimmed;
+  }
+
+  const lowerHead = head.toLowerCase();
+  const mapped = new Map<string, string>([
+    ["generating", "generated"],
+    ["running", "ran"],
+    ["installing", "installed"],
+    ["building", "built"],
+    ["fetching", "fetched"],
+    ["writing", "wrote"],
+    ["loading", "loaded"],
+    ["compiling", "compiled"],
+  ]).get(lowerHead);
+
+  if (!mapped) {
+    return trimmed;
+  }
+
+  const resolvedHead =
+    head[0] === head[0]?.toUpperCase()
+      ? mapped[0]?.toUpperCase() + mapped.slice(1)
+      : mapped;
+
+  return [resolvedHead, ...rest].join(" ");
+}
+
 export async function spin<T>(
   label: string,
   fn: () => Promise<T>,
@@ -48,10 +88,17 @@ export async function spin<T>(
 ): Promise<T> {
   const startedAt = Date.now();
   let frameIndex = 0;
+  const frames =
+    options.noColor === true ? ASCII_SPINNER_FRAMES : SPINNER_FRAMES;
+  const isTTY = options.isTTY ?? (process.stdout.isTTY === true);
   const runningLabel = `${label}...`;
-  const doneLabel = options.doneLabel ?? label;
+  const doneLabel = resolveDoneLabel(label, options.doneLabel);
 
-  if (!process.stdout.isTTY) {
+  if (!isTTY) {
+    writeLine(
+      renderSpinnerLine(frames[0], runningLabel, Date.now() - startedAt, "running"),
+    );
+
     try {
       const result = await fn();
       finalizeLiveLine(
@@ -79,7 +126,7 @@ export async function spin<T>(
   const renderRunning = () => {
     writeLiveLine(
       renderSpinnerLine(
-        SPINNER_FRAMES[frameIndex],
+        frames[frameIndex],
         runningLabel,
         Date.now() - startedAt,
         "running",
@@ -90,7 +137,7 @@ export async function spin<T>(
   renderRunning();
 
   const timer = setInterval(() => {
-    frameIndex = (frameIndex + 1) % SPINNER_FRAMES.length;
+    frameIndex = (frameIndex + 1) % frames.length;
     renderRunning();
   }, 80);
 
