@@ -1,25 +1,50 @@
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/favicon-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/public/favicon-light.svg">
+    <img src="docs/public/favicon-light.svg" alt="oscli logo" width="72">
+  </picture>
+
 # oscli
 
-The last CLI framework you'll reach for.
+*The last CLI framework you'll reach for.*
 
-`oscli` is a TypeScript-first CLI framework published on npm, built on
+[![Website](https://img.shields.io/badge/website-oscli.dev-111111?style=flat-square)](https://oscli.dev)
+[![npm version](https://img.shields.io/npm/v/%40oscli-dev%2Foscli?style=flat-square)](https://www.npmjs.com/package/@oscli-dev/oscli)
+[![npm downloads](https://img.shields.io/npm/dm/%40oscli-dev%2Foscli?style=flat-square)](https://www.npmjs.com/package/@oscli-dev/oscli)
+[![npm unpacked size](https://img.shields.io/npm/unpacked-size/%40oscli-dev%2Foscli?style=flat-square)](https://www.npmjs.com/package/@oscli-dev/oscli)
+
+[Website](https://oscli.dev) •
+[Package](https://www.npmjs.com/package/@oscli-dev/oscli) •
+[Examples](./examples)
+</div>
+
+`oscli` is a TypeScript-first CLI framework built on
 [`commander`](https://www.npmjs.com/package/commander) and
 [`picocolors`](https://www.npmjs.com/package/picocolors). You define prompts,
 flags, and output once, then read typed values from `cli.storage` and
 `cli.flags` anywhere in your flow.
 
+> [!NOTE]
+> The fastest way to understand the API is to run the examples in
+> [`examples/`](./examples). Each file is self-contained and runs directly with
+> `bun run examples/<name>.ts`.
+
 ## Install
 
-Use the package from npm with your package manager of choice.
+Install the published package with your package manager of choice.
 
 ```bash
+npm install @oscli-dev/oscli
+pnpm add @oscli-dev/oscli
+yarn add @oscli-dev/oscli
 bun add @oscli-dev/oscli
 ```
 
 ## Quick start
 
-This example shows a small CLI with one prompt, one result object, and the
-built-in output helpers.
+This is the smallest useful `oscli` program: one prompt, one confirmation, one
+success path, and a final JSON result.
 
 ```ts
 import { createCLI } from "@oscli-dev/oscli";
@@ -35,6 +60,7 @@ const cli = createCLI((b) => ({
 
 await cli.run(async () => {
   cli.intro("oscli quick start");
+
   await cli.prompt.project();
   await cli.prompt.approved();
 
@@ -53,6 +79,49 @@ await cli.run(async () => {
   cli.success(`Created ${cli.storage.project}`);
   cli.outro("Done.");
 });
+```
+
+## What you get
+
+`oscli` keeps the CLI definition small, but it still covers the usual runtime
+concerns.
+
+- Typed prompts and typed flags from one builder API.
+- Prompt bypass from matching flag names.
+- Built-in output primitives for tables, boxes, trees, diffs, links, spinners,
+  and progress.
+- Theme presets and deep theme overrides.
+- Multi-command routing on top of Commander.
+- JSON mode for scripts and machine output.
+- A test harness for Vitest and other non-interactive checks.
+
+## Examples
+
+The repository ships with runnable examples for common CLI workflows.
+
+- [`examples/create-app.ts`](./examples/create-app.ts): project scaffolding
+- [`examples/deploy.ts`](./examples/deploy.ts): deployment flow with flags and
+  progress
+- [`examples/db-migrate.ts`](./examples/db-migrate.ts): migration flow with
+  dry-run support
+- [`examples/codegen.ts`](./examples/codegen.ts): code generation with diff
+  output
+- [`examples/release.ts`](./examples/release.ts): release flow with version
+  bumping
+- [`examples/env-setup.ts`](./examples/env-setup.ts): environment file setup
+- [`examples/onboard.ts`](./examples/onboard.ts): teammate onboarding
+- [`examples/audit.ts`](./examples/audit.ts): project audit with warnings and
+  fixes
+- [`examples/theme-showcase.ts`](./examples/theme-showcase.ts): visual
+  regression pass for all themes and primitives
+- [`examples/multi-command.ts`](./examples/multi-command.ts): subcommand routing
+
+Run any example directly:
+
+```bash
+bun run examples/create-app.ts
+bun run examples/deploy.ts
+bun run examples/multi-command.ts list
 ```
 
 ## Single-command flow
@@ -97,7 +166,7 @@ await cli.run(async () => {
   await cli.prompt.approved();
   await cli.prompt.fallback();
 
-  cli.log(`Environment: ${cli.flags.env}`);
+  cli.log(`Environment: ${cli.flags.env}`).flush();
   cli.success(`Ready: ${cli.storage.project}`);
   cli.outro("Finished.");
 });
@@ -161,8 +230,8 @@ const cli = createCLI((b) => ({
 }));
 
 await cli.run(async () => {
-  cli.log(`env: ${cli.flags.env}`);
-  cli.log(`ttl: ${cli.flags.ttl}`);
+  cli.log(`env: ${cli.flags.env}`).flush();
+  cli.log(`ttl: ${cli.flags.ttl}`).flush();
 
   await cli.prompt.name();
   await cli.prompt.approved();
@@ -181,35 +250,9 @@ Built-in runtime flags:
 - `--json`: emit only the final JSON result when `json: true` is enabled
 - `NO_COLOR=1`: disable ANSI color output from the environment
 
-## Runtime behavior
+## Output and styling
 
-`oscli` adapts to interactive terminals, pipes, and CI by changing only its
-runtime behavior, not your CLI definition.
-
-- `stdout` non-TTY: prompts use defaults or matching flags, spinners stop
-  animating, progress prints sequential step lines, and ANSI styling is
-  removed.
-- `stderr` non-TTY: error output stays on `stderr`, but ANSI styling is
-  removed.
-- `--no-color` and `NO_COLOR`: force plain output even in a TTY.
-- `cli.exit(message, { hint, code })`: prints an error line, an optional hint,
-  and exits with either a numeric code or a semantic code.
-- `autocompleteHint`: adds an extra hint line for unknown commands and unknown
-  flags.
-- `json: true` with `--json`: suppresses decorative output and prints the value
-  passed to `cli.setResult()` as raw JSON.
-
-```ts
-cli.exit("package.json not found.", {
-  hint: "Are you running this command from the right directory?",
-  code: "not_found",
-});
-```
-
-## Visual primitives example
-
-This example shows `table`, `box`, `tree`, `diff`, `link`, `spinner`, and
-`progress`.
+`oscli` includes the output helpers you usually end up hand-rolling in CLIs.
 
 ```ts
 import { createCLI } from "@oscli-dev/oscli";
@@ -236,7 +279,7 @@ await cli.run(async () => {
   });
 
   cli.diff("name=old\nmode=dry-run", "name=new\nmode=live");
-  cli.link("Documentation", "https://github.com/aidankmcalister/oscli");
+  cli.link("Website", "https://oscli.dev");
 
   await cli.spin("Generating files", async () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
@@ -254,10 +297,8 @@ await cli.run(async () => {
 });
 ```
 
-## Styling helpers
-
-Use `cli.log()` for section-aware text output and `cli.style()` when you want
-to build a reusable formatter for multiple strings.
+Use `cli.log()` for section-aware text output and `cli.style()` when you want a
+reusable formatter for multiple strings.
 
 ```ts
 const emphasis = cli.style().color("cyan").bold();
@@ -483,8 +524,16 @@ Use these commands when you work on the repository locally.
 
 ```bash
 bun install
-bun run dev
 bun run test
 bun run typecheck
 bun run build
+bun run docs
+bun run examples/create-app.ts
 ```
+
+## Next steps
+
+- Browse the full docs at [oscli.dev](https://oscli.dev).
+- Run the examples in [`examples/`](./examples) to see complete flows.
+- Start a new CLI with `createCLI()` and keep your prompts, flags, and output
+  in one place.
