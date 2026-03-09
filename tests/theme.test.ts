@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createCLI } from "../src/client";
-import { activeTheme, applyTheme, theme, themePresets } from "../src/theme";
+import { createCLI } from "../packages/oscli/src/client";
+import { activeTheme, applyTheme, theme, themePresets } from "../packages/oscli/src/theme";
 
 afterEach(() => {
   applyTheme({});

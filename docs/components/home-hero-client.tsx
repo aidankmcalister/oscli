@@ -1,11 +1,60 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { OscliDemo } from "@oscli-dev/react";
+import { cli as createAppCli } from "../../examples/create-app";
 
 const installCommand = "npm install @oscli-dev/oscli";
 
 type ActiveTab = "code" | "preview";
+
+type CreateAppDemoInputs = {
+  project: string;
+  framework: "next" | "remix" | "astro" | "vite";
+  features: string[];
+  typescript: boolean;
+  packageManager: "npm" | "bun" | "pnpm" | "yarn";
+  gitInit: boolean;
+};
+
+const projectNames = ["studio-app", "orbit-kit", "northwind", "field-notes", "launchpad"];
+const frameworks: CreateAppDemoInputs["framework"][] = ["next", "remix", "astro", "vite"];
+const packageManagers: CreateAppDemoInputs["packageManager"][] = ["npm", "bun", "pnpm", "yarn"];
+const featureChoices = ["tailwind", "eslint", "testing", "auth"] as const;
+
+function pickRandom<T>(values: readonly T[]): T {
+  return values[Math.floor(Math.random() * values.length)]!;
+}
+
+function pickRandomSubset<T>(values: readonly T[], min = 1, max = Math.min(values.length, 3)): T[] {
+  const target = Math.max(min, Math.min(max, min + Math.floor(Math.random() * (max - min + 1))));
+  const shuffled = [...values].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, target);
+}
+
+function createDemoInputs(): CreateAppDemoInputs {
+  return {
+    project: pickRandom(projectNames),
+    framework: pickRandom(frameworks),
+    features: pickRandomSubset(featureChoices, 1, 3),
+    typescript: Math.random() > 0.35,
+    packageManager: pickRandom(packageManagers),
+    gitInit: Math.random() > 0.4,
+  };
+}
+
+function sameDemoInputs(a: CreateAppDemoInputs, b: CreateAppDemoInputs): boolean {
+  return (
+    a.project === b.project &&
+    a.framework === b.framework &&
+    a.typescript === b.typescript &&
+    a.packageManager === b.packageManager &&
+    a.gitInit === b.gitInit &&
+    a.features.length === b.features.length &&
+    a.features.every((feature, index) => feature === b.features[index])
+  );
+}
 
 function HeroPanel({
   title,
@@ -66,8 +115,8 @@ function ShikiPanel({ html }: { html: string }) {
         "[&_pre]:!overflow-x-auto",
         "[&_pre]:!bg-transparent",
         "[&_pre]:!p-0",
-        "[&_pre]:text-[14px]",
-        "[&_pre]:leading-[1.6]",
+        "[&_pre]:text-[11px]",
+        "[&_pre]:leading-[1.45]",
         "[&_code]:!bg-transparent",
         "[&_code]:!font-mono",
       ].join(" ")}
@@ -79,16 +128,25 @@ function ShikiPanel({ html }: { html: string }) {
 export function HomeHeroClient({
   setupHtmlLight,
   setupHtmlDark,
-  terminalHtmlLight,
-  terminalHtmlDark,
 }: {
   setupHtmlLight: string;
   setupHtmlDark: string;
-  terminalHtmlLight: string;
-  terminalHtmlDark: string;
 }) {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>("preview");
+  const [demoRun, setDemoRun] = useState(() => ({
+    id: 0,
+    inputs: createDemoInputs(),
+  }));
+  const replayTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (replayTimeoutRef.current !== null) {
+        window.clearTimeout(replayTimeoutRef.current);
+      }
+    };
+  }, []);
 
   async function copyInstallCommand() {
     try {
@@ -102,24 +160,41 @@ export function HomeHeroClient({
 
   const panelTitle = activeTab === "code" ? "setup.ts" : "terminal";
 
+  const queueNextDemo = () => {
+    if (replayTimeoutRef.current !== null) {
+      window.clearTimeout(replayTimeoutRef.current);
+    }
+
+    replayTimeoutRef.current = window.setTimeout(() => {
+      setDemoRun((current) => {
+        let nextInputs = createDemoInputs();
+        let attempts = 0;
+
+        while (sameDemoInputs(nextInputs, current.inputs) && attempts < 8) {
+          nextInputs = createDemoInputs();
+          attempts += 1;
+        }
+
+        return {
+          id: current.id + 1,
+          inputs: nextInputs,
+        };
+      });
+    }, 3400);
+  };
+
   return (
     <section className="min-h-[100svh] overflow-hidden bg-fd-background px-[clamp(1rem,2vw,1.75rem)] py-6 text-fd-foreground">
       <div className="mx-auto flex min-h-[calc(100svh-3rem)] w-full max-w-[1400px] items-center">
         <div className="grid w-full items-center gap-10 lg:grid-cols-2 lg:gap-14">
           <div className="flex items-center lg:min-h-[70svh]">
             <div className="w-full max-w-2xl space-y-[clamp(0.9rem,2vw,1.35rem)] text-left">
-              <div className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-fd-muted-foreground">
-                  oscli
-                </p>
+              <div className="space-y-2">
                 <h1 className="max-w-4xl text-[clamp(2.45rem,6.3vw,5.1rem)] leading-[0.95] font-semibold tracking-[-0.04em] text-balance text-fd-foreground">
                   The last CLI framework
                   <br />
                   you&apos;ll reach for.
                 </h1>
-                <p className="mt-8 max-w-2xl font-sans text-[clamp(1.02rem,2vw,1.35rem)] leading-[1.2] text-balance text-fd-muted-foreground italic">
-                  Everything your TypeScript CLI needs, in one runtime.
-                </p>
               </div>
 
               <div className="w-full max-w-2xl rounded-[1rem] border border-fd-border bg-fd-card p-3">
@@ -156,7 +231,7 @@ export function HomeHeroClient({
             </div>
           </div>
 
-          <div className="mx-auto flex w-full max-w-[600px] items-center lg:max-w-none lg:pl-6">
+          <div className="mx-auto flex w-full max-w-[520px] items-center lg:max-w-none lg:pl-6">
             <div className="w-full">
               <HeroPanel
                 title={panelTitle}
@@ -190,10 +265,34 @@ export function HomeHeroClient({
                     aria-hidden={activeTab !== "preview"}
                   >
                     <div className="block dark:hidden">
-                      <ShikiPanel html={terminalHtmlLight} />
+                      <OscliDemo
+                        key={`light-${demoRun.id}`}
+                        cli={createAppCli}
+                        inputs={demoRun.inputs}
+                        timing={{
+                          typeDelay: 168,
+                          promptDelay: 980,
+                          completionDelay: 0,
+                          loop: false,
+                        }}
+                        theme="light"
+                        onRunComplete={queueNextDemo}
+                      />
                     </div>
                     <div className="hidden dark:block">
-                      <ShikiPanel html={terminalHtmlDark} />
+                      <OscliDemo
+                        key={`dark-${demoRun.id}`}
+                        cli={createAppCli}
+                        inputs={demoRun.inputs}
+                        timing={{
+                          typeDelay: 168,
+                          promptDelay: 980,
+                          completionDelay: 0,
+                          loop: false,
+                        }}
+                        theme="dark"
+                        onRunComplete={queueNextDemo}
+                      />
                     </div>
                   </div>
                 </div>

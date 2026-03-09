@@ -15,38 +15,29 @@ const setupCode = [
   '  theme: "basic",',
   "  prompts: {",
   '    project: b.text().label("Project").default("my-app"),',
-  "    template: b.select({",
-  '      choices: ["next", "remix", "astro"] as const,',
-  '    }).label("Template"),',
-  '    install: b.confirm().label("Install dependencies?").default(true),',
+  "    framework: b.select({",
+  '      choices: ["next", "remix", "astro", "vite"] as const,',
+  '    }).label("Framework").default("next"),',
+  "    features: b.multiselect({",
+  '      choices: ["tailwind", "eslint", "testing", "auth"] as const,',
+  '    }).label("Features"),',
+  '    typescript: b.confirm().label("Use TypeScript?").default(true),',
+  "    packageManager: b.select({",
+  '      choices: ["npm", "bun", "pnpm", "yarn"] as const,',
+  '    }).label("Package manager").default("bun"),',
+  '    gitInit: b.confirm().label("Initialize git?").default(true),',
   "  },",
   "}))",
   "",
   "await cli.run(async () => {",
   "  await cli.prompt.project()",
-  "  await cli.prompt.template()",
-  "  await cli.prompt.install()",
+  "  await cli.prompt.framework()",
+  "  await cli.prompt.features()",
+  "  await cli.prompt.typescript()",
+  "  await cli.prompt.packageManager()",
+  "  await cli.prompt.gitInit()",
   "  cli.success(`Created ${cli.storage.project}`)",
   "})",
-].join("\n");
-
-const terminalCode = [
-  "┌  create-app",
-  "│",
-  "│  Project",
-  "│  › my-app_",
-  "│",
-  "│  Template",
-  "│  ● next   ○ remix   ○ astro",
-  "│",
-  "│  Install dependencies?",
-  "│  ● Yes  /  ○ No",
-  "│",
-  "│ ✓  Project      my-app",
-  "│ ✓  Template     next",
-  "│ ✓  Install      yes",
-  "│",
-  "└  Created my-app",
 ].join("\n");
 
 const getHighlighter = cache(async () =>
@@ -70,24 +61,15 @@ async function highlight(
 }
 
 export default async function HomePage() {
-  const [
-    setupHtmlLight,
-    setupHtmlDark,
-    terminalHtmlLight,
-    terminalHtmlDark,
-  ] = await Promise.all([
+  const [setupHtmlLight, setupHtmlDark] = await Promise.all([
     highlight(setupCode, "ts", "github-light-oscli"),
     highlight(setupCode, "ts", "github-dark-oscli"),
-    highlight(terminalCode, "oscli", "github-light-oscli"),
-    highlight(terminalCode, "oscli", "github-dark-oscli"),
   ]);
 
   return (
     <HomeHeroClient
       setupHtmlLight={setupHtmlLight}
       setupHtmlDark={setupHtmlDark}
-      terminalHtmlLight={terminalHtmlLight}
-      terminalHtmlDark={terminalHtmlDark}
     />
   );
 }

@@ -1,4 +1,7 @@
-import { Command, CommanderError, Option } from "commander";
+import type {
+  Command as CommanderCommand,
+  Option as CommanderOption,
+} from "commander";
 import { createBuilder } from "./builder";
 import {
   clearPersistentCorner,
@@ -157,8 +160,51 @@ export interface TestResult<
   exitCode: number;
 }
 
+export type AnimateEvent =
+  | { type: "intro"; message: string }
+  | { type: "prompt_start"; key: string; label: string; promptType: string }
+  | {
+      type: "prompt_preview";
+      key: string;
+      label: string;
+      promptType: string;
+      lines: string[];
+    }
+  | { type: "char"; key: string; value: string; full: string }
+  | {
+      type: "prompt_submit";
+      key: string;
+      label: string;
+      displayValue: string;
+    }
+  | { type: "outro"; message: string }
+  | { type: "run_complete" }
+  | { type: "loop_restart" };
+
+export interface AnimateOptions<
+  TInputs extends Record<string, unknown> = Record<string, unknown>,
+> {
+  inputs: Partial<TInputs>;
+  timing?: {
+    typeDelay?: number;
+    promptDelay?: number;
+    completionDelay?: number;
+    loop?: boolean;
+    loopDelay?: number;
+  };
+}
+
+type ResolvedAnimateTiming = {
+  typeDelay: number;
+  promptDelay: number;
+  completionDelay: number;
+  loop: boolean;
+  loopDelay: number;
+};
+
 let spinnerModulePromise: Promise<typeof import("./primitives/spinner")> | null = null;
 let progressModulePromise: Promise<typeof import("./primitives/progress")> | null = null;
+let commanderModulePromise: Promise<typeof import("commander")> | null = null;
 
 function loadSpinnerModule() {
   spinnerModulePromise ??= import("./primitives/spinner");
@@ -168,6 +214,11 @@ function loadSpinnerModule() {
 function loadProgressModule() {
   progressModulePromise ??= import("./primitives/progress");
   return progressModulePromise;
+}
+
+function loadCommanderModule() {
+  commanderModulePromise ??= import("commander");
+  return commanderModulePromise;
 }
 
 const EXIT_CODE_MAP: Record<ExitCode, number> = {
@@ -296,20 +347,21 @@ function extractUnknownCommand(message: string): string | null {
 function createPromptBypassOption(
   promptName: string,
   config: RuntimePromptConfig,
-): Option | null {
+  OptionCtor: typeof CommanderOption,
+): CommanderOption | null {
   switch (config.type) {
     case "confirm":
-      return new Option(`--${promptName}`, "");
+      return new OptionCtor(`--${promptName}`, "");
     case "multiselect":
     case "list":
-      return new Option(`--${promptName} <value...>`, "");
+      return new OptionCtor(`--${promptName} <value...>`, "");
     case "number":
     case "text":
     case "password":
     case "select":
     case "search":
     case "date":
-      return new Option(`--${promptName} <value>`, "");
+      return new OptionCtor(`--${promptName} <value>`, "");
     default:
       return null;
   }
@@ -616,6 +668,167 @@ function clearStorage<T extends Record<string, unknown>>(storage: Partial<T>): v
   }
 }
 
+function wait(delay: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, Math.max(0, delay));
+  });
+}
+
+function humanizePause(baseDelay: number, variance = 0.18): number {
+  if (baseDelay <= 0) {
+    return 0;
+  }
+
+  const min = 1 - variance;
+  const max = 1 + variance;
+  const multiplier = min + Math.random() * (max - min);
+  return Math.max(0, Math.round(baseDelay * multiplier));
+}
+
+function humanizeTypeDelay(
+  baseDelay: number,
+  sequence: string,
+  index: number,
+): number {
+  if (baseDelay <= 0) {
+    return 0;
+  }
+
+  const char = sequence[index] ?? "";
+  let delay = baseDelay;
+  const lastIndex = Math.max(0, sequence.length - 1);
+  const progress = lastIndex === 0 ? 1 : index / lastIndex;
+
+  if (index === 0) {
+    delay *= 1.55;
+  } else if (progress < 0.3) {
+    delay *= 1.12;
+  } else if (progress > 0.8) {
+    delay *= 1.2;
+  } else {
+    delay *= 0.9;
+  }
+
+  if (char === " ") {
+    delay *= 1.45;
+  } else if (/[.,!?;:]/.test(char)) {
+    delay *= 1.8;
+  } else if (/[-_/]/.test(char)) {
+    delay *= 1.25;
+  }
+
+  return humanizePause(delay, 0.2);
+}
+
+function resolveAnimateTiming(
+  timing?: AnimateOptions["timing"],
+): ResolvedAnimateTiming {
+  return {
+    typeDelay: timing?.typeDelay ?? 85,
+    promptDelay: timing?.promptDelay ?? 360,
+    completionDelay: timing?.completionDelay ?? 620,
+    loop: timing?.loop ?? false,
+    loopDelay: timing?.loopDelay ?? 1500,
+  };
+}
+
+function hasOwnKey<T extends object>(
+  target: T,
+  key: PropertyKey,
+): key is keyof T {
+  return Object.prototype.hasOwnProperty.call(target, key);
+}
+
+function coerceAnimateValue(
+  config: RuntimePromptConfig,
+  rawValue: unknown,
+): unknown {
+  switch (config.type) {
+    case "confirm":
+      if (typeof rawValue === "boolean") {
+        return rawValue;
+      }
+      if (typeof rawValue === "string") {
+        const normalized = rawValue.trim().toLowerCase();
+        if (["1", "true", "t", "y", "yes"].includes(normalized)) {
+          return true;
+        }
+        if (["0", "false", "f", "n", "no"].includes(normalized)) {
+          return false;
+        }
+      }
+      return Boolean(rawValue);
+
+    case "number":
+      return typeof rawValue === "number" ? rawValue : Number(rawValue);
+
+    case "date":
+      if (rawValue instanceof Date) {
+        return rawValue;
+      }
+      if (typeof rawValue === "string") {
+        return (
+          parseDateByFormat(rawValue.trim(), config.format ?? "YYYY-MM-DD") ??
+          rawValue
+        );
+      }
+      return rawValue;
+
+    case "multiselect":
+    case "list":
+      if (Array.isArray(rawValue)) {
+        return rawValue.map((value) => String(value));
+      }
+      if (rawValue === undefined || rawValue === null) {
+        return [];
+      }
+      return [String(rawValue)];
+
+    default:
+      return rawValue;
+  }
+}
+
+function resolveAnimateChoiceLabel(
+  config: RuntimePromptConfig,
+  rawValue: unknown,
+): string {
+  const needle = String(rawValue ?? "");
+  const match = config.choices?.find((choice) => String(choice) === needle);
+  return String(match ?? rawValue ?? "");
+}
+
+function deriveAnimateIntroMessage(description?: string): string {
+  return description?.trim() ?? "";
+}
+
+function deriveAnimateOutroMessage(
+  description: string | undefined,
+  resolvedValues: Map<string, unknown>,
+): string {
+  const normalized = description?.trim().toLowerCase() ?? "";
+  const primaryValue =
+    typeof resolvedValues.get("project") === "string"
+      ? (resolvedValues.get("project") as string)
+      : typeof resolvedValues.get("name") === "string"
+        ? (resolvedValues.get("name") as string)
+        : null;
+
+  if (!primaryValue) {
+    return "";
+  }
+
+  if (normalized.includes("create")) {
+    return `Created ${primaryValue}`;
+  }
+
+  if (normalized.includes("init")) {
+    return `Initialized ${primaryValue}`;
+  }
+
+  return "";
+}
+
 function resolveTheme(
   value: ThemeOverride | ThemePreset | undefined,
 ): ThemeOverride {
@@ -624,6 +837,108 @@ function resolveTheme(
   }
 
   return value ?? {};
+}
+
+function animatePromptType(config: RuntimePromptConfig): string {
+  if (config.type === "confirm") {
+    return config.confirmMode === "simple" ? "confirm-simple" : "confirm-toggle";
+  }
+
+  return config.type ?? "unknown";
+}
+
+function animateCharSequence(
+  config: RuntimePromptConfig,
+  value: unknown,
+): string | null {
+  switch (config.type) {
+    case "text":
+    case "number":
+      return String(value ?? "");
+    case "date":
+      return value instanceof Date
+        ? formatDateValue(value, config.format ?? "YYYY-MM-DD")
+        : String(value ?? "");
+    case "password":
+      return "*".repeat(String(value ?? "").length);
+    case "search":
+      return resolveAnimateChoiceLabel(config, value);
+    case "confirm":
+      if (config.confirmMode === "simple") {
+        return value ? "y" : "n";
+      }
+      return null;
+    default:
+      return null;
+  }
+}
+
+function resolveAnimateChoiceIndex(
+  config: RuntimePromptConfig,
+  rawValue: unknown,
+  fallbackIndex = 0,
+): number {
+  const choices = config.choices ?? [];
+  if (choices.length === 0) {
+    return 0;
+  }
+
+  const label = resolveAnimateChoiceLabel(config, rawValue);
+  const index = choices.findIndex((choice) => String(choice) === label);
+  return index >= 0 ? index : Math.max(0, Math.min(fallbackIndex, choices.length - 1));
+}
+
+function buildSelectPreviewLines(
+  config: RuntimePromptConfig,
+  activeIndex: number,
+): string[] {
+  const choices = config.choices ?? [];
+  return [
+    ...choices.map((choice, index) => {
+      const isActive = index === activeIndex;
+      const cursor = isActive ? theme.symbols.cursor : " ";
+      const radio = isActive ? theme.symbols.radio_on : theme.symbols.radio_off;
+      return `${cursor} ${radio} ${choice}`;
+    }),
+    "↑↓ navigate   enter select",
+  ];
+}
+
+function buildMultiselectPreviewLines(
+  config: RuntimePromptConfig,
+  activeIndex: number,
+  selectedValues: Set<string>,
+): string[] {
+  const choices = config.choices ?? [];
+  return [
+    ...choices.map((choice, index) => {
+      const choiceValue = String(choice);
+      const isActive = index === activeIndex;
+      const isSelected = selectedValues.has(choiceValue);
+      const cursor = isActive ? theme.symbols.cursor : " ";
+      const icon = isSelected ? theme.symbols.check_on : theme.symbols.check_off;
+      return `${cursor} ${icon} ${choice}`;
+    }),
+    "↑↓ navigate   space toggle   enter confirm",
+  ];
+}
+
+function buildConfirmPreviewLines(value: boolean): string[] {
+  return [
+    value
+      ? `${theme.symbols.radio_on} Yes  /  ${theme.symbols.radio_off} No`
+      : `${theme.symbols.radio_off} Yes  /  ${theme.symbols.radio_on} No`,
+  ];
+}
+
+function moveIndexToward(current: number, target: number): number[] {
+  const frames: number[] = [];
+  let pointer = current;
+  while (pointer !== target) {
+    pointer += pointer < target ? 1 : -1;
+    frames.push(pointer);
+  }
+  return frames;
 }
 
 export function createCLI<
@@ -773,7 +1088,10 @@ export function createCLI<
     );
   };
 
-  const registerOptions = (target: Command): void => {
+  const registerOptions = (
+    target: CommanderCommand,
+    OptionCtor: typeof CommanderOption,
+  ): void => {
     for (const key of Object.keys(flagDefs) as Array<keyof TFlags>) {
       const runtimeConfig = runtimeFlagConfigs.get(key);
       if (!runtimeConfig) {
@@ -782,8 +1100,11 @@ export function createCLI<
 
       const option =
         runtimeConfig.type === "boolean"
-          ? new Option(`--${String(key)}`, runtimeConfig.label ?? "")
-          : new Option(`--${String(key)} <value>`, runtimeConfig.label ?? "");
+          ? new OptionCtor(`--${String(key)}`, runtimeConfig.label ?? "")
+          : new OptionCtor(
+              `--${String(key)} <value>`,
+              runtimeConfig.label ?? "",
+            );
 
       if (runtimeConfig.choices) {
         option.choices(runtimeConfig.choices.map((choice) => String(choice)));
@@ -810,7 +1131,11 @@ export function createCLI<
         continue;
       }
 
-      const option = createPromptBypassOption(String(key), runtimeConfig);
+      const option = createPromptBypassOption(
+        String(key),
+        runtimeConfig,
+        OptionCtor,
+      );
       if (!option) {
         continue;
       }
@@ -838,11 +1163,15 @@ export function createCLI<
     }
   };
 
-  const getOptionSource = (program: Command, parser: Command, name: string) => {
+  const getOptionSource = (
+    program: CommanderCommand,
+    parser: CommanderCommand,
+    name: string,
+  ) => {
     return parser.getOptionValueSource(name) ?? program.getOptionValueSource(name);
   };
 
-  const getOptions = (parser: Command): Record<string, unknown> => {
+  const getOptions = (parser: CommanderCommand): Record<string, unknown> => {
     if (typeof parser.optsWithGlobals === "function") {
       return parser.optsWithGlobals() as Record<string, unknown>;
     }
@@ -850,7 +1179,10 @@ export function createCLI<
     return parser.opts() as Record<string, unknown>;
   };
 
-  const hydrateRuntime = async (program: Command, parser: Command) => {
+  const hydrateRuntime = async (
+    program: CommanderCommand,
+    parser: CommanderCommand,
+  ) => {
     clearStorage(storage.data as Partial<StorageShape<TPrompts>>);
     initializeFlags();
     promptBypassValues.clear();
@@ -974,6 +1306,10 @@ export function createCLI<
     });
   }
 
+  // TODO: Step 2 — cli.animate() browser adapter
+  // A framework-agnostic event emitter variant that streams animation
+  // events (prompt_start, keypress, prompt_submit, run_complete) so
+  // React/Svelte/Vue components can render the animation without a TTY.
   const cli = {
     storage: storage.data as Partial<StorageShape<TPrompts>>,
     flags,
@@ -984,6 +1320,290 @@ export function createCLI<
     _jsonMode: jsonMode,
     _writeLine,
     suggest: suggestValue,
+    animate: async function* (
+      options: AnimateOptions<Record<Extract<keyof TPrompts, string>, unknown>>,
+    ): AsyncGenerator<AnimateEvent> {
+      const timing = resolveAnimateTiming(options.timing);
+
+      while (true) {
+        const resolvedValues = new Map<string, unknown>();
+        const introMessage = deriveAnimateIntroMessage(config.description);
+
+        if (introMessage.length > 0) {
+          yield {
+            type: "intro",
+            message: introMessage,
+          };
+        }
+
+        for (const key of Object.keys(promptDefs) as Array<keyof TPrompts>) {
+          const runtimeConfig = runtimePromptConfigs.get(key);
+          if (!runtimeConfig || !runtimeConfig.type) {
+            continue;
+          }
+
+          const name = String(key);
+          const label = runtimeConfig.label ?? name;
+          const hasInput = hasOwnKey(options.inputs, name);
+          const rawValue = hasInput
+            ? options.inputs[name]
+            : hasPromptDefault(runtimeConfig)
+              ? runtimeConfig.defaultValue
+              : undefined;
+
+          if (rawValue === undefined) {
+            continue;
+          }
+
+          const value = coerceAnimateValue(runtimeConfig, rawValue);
+          let finalValue = value;
+          const resolved = await resolvePromptValue(runtimeConfig, value);
+          if (resolved.ok) {
+            finalValue = resolved.value;
+          }
+
+          resolvedValues.set(name, finalValue);
+
+          if (runtimeConfig.type === "list") {
+            const items = Array.isArray(value) ? value : [value];
+            for (const item of items) {
+              yield {
+                type: "prompt_start",
+                key: name,
+                label,
+                promptType: animatePromptType(runtimeConfig),
+              };
+
+              await wait(humanizePause(timing.promptDelay));
+
+              const sequence = String(item ?? "");
+              let typed = "";
+              for (const [index, char] of Array.from(sequence).entries()) {
+                typed += char;
+                yield {
+                  type: "char",
+                  key: name,
+                  value: char,
+                  full: typed,
+                };
+                await wait(humanizeTypeDelay(timing.typeDelay, sequence, index));
+              }
+
+              yield {
+                type: "prompt_submit",
+                key: name,
+                label,
+                displayValue: typed,
+              };
+
+              await wait(humanizePause(timing.completionDelay));
+            }
+
+            continue;
+          }
+
+          yield {
+            type: "prompt_start",
+            key: name,
+            label,
+            promptType: animatePromptType(runtimeConfig),
+          };
+
+          if (
+            runtimeConfig.type === "select" ||
+            runtimeConfig.type === "search"
+          ) {
+            const startIndex = resolveAnimateChoiceIndex(
+              runtimeConfig,
+              runtimeConfig.defaultValue,
+              0,
+            );
+            const targetIndex = resolveAnimateChoiceIndex(
+              runtimeConfig,
+              value,
+              startIndex,
+            );
+
+            yield {
+              type: "prompt_preview",
+              key: name,
+              label,
+              promptType: animatePromptType(runtimeConfig),
+              lines: buildSelectPreviewLines(runtimeConfig, startIndex),
+            };
+
+            await wait(humanizePause(timing.promptDelay));
+
+            for (const index of moveIndexToward(startIndex, targetIndex)) {
+              yield {
+                type: "prompt_preview",
+                key: name,
+                label,
+                promptType: animatePromptType(runtimeConfig),
+                lines: buildSelectPreviewLines(runtimeConfig, index),
+              };
+              await wait(humanizePause(Math.max(timing.typeDelay * 1.8, 120)));
+            }
+          } else if (runtimeConfig.type === "multiselect") {
+            const choices = runtimeConfig.choices ?? [];
+            const defaultValues = new Set(
+              Array.isArray(runtimeConfig.defaultValue)
+                ? runtimeConfig.defaultValue.map((entry) => String(entry))
+                : [],
+            );
+            const targetValues = new Set(
+              Array.isArray(value) ? value.map((entry) => String(entry)) : [],
+            );
+            let activeIndex = 0;
+            let currentSelections = new Set(defaultValues);
+
+            yield {
+              type: "prompt_preview",
+              key: name,
+              label,
+              promptType: animatePromptType(runtimeConfig),
+              lines: buildMultiselectPreviewLines(
+                runtimeConfig,
+                activeIndex,
+                currentSelections,
+              ),
+            };
+
+            await wait(humanizePause(timing.promptDelay));
+
+            const choiceOrder = choices.map((choice, index) => ({
+              label: String(choice),
+              index,
+            }));
+            const toggles = choiceOrder.filter(({ label: choiceLabel }) =>
+              currentSelections.has(choiceLabel) !== targetValues.has(choiceLabel),
+            );
+
+            for (const toggle of toggles) {
+              for (const index of moveIndexToward(activeIndex, toggle.index)) {
+                activeIndex = index;
+                yield {
+                  type: "prompt_preview",
+                  key: name,
+                  label,
+                  promptType: animatePromptType(runtimeConfig),
+                  lines: buildMultiselectPreviewLines(
+                    runtimeConfig,
+                    activeIndex,
+                    currentSelections,
+                  ),
+                };
+                await wait(
+                  humanizePause(Math.max(timing.typeDelay * 1.8, 120)),
+                );
+              }
+
+              const keyLabel = toggle.label;
+              if (currentSelections.has(keyLabel)) {
+                currentSelections.delete(keyLabel);
+              } else {
+                currentSelections.add(keyLabel);
+              }
+
+              yield {
+                type: "prompt_preview",
+                key: name,
+                label,
+                promptType: animatePromptType(runtimeConfig),
+                lines: buildMultiselectPreviewLines(
+                  runtimeConfig,
+                  activeIndex,
+                  currentSelections,
+                ),
+              };
+              await wait(humanizePause(Math.max(timing.typeDelay * 1.4, 140)));
+            }
+          } else if (
+            runtimeConfig.type === "confirm" &&
+            runtimeConfig.confirmMode === "toggle"
+          ) {
+            const startValue = hasPromptDefault(runtimeConfig)
+              ? Boolean(runtimeConfig.defaultValue)
+              : true;
+            const targetValue = Boolean(value);
+
+            yield {
+              type: "prompt_preview",
+              key: name,
+              label,
+              promptType: animatePromptType(runtimeConfig),
+              lines: buildConfirmPreviewLines(startValue),
+            };
+
+            await wait(humanizePause(timing.promptDelay));
+
+            if (startValue !== targetValue) {
+              yield {
+                type: "prompt_preview",
+                key: name,
+                label,
+                promptType: animatePromptType(runtimeConfig),
+                lines: buildConfirmPreviewLines(targetValue),
+              };
+              await wait(humanizePause(Math.max(timing.typeDelay * 1.6, 120)));
+            }
+          } else {
+            await wait(humanizePause(timing.promptDelay));
+          }
+
+          const sequence = animateCharSequence(runtimeConfig, value);
+          if (sequence !== null) {
+            let typed = "";
+            for (const [index, char] of Array.from(sequence).entries()) {
+              typed += char;
+              yield {
+                type: "char",
+                key: name,
+                value: char,
+                full: typed,
+              };
+              await wait(humanizeTypeDelay(timing.typeDelay, sequence, index));
+            }
+          }
+
+          let displayValue = formatPromptSummaryValue(runtimeConfig, finalValue);
+          if (
+            runtimeConfig.type === "select" ||
+            runtimeConfig.type === "search"
+          ) {
+            displayValue = resolveAnimateChoiceLabel(runtimeConfig, value);
+          } else if (runtimeConfig.type === "multiselect") {
+            displayValue = Array.isArray(value)
+              ? value
+                  .map((item) => resolveAnimateChoiceLabel(runtimeConfig, item))
+                  .join(", ")
+              : String(value ?? "");
+          }
+
+          yield {
+            type: "prompt_submit",
+            key: name,
+            label,
+            displayValue,
+          };
+
+          await wait(humanizePause(timing.completionDelay));
+        }
+
+        yield {
+          type: "outro",
+          message: deriveAnimateOutroMessage(config.description, resolvedValues),
+        };
+        yield { type: "run_complete" };
+
+        if (!timing.loop) {
+          return;
+        }
+
+        await wait(humanizePause(timing.loopDelay, 0.08));
+        yield { type: "loop_restart" };
+      }
+    },
     command: (name: string, fn: () => Promise<void> | void) => {
       commandHandlers.set(name, fn);
     },
@@ -992,6 +1612,7 @@ export function createCLI<
         mainHandler = fn;
       }
 
+      const { Command, CommanderError, Option } = await loadCommanderModule();
       const program = new Command();
       const registeredCommandNames = [...commandHandlers.keys()];
       let handled = false;
@@ -1022,7 +1643,7 @@ export function createCLI<
         outputError: () => {},
       });
       program.exitOverride();
-      registerOptions(program);
+      registerOptions(program, Option);
 
       if (commandHandlers.size === 0) {
         program.action(async () => {
@@ -1039,7 +1660,7 @@ export function createCLI<
       } else {
         for (const [name, handler] of commandHandlers) {
           const command = program.command(name);
-          registerOptions(command);
+          registerOptions(command, Option);
           command.action(async () => {
             handled = true;
             await hydrateRuntime(program, command);

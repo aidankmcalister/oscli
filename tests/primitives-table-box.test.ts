@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { table } from "../src/primitives/table";
-import { box } from "../src/primitives/box";
+import { table } from "../packages/oscli/src/primitives/table";
+import { box } from "../packages/oscli/src/primitives/box";
 
 function withStdoutTTY<T>(isTTY: boolean, fn: () => T): T {
   const descriptor = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");

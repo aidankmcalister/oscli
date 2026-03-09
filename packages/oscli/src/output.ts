@@ -1,5 +1,4 @@
 import * as pc from "picocolors";
-import * as readline from "node:readline";
 import {
   activeNoColor,
   activeTheme as theme,
@@ -13,6 +12,10 @@ let railEnabled = false;
 let lastLiveLineWidth = 0;
 let hasPersistentCorner = false;
 let outputSuppressed = false;
+
+function writeStdoutAnsi(value: string): void {
+  process.stdout.write(value);
+}
 
 export type LogLevel = "info" | "warn" | "error" | "success" | "plain";
 
@@ -84,9 +87,7 @@ export function clearPersistentCorner(): void {
     return;
   }
 
-  readline.moveCursor(process.stdout, 0, -1);
-  readline.clearLine(process.stdout, 0);
-  readline.cursorTo(process.stdout, 0);
+  writeStdoutAnsi("\u001b[1A\u001b[2K\r");
   hasPersistentCorner = false;
 }
 

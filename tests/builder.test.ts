@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createBuilder } from "../src/builder";
+import { createBuilder } from "../packages/oscli/src/builder";
 
 describe("createBuilder", () => {
   it("builds text prompt config with shared options", () => {

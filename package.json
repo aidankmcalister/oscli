@@ -19,8 +19,8 @@
     "docs": "cd docs && bun run dev",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "bun build src/index.ts --outdir dist --target node --format esm --splitting && bun tsc -p tsconfig.build.json",
-    "benchmark": "bun build src/index.ts --outdir /tmp/oscli-bench --target node --format esm --splitting --analyze && echo 'Entry point size:' && ls -lh /tmp/oscli-bench/index.js",
+    "build": "bun build packages/oscli/src/index.ts --outdir dist --target node --format esm --splitting && bun tsc -p tsconfig.build.json",
+    "benchmark": "bun build packages/oscli/src/index.ts --outdir /tmp/oscli-bench --target node --format esm --splitting --analyze && echo 'Entry point size:' && ls -lh /tmp/oscli-bench/index.js",
     "typecheck": "bun tsc --noEmit",
     "prepublishOnly": "bun run test && bun run build"
   },

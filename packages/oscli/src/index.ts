@@ -3,6 +3,8 @@ export { createBuilder } from "./builder";
 export { createStorage } from "./storage";
 export {
   createCLI,
+  type AnimateEvent,
+  type AnimateOptions,
   type ExitCode,
   type ExitOptions,
   type TestOptions,

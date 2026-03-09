@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createStorage } from "../src/storage";
+import { createStorage } from "../packages/oscli/src/storage";
 
 describe("createStorage", () => {
   it("stores and retrieves typed values", () => {

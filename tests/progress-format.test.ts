@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createProgressGroup, renderProgressLine } from "../src/primitives/progress";
-import { decorateLine, setRailEnabled } from "../src/output";
-import { stripAnsi, visibleLength } from "../src/theme";
+import { createProgressGroup, renderProgressLine } from "../packages/oscli/src/primitives/progress";
+import { decorateLine, setRailEnabled } from "../packages/oscli/src/output";
+import { stripAnsi, visibleLength } from "../packages/oscli/src/theme";
 
 describe("progress formatting", () => {
   it("keeps timer and percent columns aligned across a group", () => {

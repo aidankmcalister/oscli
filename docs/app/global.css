@@ -1,7 +1,6 @@
 @import "tailwindcss";
 @import "fumadocs-ui/css/solar.css";
 @import "fumadocs-ui/css/preset.css";
-
 @theme {
     --font-sans: var(--font-montserrat);
     --font-serif: var(--font-fraunces);
@@ -84,6 +83,30 @@ body {
 
 h1 {
     font-family: var(--font-serif);
+}
+
+code, pre, kbd, samp, .font-mono {
+    font-family: var(--font-jetbrains-mono), monospace;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-fd-foreground) 28%, transparent)
+        color-mix(in srgb, var(--color-fd-foreground) 10%, transparent);
+}
+
+*::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--color-fd-foreground) 10%, transparent);
+}
+
+*::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-fd-foreground) 28%, transparent);
+    border-radius: 999px;
 }
 
 #nd-page :where(h2, h3),

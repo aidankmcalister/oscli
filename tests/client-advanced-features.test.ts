@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createCLI } from "../src/client";
-import { stripAnsi } from "../src/theme";
+import { createCLI } from "../packages/oscli/src/client";
+import { stripAnsi } from "../packages/oscli/src/theme";
 
 async function withArgv(args: string[], fn: () => Promise<void>) {
   const originalArgv = process.argv;

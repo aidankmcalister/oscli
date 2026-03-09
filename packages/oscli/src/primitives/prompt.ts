@@ -1,4 +1,3 @@
-import * as readline from "node:readline";
 import { writeLine, writeLines, writeSectionLine } from "../output";
 import {
   activeTheme as theme,
@@ -114,12 +113,13 @@ function disableRawMode(): void {
 }
 
 function clearLine(): void {
-  readline.clearLine(process.stdout, 0);
-  readline.cursorTo(process.stdout, 0);
+  process.stdout.write("\u001b[2K\r");
 }
 
 function moveCursorUp(lines: number): void {
-  readline.moveCursor(process.stdout, 0, -lines);
+  if (lines > 0) {
+    process.stdout.write(`\u001b[${lines}A`);
+  }
 }
 
 function clearRenderedBlock(lines: number): void {
@@ -128,8 +128,7 @@ function clearRenderedBlock(lines: number): void {
   }
 
   moveCursorUp(lines);
-  readline.cursorTo(process.stdout, 0);
-  readline.clearScreenDown(process.stdout);
+  process.stdout.write("\r\u001b[J");
 }
 
 function renderBlock(lines: string[], renderedLines: number): number {

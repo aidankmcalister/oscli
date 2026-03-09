@@ -8,6 +8,7 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
+    "types": ["react", "react-dom", "node"],
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -17,6 +18,8 @@
     "incremental": true,
     "paths": {
       "@/*": ["./*"],
+      "@oscli-dev/oscli": ["../packages/oscli/src/index.ts"],
+      "@oscli-dev/react": ["../packages/react"],
       "fumadocs-mdx:collections/*": [".source/*"]
     },
     "plugins": [
