@@ -16,7 +16,6 @@
     "dist"
   ],
   "scripts": {
-    "dev": "bun run examples/kitchen-sink.ts",
     "docs": "cd docs && bun run dev",
     "test": "vitest run",
     "test:watch": "vitest",
