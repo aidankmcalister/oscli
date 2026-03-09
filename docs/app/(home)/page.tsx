@@ -1,7 +1,11 @@
 import { cache } from "react";
 import { createHighlighter } from "shiki";
 import { HomeHeroClient } from "@/components/home-hero-client";
-import { oscliDarkTheme, oscliLanguage } from "@/lib/shiki-oscli";
+import {
+  oscliDarkTheme,
+  oscliLanguage,
+  oscliLightTheme,
+} from "@/lib/shiki-oscli";
 
 const setupCode = [
   'import { createCLI } from "@oscli-dev/oscli"',
@@ -47,25 +51,43 @@ const terminalCode = [
 
 const getHighlighter = cache(async () =>
   createHighlighter({
-    themes: [oscliDarkTheme],
+    themes: [oscliLightTheme, oscliDarkTheme],
     langs: ["ts", oscliLanguage],
   }),
 );
 
-async function highlight(code: string, lang: "ts" | "oscli") {
+async function highlight(
+  code: string,
+  lang: "ts" | "oscli",
+  theme: "github-light-oscli" | "github-dark-oscli",
+) {
   const highlighter = await getHighlighter();
 
   return highlighter.codeToHtml(code, {
     lang,
-    theme: "github-dark-oscli",
+    theme,
   });
 }
 
 export default async function HomePage() {
-  const [setupHtml, terminalHtml] = await Promise.all([
-    highlight(setupCode, "ts"),
-    highlight(terminalCode, "oscli"),
+  const [
+    setupHtmlLight,
+    setupHtmlDark,
+    terminalHtmlLight,
+    terminalHtmlDark,
+  ] = await Promise.all([
+    highlight(setupCode, "ts", "github-light-oscli"),
+    highlight(setupCode, "ts", "github-dark-oscli"),
+    highlight(terminalCode, "oscli", "github-light-oscli"),
+    highlight(terminalCode, "oscli", "github-dark-oscli"),
   ]);
 
-  return <HomeHeroClient setupHtml={setupHtml} terminalHtml={terminalHtml} />;
+  return (
+    <HomeHeroClient
+      setupHtmlLight={setupHtmlLight}
+      setupHtmlDark={setupHtmlDark}
+      terminalHtmlLight={terminalHtmlLight}
+      terminalHtmlDark={terminalHtmlDark}
+    />
+  );
 }

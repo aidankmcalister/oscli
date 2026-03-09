@@ -19,21 +19,21 @@ function HeroPanel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="overflow-visible rounded-[8px] border border-[#222222] bg-[#141414]">
-      <div className="flex items-center justify-between gap-4 border-b border-[#222222] px-4 py-3">
-        <span className="text-[13px] font-medium tracking-[0.01em] text-[#777777]">
+    <div className="overflow-visible rounded-[8px] border border-fd-border bg-fd-card">
+      <div className="flex items-center justify-between gap-4 border-b border-fd-border px-4 py-3">
+        <span className="text-[13px] font-medium tracking-[0.01em] text-fd-muted-foreground">
           {title}
         </span>
 
-        <div className="inline-flex items-center gap-1 rounded-full border border-[#222222] bg-[#101010] p-1">
+        <div className="inline-flex items-center gap-1 rounded-full border border-fd-border bg-fd-background p-1">
           <button
             type="button"
             onClick={() => onTabChange("code")}
             className={[
               "rounded-full px-3 py-1 text-[12px] font-medium transition-colors duration-75",
               activeTab === "code"
-                ? "bg-[#f3f1eb] text-[#0a0a0a]"
-                : "text-[#777777] hover:text-[#f3f1eb]",
+                ? "bg-fd-foreground text-fd-background"
+                : "text-fd-muted-foreground hover:text-fd-foreground",
             ].join(" ")}
           >
             Code
@@ -44,8 +44,8 @@ function HeroPanel({
             className={[
               "rounded-full px-3 py-1 text-[12px] font-medium transition-colors duration-75",
               activeTab === "preview"
-                ? "bg-[#f3f1eb] text-[#0a0a0a]"
-                : "text-[#777777] hover:text-[#f3f1eb]",
+                ? "bg-fd-foreground text-fd-background"
+                : "text-fd-muted-foreground hover:text-fd-foreground",
             ].join(" ")}
           >
             Preview
@@ -77,11 +77,15 @@ function ShikiPanel({ html }: { html: string }) {
 }
 
 export function HomeHeroClient({
-  setupHtml,
-  terminalHtml,
+  setupHtmlLight,
+  setupHtmlDark,
+  terminalHtmlLight,
+  terminalHtmlDark,
 }: {
-  setupHtml: string;
-  terminalHtml: string;
+  setupHtmlLight: string;
+  setupHtmlDark: string;
+  terminalHtmlLight: string;
+  terminalHtmlDark: string;
 }) {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>("preview");
@@ -99,7 +103,7 @@ export function HomeHeroClient({
   const panelTitle = activeTab === "code" ? "setup.ts" : "terminal";
 
   return (
-    <section className="min-h-[100svh] overflow-hidden bg-[#0a0a0a] px-[clamp(1rem,2vw,1.75rem)] py-6 text-fd-foreground">
+    <section className="min-h-[100svh] overflow-hidden bg-fd-background px-[clamp(1rem,2vw,1.75rem)] py-6 text-fd-foreground">
       <div className="mx-auto flex min-h-[calc(100svh-3rem)] w-full max-w-[1400px] items-center">
         <div className="grid w-full items-center gap-10 lg:grid-cols-2 lg:gap-14">
           <div className="flex items-center lg:min-h-[70svh]">
@@ -159,11 +163,40 @@ export function HomeHeroClient({
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
               >
-                {activeTab === "code" ? (
-                  <ShikiPanel html={setupHtml} />
-                ) : (
-                  <ShikiPanel html={terminalHtml} />
-                )}
+                <div className="grid">
+                  <div
+                    className={[
+                      "col-start-1 row-start-1",
+                      activeTab === "code"
+                        ? "visible"
+                        : "invisible pointer-events-none",
+                    ].join(" ")}
+                    aria-hidden={activeTab !== "code"}
+                  >
+                    <div className="block dark:hidden">
+                      <ShikiPanel html={setupHtmlLight} />
+                    </div>
+                    <div className="hidden dark:block">
+                      <ShikiPanel html={setupHtmlDark} />
+                    </div>
+                  </div>
+                  <div
+                    className={[
+                      "col-start-1 row-start-1",
+                      activeTab === "preview"
+                        ? "visible"
+                        : "invisible pointer-events-none",
+                    ].join(" ")}
+                    aria-hidden={activeTab !== "preview"}
+                  >
+                    <div className="block dark:hidden">
+                      <ShikiPanel html={terminalHtmlLight} />
+                    </div>
+                    <div className="hidden dark:block">
+                      <ShikiPanel html={terminalHtmlDark} />
+                    </div>
+                  </div>
+                </div>
               </HeroPanel>
             </div>
           </div>
