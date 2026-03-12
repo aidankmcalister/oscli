@@ -365,10 +365,14 @@ export function OscliDemo({
 
           if (event.type === "prompt_start") {
             setActiveKey(event.key);
-            setLines((prev) => [
-              ...prev,
-              { kind: "prompt-label", key: event.key, label: event.label },
-            ]);
+            const isTextType = ["text", "password", "number", "date"].includes(event.promptType);
+            setLines((prev) => {
+              const next = [...prev, { kind: "prompt-label" as const, key: event.key, label: event.label }];
+              if (isTextType) {
+                next.push({ kind: "active-text" as const, key: event.key, full: "" });
+              }
+              return next;
+            });
             continue;
           }
 
