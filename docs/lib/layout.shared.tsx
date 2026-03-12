@@ -11,6 +11,7 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: 'oscli',
     },
+    links: [],
     githubUrl: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,
   };
 }

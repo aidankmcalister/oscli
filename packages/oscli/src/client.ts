@@ -1310,6 +1310,11 @@ export function createCLI<
   // A framework-agnostic event emitter variant that streams animation
   // events (prompt_start, keypress, prompt_submit, run_complete) so
   // React/Svelte/Vue components can render the animation without a TTY.
+  const _promptConfigs: Record<string, RuntimePromptConfig> = {};
+  for (const [key, value] of runtimePromptConfigs) {
+    _promptConfigs[String(key)] = value;
+  }
+
   const cli = {
     storage: storage.data as Partial<StorageShape<TPrompts>>,
     flags,
@@ -1319,6 +1324,7 @@ export function createCLI<
     _noColor: noColor,
     _jsonMode: jsonMode,
     _writeLine,
+    _promptConfigs,
     suggest: suggestValue,
     animate: async function* (
       options: AnimateOptions<Record<Extract<keyof TPrompts, string>, unknown>>,

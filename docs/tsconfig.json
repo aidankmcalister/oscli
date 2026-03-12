@@ -19,7 +19,7 @@
     "paths": {
       "@/*": ["./*"],
       "@oscli-dev/oscli": ["../packages/oscli/src/index.ts"],
-      "@oscli-dev/react": ["../packages/react"],
+      "@oscli-dev/react": ["../packages/react/src/index.ts"],
       "fumadocs-mdx:collections/*": [".source/*"]
     },
     "plugins": [
