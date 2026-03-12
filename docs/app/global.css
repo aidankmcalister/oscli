@@ -89,13 +89,21 @@ h1 {
     font-family: var(--font-serif);
 }
 
-code, pre, kbd, samp, .font-mono {
+code,
+pre,
+kbd,
+samp,
+.font-mono {
     font-family: var(--font-jetbrains-mono), monospace;
 }
 
 * {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--color-fd-foreground) 28%, transparent)
+    scrollbar-color: color-mix(
+            in srgb,
+            var(--color-fd-foreground) 28%,
+            transparent
+        )
         color-mix(in srgb, var(--color-fd-foreground) 10%, transparent);
 }
 
@@ -127,6 +135,11 @@ code, pre, kbd, samp, .font-mono {
     font-family: var(--font-serif) !important;
     font-weight: 500;
     letter-spacing: -0.02em;
+}
+
+#nd-sidebar :where(p),
+#nd-sidebar-mobile :where(p) {
+    font-family: var(--font-serif);
 }
 
 #nd-sidebar :where(svg),
@@ -179,7 +192,17 @@ code, pre, kbd, samp, .font-mono {
 
 .oscli-terminal-body {
     padding: 1rem 1.25rem;
-    font-family: var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+    font-family: var(
+        --font-geist-mono,
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        "Liberation Mono",
+        "Courier New",
+        monospace
+    );
     font-size: 0.95rem;
     line-height: 1.55;
 }
@@ -259,7 +282,7 @@ code, pre, kbd, samp, .font-mono {
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.87 0.00 0);
+    --primary: oklch(0.87 0 0);
     --primary-foreground: oklch(0.205 0 0);
     --secondary: oklch(0.269 0 0);
     --secondary-foreground: oklch(0.985 0 0);
@@ -330,7 +353,7 @@ code, pre, kbd, samp, .font-mono {
 
 /* shadcn base layer — kept minimal to avoid conflicts with fumadocs */
 @layer base {
-  * {
-    outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
-  }
+    * {
+        outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
+    }
 }
