@@ -576,6 +576,11 @@ export function OscliDemo({
             </div>
           );
         })}
+        {!lines.some((l) => l.kind === "outro") && lines.length > 0 && (
+          <div>
+            <span style={{ color: t.rail }}>└</span>
+          </div>
+        )}
       </div>
     </div>
   );
