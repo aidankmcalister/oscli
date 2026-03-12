@@ -1446,8 +1446,6 @@ export function createCLI<
               startIndex,
             );
 
-            await wait(humanizePause(timing.promptDelay));
-
             yield {
               type: "prompt_preview",
               key: name,
@@ -1456,8 +1454,10 @@ export function createCLI<
               lines: buildSelectPreviewLines(runtimeConfig, startIndex),
             };
 
-            // Dwell on the initial position so it's visible before moving.
-            await wait(humanizePause(Math.max(timing.typeDelay * 1.8, 120)));
+            // Show the initial frame immediately, then dwell before movement.
+            await wait(
+              humanizePause(Math.max(timing.promptDelay, timing.typeDelay * 1.8, 120)),
+            );
 
             for (const index of moveIndexToward(startIndex, targetIndex)) {
               yield {
@@ -1482,8 +1482,6 @@ export function createCLI<
             let activeIndex = 0;
             let currentSelections = new Set(defaultValues);
 
-            await wait(humanizePause(timing.promptDelay));
-
             yield {
               type: "prompt_preview",
               key: name,
@@ -1496,8 +1494,10 @@ export function createCLI<
               ),
             };
 
-            // Dwell on index 0 so it's visible before cursor movement begins.
-            await wait(humanizePause(Math.max(timing.typeDelay * 2.2, 200)));
+            // Show the initial frame immediately, then dwell before movement.
+            await wait(
+              humanizePause(Math.max(timing.promptDelay, timing.typeDelay * 2.2, 200)),
+            );
 
             const choiceOrder = choices.map((choice, index) => ({
               label: String(choice),
@@ -1552,8 +1552,6 @@ export function createCLI<
           ) {
             const targetValue = Boolean(value);
 
-            await wait(humanizePause(timing.promptDelay));
-
             // Always show the opposite state first so there is always a visible
             // toggle animation, regardless of the default value.
             yield {
@@ -1564,8 +1562,10 @@ export function createCLI<
               lines: buildConfirmPreviewLines(!targetValue),
             };
 
-            // Dwell on the initial state before toggling.
-            await wait(humanizePause(Math.max(timing.typeDelay * 3, 340)));
+            // Show the initial state immediately, then dwell before toggling.
+            await wait(
+              humanizePause(Math.max(timing.promptDelay, timing.typeDelay * 3, 340)),
+            );
 
             yield {
               type: "prompt_preview",
