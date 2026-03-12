@@ -5,7 +5,9 @@
     "moduleResolution": "bundler",
     "strict": true,
     "skipLibCheck": true,
+    "outDir": "dist",
+    "declaration": true,
     "sourceMap": true
   },
-  "include": ["examples", "tests", "packages/**/*.ts", "packages/**/*.tsx"]
+  "include": ["src"]
 }

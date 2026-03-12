@@ -44,7 +44,7 @@ jobs:
         uses: sergeysova/jq-action@v2
         id: version
         with:
-          cmd: "jq .version package.json -r"
+          cmd: "jq .version packages/oscli/package.json -r"
 
       - name: Get latest tag
         uses: actions-ecosystem/action-get-latest-tag@v1
@@ -64,6 +64,6 @@ jobs:
 
       - name: Publish to NPM
         if: ${{ steps.get-latest-tag.outputs.tag != format('v{0}', steps.version.outputs.value) }}
-        run: npm publish --access public
+        run: cd packages/oscli && npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

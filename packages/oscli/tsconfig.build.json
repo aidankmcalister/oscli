@@ -5,7 +5,7 @@
     "declaration": true,
     "declarationMap": true,
     "emitDeclarationOnly": true,
-    "rootDir": "packages/oscli/src"
+    "rootDir": "src"
   },
-  "include": ["packages/oscli/src"]
+  "include": ["src"]
 }

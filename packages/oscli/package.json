@@ -1,0 +1,54 @@
+{
+  "name": "@oscli-dev/oscli",
+  "version": "0.1.2",
+  "description": "The last CLI framework you'll reach for.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target node --format esm --splitting && bun tsc -p tsconfig.build.json",
+    "benchmark": "bun build src/index.ts --outdir /tmp/oscli-bench --target node --format esm --splitting --analyze && echo 'Entry point size:' && ls -lh /tmp/oscli-bench/index.js",
+    "typecheck": "bun tsc --noEmit",
+    "prepublishOnly": "cd ../.. && bun run test && bun run build"
+  },
+  "keywords": [
+    "cli",
+    "framework",
+    "typescript",
+    "prompts",
+    "terminal",
+    "bun"
+  ],
+  "author": "Aidan McAlister",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aidankmcalister/oscli.git"
+  },
+  "homepage": "https://oscli.dev",
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "picocolors": "^1.1.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
