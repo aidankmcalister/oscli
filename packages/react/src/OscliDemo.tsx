@@ -39,9 +39,9 @@ type DemoTiming = {
 export type DemoSpeed = "slow" | "normal" | "fast";
 
 const SPEED_PRESETS: Record<DemoSpeed, Required<Pick<DemoTiming, "typeDelay" | "promptDelay" | "completionDelay">>> = {
-  slow:   { typeDelay: 160, promptDelay: 1100, completionDelay: 20 },
-  normal: { typeDelay: 85,  promptDelay: 700,  completionDelay: 20 },
-  fast:   { typeDelay: 30,  promptDelay: 240,  completionDelay: 20 },
+  slow:   { typeDelay: 160, promptDelay: 1100, completionDelay: 0 },
+  normal: { typeDelay: 85,  promptDelay: 700,  completionDelay: 0 },
+  fast:   { typeDelay: 30,  promptDelay: 240,  completionDelay: 0 },
 };
 
 type PromptConfig = {
