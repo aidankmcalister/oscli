@@ -25,7 +25,12 @@ type AnimateEvent =
     }
   | { type: "outro"; message: string }
   | { type: "run_complete" }
-  | { type: "loop_restart" };
+  | { type: "loop_restart" }
+  | { type: "spin_start"; label: string }
+  | { type: "spin_complete"; label: string }
+  | { type: "log_line"; level: string; message: string }
+  | { type: "box_render"; title?: string; content: string }
+  | { type: "success_line"; message: string };
 
 type DemoTiming = {
   typeDelay?: number;
@@ -80,7 +85,11 @@ type RenderLine =
   | { kind: "active-text"; key: string; full: string }
   | { kind: "active-preview"; key: string; lines: string[] }
   | { kind: "summary"; key: string; label: string; displayValue: string }
-  | { kind: "outro"; message: string };
+  | { kind: "outro"; message: string }
+  | { kind: "spin"; label: string; done: boolean }
+  | { kind: "log-line"; level: string; message: string }
+  | { kind: "box"; title?: string; content: string }
+  | { kind: "success"; message: string };
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
@@ -439,6 +448,41 @@ export function OscliDemo({
             continue;
           }
 
+          if (event.type === "spin_start") {
+            setLines((prev) => [...prev, { kind: "spin", label: event.label, done: false }]);
+            continue;
+          }
+
+          if (event.type === "spin_complete") {
+            setLines((prev) => {
+              const next = [...prev];
+              for (let i = next.length - 1; i >= 0; i--) {
+                const l = next[i]!;
+                if (l.kind === "spin" && l.label === event.label && !l.done) {
+                  next[i] = { ...l, done: true };
+                  break;
+                }
+              }
+              return next;
+            });
+            continue;
+          }
+
+          if (event.type === "log_line") {
+            setLines((prev) => [...prev, { kind: "log-line", level: event.level, message: event.message }]);
+            continue;
+          }
+
+          if (event.type === "box_render") {
+            setLines((prev) => [...prev, { kind: "box", title: event.title, content: event.content }]);
+            continue;
+          }
+
+          if (event.type === "success_line") {
+            setLines((prev) => [...prev, { kind: "success", message: event.message }]);
+            continue;
+          }
+
           if (event.type === "outro") {
             setActiveKey(null);
             setLines((prev) => [...prev, { kind: "outro", message: event.message }]);
@@ -564,6 +608,80 @@ export function OscliDemo({
                 <span style={{ color: t.muted }}>{`${line.label}:`}</span>
                 <span>{"  "}</span>
                 <span>{line.displayValue}</span>
+              </div>
+            );
+          }
+
+          if (line.kind === "spin") {
+            return (
+              <div key={`spin-${i}`}>
+                <span style={{ color: t.rail }}>│</span>
+                <span>{"  "}</span>
+                {line.done ? (
+                  <span style={{ color: t.success }}>✓</span>
+                ) : (
+                  <span style={{ color: t.accent, animation: "oscli-blink 0.8s step-end infinite" }}>⠋</span>
+                )}
+                <span>{"  "}</span>
+                <span style={{ color: line.done ? t.muted : t.fg }}>{line.label}</span>
+              </div>
+            );
+          }
+
+          if (line.kind === "log-line") {
+            const levelColor =
+              line.level === "info" ? t.accent
+              : line.level === "warn" ? "#f59e0b"
+              : line.level === "error" ? "#f87171"
+              : line.level === "success" ? t.success
+              : t.muted;
+            const levelIcon =
+              line.level === "info" ? "ℹ"
+              : line.level === "warn" ? "⚠"
+              : line.level === "error" ? "✖"
+              : line.level === "success" ? "✓"
+              : "·";
+            return (
+              <div key={`log-${i}`}>
+                <span style={{ color: t.rail }}>│</span>
+                <span>{"  "}</span>
+                <span style={{ color: levelColor }}>{levelIcon}</span>
+                <span>{"  "}</span>
+                <span style={{ color: t.muted }}>{line.message}</span>
+              </div>
+            );
+          }
+
+          if (line.kind === "box") {
+            const boxLines = line.content.split("\n");
+            return (
+              <React.Fragment key={`box-${i}`}>
+                {line.title && (
+                  <div>
+                    <span style={{ color: t.rail }}>│</span>
+                    <span>{"  "}</span>
+                    <span style={{ color: t.accent }}>{line.title}</span>
+                  </div>
+                )}
+                {boxLines.map((bl, bi) => (
+                  <div key={`boxline-${i}-${bi}`}>
+                    <span style={{ color: t.rail }}>│</span>
+                    <span>{"  "}</span>
+                    <span style={{ color: t.muted }}>{bl}</span>
+                  </div>
+                ))}
+              </React.Fragment>
+            );
+          }
+
+          if (line.kind === "success") {
+            return (
+              <div key={`success-${i}`}>
+                <span style={{ color: t.rail }}>│</span>
+                <span> </span>
+                <span style={{ color: t.success }}>✓</span>
+                <span>{"  "}</span>
+                <span style={{ color: t.success }}>{line.message}</span>
               </div>
             );
           }

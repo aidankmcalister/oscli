@@ -179,7 +179,12 @@ export type AnimateEvent =
     }
   | { type: "outro"; message: string }
   | { type: "run_complete" }
-  | { type: "loop_restart" };
+  | { type: "loop_restart" }
+  | { type: "spin_start"; label: string }
+  | { type: "spin_complete"; label: string }
+  | { type: "log_line"; level: string; message: string }
+  | { type: "box_render"; title?: string; content: string }
+  | { type: "success_line"; message: string };
 
 export interface AnimateOptions<
   TInputs extends Record<string, unknown> = Record<string, unknown>,
@@ -990,6 +995,7 @@ export function createCLI<
   const testInputs = new Map<keyof TPrompts, unknown>();
   let testFlagOverrides: Partial<FlagsShape<TFlags>> | null = null;
   let mainHandler: CommandHandler | undefined;
+  let animateEventPush: ((event: AnimateEvent) => void) | null = null;
   let autoYes = false;
   let isTTY = false;
   let noColor = false;
@@ -1275,6 +1281,10 @@ export function createCLI<
   ): LogChain {
     if (maybeMessage === undefined) {
       return createLogChain("plain", levelOrMessage, (renderedMessage) => {
+        if (animateEventPush) {
+          animateEventPush({ type: "log_line", level: "plain", message: renderedMessage });
+          return;
+        }
         _writeLine(`${theme.layout.indent}${theme.color.value(renderedMessage)}`);
       });
     }
@@ -1299,6 +1309,10 @@ export function createCLI<
             : theme.color.success;
 
     return createLogChain(level, maybeMessage, (renderedMessage) => {
+      if (animateEventPush) {
+        animateEventPush({ type: "log_line", level, message: renderedMessage });
+        return;
+      }
       _writeLine(
         `${theme.layout.indent}${symbol} ${colorize(renderedMessage)}`,
         level === "error" ? "stderr" : "stdout",
@@ -1596,10 +1610,57 @@ export function createCLI<
           await wait(humanizePause(timing.completionDelay));
         }
 
-        yield {
-          type: "outro",
-          message: deriveAnimateOutroMessage(config.description, resolvedValues),
-        };
+        // Pre-fill test inputs so prompt calls inside mainHandler are instant
+        for (const [key, value] of resolvedValues) {
+          testInputs.set(key as keyof TPrompts, value);
+        }
+
+        if (mainHandler) {
+          // Set up event channel
+          const pendingEvents: AnimateEvent[] = [];
+          let handlerDone = false;
+          let notifyDrain: (() => void) | null = null;
+
+          animateEventPush = (event: AnimateEvent) => {
+            pendingEvents.push(event);
+            notifyDrain?.();
+            notifyDrain = null;
+          };
+
+          const waitForActivity = () =>
+            new Promise<void>((resolve) => {
+              if (pendingEvents.length > 0 || handlerDone) {
+                resolve();
+              } else {
+                notifyDrain = resolve;
+              }
+            });
+
+          const handlerPromise = Promise.resolve()
+            .then(() => mainHandler!())
+            .finally(() => {
+              handlerDone = true;
+              notifyDrain?.();
+              notifyDrain = null;
+            });
+
+          while (!handlerDone || pendingEvents.length > 0) {
+            await waitForActivity();
+            while (pendingEvents.length > 0) {
+              yield pendingEvents.shift()!;
+            }
+          }
+
+          await handlerPromise;
+          animateEventPush = null;
+          testInputs.clear();
+        } else {
+          yield {
+            type: "outro",
+            message: deriveAnimateOutroMessage(config.description, resolvedValues),
+          };
+        }
+
         yield { type: "run_complete" };
 
         if (!timing.loop) {
@@ -1805,6 +1866,10 @@ export function createCLI<
       };
     },
     intro: (message: string) => {
+      if (animateEventPush) {
+        animateEventPush({ type: "intro", message });
+        return;
+      }
       if (isOutputSuppressed()) {
         return;
       }
@@ -1821,6 +1886,10 @@ export function createCLI<
       writeSectionGap();
     },
     outro: (message: string) => {
+      if (animateEventPush) {
+        animateEventPush({ type: "outro", message });
+        return;
+      }
       if (isOutputSuppressed()) {
         return;
       }
@@ -1857,6 +1926,10 @@ export function createCLI<
       writeSectionLines(renderDiff(before, after));
     },
     box: (options: { title?: string; content: string }) => {
+      if (animateEventPush) {
+        animateEventPush({ type: "box_render", title: options.title, content: options.content });
+        return;
+      }
       writeSectionLines(renderBox(options));
     },
     spin: async <T>(
@@ -1864,6 +1937,12 @@ export function createCLI<
       fn: () => Promise<T>,
       options?: SpinnerOptions,
     ) => {
+      if (animateEventPush) {
+        animateEventPush({ type: "spin_start", label });
+        const result = await fn();
+        animateEventPush({ type: "spin_complete", label });
+        return result;
+      }
       const { spin: runSpinner } = await loadSpinnerModule();
       return runSpinner(label, fn, {
         ...options,
@@ -1910,6 +1989,10 @@ export function createCLI<
       });
     },
     success: (message: string) => {
+      if (animateEventPush) {
+        animateEventPush({ type: "success_line", message });
+        return;
+      }
       _writeLine(
         `${theme.layout.indent}${theme.color.success(theme.symbols.success)} ${theme.color.success(message)}`,
       );
