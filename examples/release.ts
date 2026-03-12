@@ -1,4 +1,4 @@
-import { createCLI } from "../packages/oscli/src/index.ts";
+import { createCLI } from "../packages/oscli/src/index";
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
