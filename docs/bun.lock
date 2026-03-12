@@ -6,6 +6,8 @@
       "name": "docs",
       "dependencies": {
         "@base-ui/react": "^1.2.0",
+        "@oscli-dev/oscli": "^0.1.2",
+        "@oscli-dev/react": "^0.1.0",
         "@radix-ui/react-popover": "^1.1.15",
         "@radix-ui/react-scroll-area": "^1.2.10",
         "@radix-ui/react-select": "^2.2.6",
@@ -314,6 +316,10 @@
     "@open-draft/until": ["@open-draft/until@2.1.0", "", {}, "sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg=="],
 
     "@orama/orama": ["@orama/orama@3.1.18", "", {}, "sha512-a61ljmRVVyG5MC/698C8/FfFDw5a8LOIvyOLW5fztgUXqUpc1jOfQzOitSCbge657OgXXThmY3Tk8fpiDb4UcA=="],
+
+    "@oscli-dev/oscli": ["@oscli-dev/oscli@0.1.2", "", { "dependencies": { "commander": "^14.0.3", "picocolors": "^1.1.1" }, "peerDependencies": { "typescript": "^5" } }, "sha512-loOYCQGP8fcPTbYNQv3BYhJLcqx2IGg0h1wGBA1DQbNKI8dO/e51dLyrytyJ2Aw2ojXbL+lp5wBsYV+UnVOmhA=="],
+
+    "@oscli-dev/react": ["@oscli-dev/react@0.1.0", "", { "peerDependencies": { "@oscli-dev/oscli": "*", "react": ">=18" } }, "sha512-ekWNkAh/A4sEo2BbA3l/dqQ7rhnCnLKOyeFehm/Sa2fiB7ZwkkTML2Mtt4Ry+G2lzVW1kfONhGuYUI+Ij4+4Cg=="],
 
     "@radix-ui/number": ["@radix-ui/number@1.1.1", "", {}, "sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g=="],
 

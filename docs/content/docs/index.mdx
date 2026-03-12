@@ -1,46 +1,27 @@
 ---
 title: Getting started
-description: Install oscli, define one flow, and ship a typed CLI in a few lines.
+description: Install oscli, define a flow, and ship a typed CLI.
 icon: Rocket
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 import { Card, Cards } from "fumadocs-ui/components/card";
-import { File, Files, Folder } from "fumadocs-ui/components/files";
-import { Step, Steps } from "fumadocs-ui/components/steps";
 
-`oscli` is a TypeScript-first CLI framework published on npm. You define
-prompts and flags once with a builder API, run your flow, then read typed
-values from `cli.storage` and `cli.flags`.
+`oscli` lets you define prompts, flags, and output once, then reuse the same
+flow in interactive terminals, tests, and automation.
 
 ## Install
 
-Use the package manager you already use.
+Install `@oscli-dev/oscli` with the package manager you already use.
 
 ```package-install
 @oscli-dev/oscli
 ```
 
-## Your first CLI
+## First CLI
 
-Start with the smallest possible CLI. This example stays under 10 lines and is
-complete.
-
-```ts title="src/cli.ts"
-import { createCLI } from "@oscli-dev/oscli";
-
-const cli = createCLI(() => ({ description: "my tool" }));
-
-await cli.run(async () => {
-  cli.success("Done.");
-});
-```
-
-Use this shape when you want a single-command CLI with no prompts yet.
-
-## Build a prompt-driven CLI
-
-Add prompts, run them once, and read the resolved values from `cli.storage`.
+Start with one flow, resolve prompts, and read typed values from
+`cli.storage`.
 
 ```ts title="src/cli.ts"
 import { createCLI } from "@oscli-dev/oscli";
@@ -49,92 +30,62 @@ const cli = createCLI((b) => ({
   description: "project setup",
   prompts: {
     project: b.text().label("Project").default("my-app"),
-    framework: b
-      .select({ choices: ["react", "vue", "svelte"] as const })
-      .label("Framework"),
     approved: b.confirm().label("Continue?").default(true),
   },
 }));
 
 await cli.run(async () => {
   cli.intro("project setup");
+
   await cli.prompt.project();
-  await cli.prompt.framework();
   await cli.prompt.approved();
 
+  if (!cli.storage.approved) {
+    cli.exit("Cancelled.", { code: "usage" });
+  }
+
   cli.success(`Created ${cli.storage.project}`);
-  cli.outro("Done.");
++  cli.outro("Done.");
 });
 ```
 
-## Grow the same CLI
+## Grow the same flow
 
-You can add JSON mode and return a machine-readable result without changing the
-rest of the flow.
+Add typed flags or machine-readable output without changing the basic shape of
+the CLI.
 
 ```ts title="src/cli.ts"
 const cli = createCLI((b) => ({
   description: "project setup",
-  prompts: {
-    project: b.text().label("Project"),
+  json: true,
+  flags: {
+    env: b
+      .flag()
+      .string()
+      .label("Environment")
+      .choices(["dev", "staging", "prod"] as const)
+      .default("dev"),
   },
-  json: true, // [!code ++]
+  prompts: {
+    project: b.text().label("Project").default("my-app"),
+  },
 }));
 
 await cli.run(async () => {
   await cli.prompt.project();
-  cli.setResult({ project: cli.storage.project }); // [!code ++]
+  cli.setResult({
+    env: cli.flags.env,
+    project: cli.storage.project,
+  });
 });
 ```
 
-Run that command with `--json` to suppress decorative output and print only the
-JSON result.
-
-## Suggested layout
-
-You do not need a special folder structure, but this is a clean starting point.
-
-<Files>
-  <Folder name="src" defaultOpen>
-    <File name="cli.ts" />
-  </Folder>
-  <File name="package.json" />
-  <File name="tsconfig.json" />
-</Files>
-
-## Setup flow
-
-Use this order when you are starting a new CLI.
-
-<Steps>
-  <Step>
-    <h3>Install the package</h3>
-    <div>
-      Add <code>@oscli-dev/oscli</code> to your project.
-    </div>
-  </Step>
-  <Step>
-    <h3>Define prompts and flags</h3>
-    <div>
-      Put your builder definitions inside <code>createCLI()</code> so types are
-      inferred once and reused everywhere.
-    </div>
-  </Step>
-  <Step>
-    <h3>Run the flow</h3>
-    <div>
-      Call <code>await cli.run(...)</code>, resolve prompts, and read values
-      from <code>cli.storage</code> and <code>cli.flags</code>.
-    </div>
-  </Step>
-</Steps>
-
 <Callout type="info">
-  <code>oscli</code> installs cleanly with npm, pnpm, Yarn, and Bun. The
-  published package targets Node 18+ at runtime.
+  The published package targets Node 18 or newer and installs cleanly with
+  npm, pnpm, Yarn, and Bun.
 </Callout>
 
-## Read next
+## Next steps
 
 Use these pages next.
 
@@ -142,22 +93,12 @@ Use these pages next.
   <Card
     title="Prompts"
     href="/docs/prompts"
-    description="All prompt builders, confirm modes, validation, and transforms."
+    description="Prompt builders, validation, transforms, and confirm modes."
   />
   <Card
     title="Flags"
     href="/docs/flags"
-    description="Typed flags, prompt bypass, and reserved globals."
-  />
-  <Card
-    title="Theme"
-    href="/docs/theme"
-    description="Theme presets, overrides, and per-prompt color."
-  />
-  <Card
-    title="Visual primitives"
-    href="/docs/visual-primitives"
-    description="Boxes, tables, progress, links, trees, and diffs."
+    description="Typed flags, prompt bypass, and reserved runtime flags."
   />
   <Card
     title="Testing"
@@ -165,8 +106,18 @@ Use these pages next.
     description="Run the same CLI in Vitest without touching stdin."
   />
   <Card
-    title="Non-interactive and CI"
-    href="/docs/non-interactive-and-ci"
-    description="TTY detection, no-color behavior, exit codes, and automation."
+    title="OscliDemo"
+    href="/docs/oscli-demo"
+    description="Embed an animated CLI preview in a React app."
+  />
+  <Card
+    title="Theme"
+    href="/docs/theme"
+    description="Theme presets, overrides, and prompt color control."
+  />
+  <Card
+    title="Visual primitives"
+    href="/docs/visual-primitives"
+    description="Boxes, tables, progress, trees, links, and diffs."
   />
 </Cards>

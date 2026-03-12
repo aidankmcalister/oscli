@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { OscliDemo } from "@oscli-dev/react";
-import { cli as createAppCli } from "../../examples/create-app";
+import { createAppDemoCli } from "@/lib/create-app-demo";
 
-const installCommand = "npm install @oscli-dev/oscli";
+const installCommand = "bun add @oscli-dev/oscli";
 
 type ActiveTab = "code" | "preview";
 
@@ -150,14 +150,13 @@ export function HomeHeroClient({
           {/* ── Left: hero copy ── */}
           <div className="space-y-7">
             <h1 className="text-[clamp(2.5rem,5.8vw,5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-balance text-fd-foreground">
-              The last CLI framework
+              Build polished CLIs
               <br />
-              you&apos;ll reach for.
+              with TypeScript.
             </h1>
 
             <p className="max-w-[30ch] text-[clamp(0.95rem,1.3vw,1.1rem)] leading-snug text-fd-muted-foreground">
-              One builder API for prompts, flags, and output — fully typed end
-              to end.
+              Typed prompts, flags, and output with one builder API.
             </p>
 
             {/* Install command */}
@@ -259,7 +258,7 @@ export function HomeHeroClient({
                 >
                   <div className="block dark:hidden">
                     <OscliDemo
-                      cli={createAppCli}
+                      cli={createAppDemoCli}
                       theme="light"
                       timing={{
                         typeDelay: 100,
@@ -271,7 +270,7 @@ export function HomeHeroClient({
                   </div>
                   <div className="hidden dark:block">
                     <OscliDemo
-                      cli={createAppCli}
+                      cli={createAppDemoCli}
                       theme="dark"
                       timing={{
                         typeDelay: 100,
