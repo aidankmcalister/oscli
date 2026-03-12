@@ -33,16 +33,47 @@ function CopyButton({ text }: { text: string }) {
     >
       {copied ? (
         <>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="M2 6l3 3 5-5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
           Copied
         </>
       ) : (
         <>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-            <rect x="4" y="4" width="7" height="7" rx="1.2" stroke="currentColor" strokeWidth="1.2"/>
-            <path d="M8 4V2.8A.8.8 0 0 0 7.2 2H1.8A.8.8 0 0 0 1 2.8v5.4A.8.8 0 0 0 1.8 9H3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            aria-hidden
+          >
+            <rect
+              x="4"
+              y="4"
+              width="7"
+              height="7"
+              rx="1.2"
+              stroke="currentColor"
+              strokeWidth="1.2"
+            />
+            <path
+              d="M8 4V2.8A.8.8 0 0 0 7.2 2H1.8A.8.8 0 0 0 1 2.8v5.4A.8.8 0 0 0 1.8 9H3"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
           </svg>
           Copy
         </>
@@ -116,7 +147,6 @@ export function HomeHeroClient({
     >
       <div className="mx-auto flex h-full w-full max-w-[1380px] items-center px-[clamp(1.25rem,3vw,2.5rem)]">
         <div className="grid w-full grid-cols-1 items-center gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-12">
-
           {/* ── Left: hero copy ── */}
           <div className="space-y-7">
             <h1 className="text-[clamp(2.5rem,5.8vw,5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-balance text-fd-foreground">
@@ -126,7 +156,8 @@ export function HomeHeroClient({
             </h1>
 
             <p className="max-w-[30ch] text-[clamp(0.95rem,1.3vw,1.1rem)] leading-snug text-fd-muted-foreground">
-              One builder API for prompts, flags, and output — fully typed end to end.
+              One builder API for prompts, flags, and output — fully typed end
+              to end.
             </p>
 
             {/* Install command */}
@@ -144,8 +175,21 @@ export function HomeHeroClient({
                 className="group flex items-center gap-1.5 text-[0.9rem] font-medium text-fd-foreground transition-opacity hover:opacity-70"
               >
                 Get started
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="transition-transform duration-100 group-hover:translate-x-0.5" aria-hidden>
-                  <path d="M2.5 6.5h8M7 3l3.5 3.5L7 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 13 13"
+                  fill="none"
+                  className="transition-transform duration-100 group-hover:translate-x-0.5"
+                  aria-hidden
+                >
+                  <path
+                    d="M2.5 6.5h8M7 3l3.5 3.5L7 10"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </Link>
               <span className="text-fd-border">·</span>
@@ -172,7 +216,6 @@ export function HomeHeroClient({
           {/* ── Right: demo panel ── */}
           <div className="flex items-center">
             <div className="w-full overflow-hidden rounded-xl border border-fd-border bg-fd-card">
-
               {/* Panel header */}
               <div className="flex items-center justify-between border-b border-fd-border px-4 py-[10px]">
                 <div className="flex items-center gap-3">
@@ -186,12 +229,13 @@ export function HomeHeroClient({
 
               {/* Panel content — fixed height, scrollable internally */}
               <div className="relative h-[min(52svh,440px)] overflow-hidden">
-
                 {/* Code */}
                 <div
                   className={[
                     "absolute inset-0 overflow-y-auto p-5 transition-opacity duration-200",
-                    activeTab === "code" ? "opacity-100" : "pointer-events-none opacity-0",
+                    activeTab === "code"
+                      ? "opacity-100"
+                      : "pointer-events-none opacity-0",
                   ].join(" ")}
                   aria-hidden={activeTab !== "code"}
                 >
@@ -207,7 +251,9 @@ export function HomeHeroClient({
                 <div
                   className={[
                     "absolute inset-0 overflow-hidden p-5 transition-opacity duration-200",
-                    activeTab === "preview" ? "opacity-100" : "pointer-events-none opacity-0",
+                    activeTab === "preview"
+                      ? "opacity-100"
+                      : "pointer-events-none opacity-0",
                   ].join(" ")}
                   aria-hidden={activeTab !== "preview"}
                 >
@@ -215,7 +261,11 @@ export function HomeHeroClient({
                     <OscliDemo
                       cli={createAppCli}
                       theme="light"
-                      timing={{ typeDelay: 85, promptDelay: 700, completionDelay: 140 }}
+                      timing={{
+                        typeDelay: 100,
+                        promptDelay: 1300,
+                        completionDelay: 0,
+                      }}
                       replayDelay={2600}
                     />
                   </div>
@@ -223,7 +273,11 @@ export function HomeHeroClient({
                     <OscliDemo
                       cli={createAppCli}
                       theme="dark"
-                      timing={{ typeDelay: 85, promptDelay: 700, completionDelay: 140 }}
+                      timing={{
+                        typeDelay: 100,
+                        promptDelay: 1300,
+                        completionDelay: 0,
+                      }}
                       replayDelay={2600}
                     />
                   </div>
@@ -231,7 +285,6 @@ export function HomeHeroClient({
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </section>

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createCLI } from "../packages/oscli/src/client";
+import { createCLI } from "../src/client";
 
 async function withArgv(args: string[], fn: () => Promise<void>) {
   const originalArgv = process.argv;

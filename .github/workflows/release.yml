@@ -40,11 +40,35 @@ jobs:
       - name: Build package
         run: bun run build
 
-      - name: Extract version from package.json
-        uses: sergeysova/jq-action@v2
-        id: version
-        with:
-          cmd: "jq .version packages/oscli/package.json -r"
+      - name: Read oscli package metadata
+        id: oscli_meta
+        run: |
+          echo "name=$(jq -r '.name' packages/oscli/package.json)" >> "$GITHUB_OUTPUT"
+          echo "version=$(jq -r '.version' packages/oscli/package.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Check if oscli version is already published
+        id: oscli_npm
+        run: |
+          if npm view "${{ steps.oscli_meta.outputs.name }}@${{ steps.oscli_meta.outputs.version }}" version >/dev/null 2>&1; then
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
+      
+      - name: Read react package metadata
+        id: react_meta
+        run: |
+          echo "name=$(jq -r '.name' packages/react/package.json)" >> "$GITHUB_OUTPUT"
+          echo "version=$(jq -r '.version' packages/react/package.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Check if react version is already published
+        id: react_npm
+        run: |
+          if npm view "${{ steps.react_meta.outputs.name }}@${{ steps.react_meta.outputs.version }}" version >/dev/null 2>&1; then
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Get latest tag
         uses: actions-ecosystem/action-get-latest-tag@v1
@@ -54,16 +78,24 @@ jobs:
           initial_version: v0.0.0
 
       - name: Publish GitHub Release
+        if: ${{ steps.get-latest-tag.outputs.tag != format('v{0}', steps.oscli_meta.outputs.version) }}
         uses: release-drafter/release-drafter@v6
-        if: ${{ steps.get-latest-tag.outputs.tag != format('v{0}', steps.version.outputs.value) }}
         with:
-          version: ${{ steps.version.outputs.value }}
+          version: ${{ steps.oscli_meta.outputs.version }}
           publish: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish to NPM
-        if: ${{ steps.get-latest-tag.outputs.tag != format('v{0}', steps.version.outputs.value) }}
-        run: cd packages/oscli && npm publish --access public
+      - name: Publish @oscli-dev/oscli to NPM
+        if: ${{ steps.oscli_npm.outputs.should_publish == 'true' }}
+        working-directory: packages/oscli
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @oscli-dev/react to NPM
+        if: ${{ steps.react_npm.outputs.should_publish == 'true' }}
+        working-directory: packages/react
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCLI, type AnimateEvent } from "../packages/oscli/src/client";
+import { createCLI, type AnimateEvent } from "../src/client";
 
 async function collectEvents(
   iterator: AsyncGenerator<AnimateEvent>,

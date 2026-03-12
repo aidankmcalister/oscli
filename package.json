@@ -9,7 +9,7 @@
     "docs": "cd docs && bun run dev",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "cd packages/oscli && bun run build",
+    "build": "cd packages/oscli && bun run build && cd ../react && bun run build",
     "benchmark": "cd packages/oscli && bun run benchmark",
     "typecheck": "cd packages/oscli && bun run typecheck"
   },
