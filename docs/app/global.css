@@ -162,8 +162,7 @@ samp,
     background-color: transparent !important;
 }
 
-#nd-sidebar[data-collapsed="false"],
-#nd-sidebar-mobile {
+#nd-sidebar[data-collapsed="false"] {
     background: transparent !important;
     background-color: transparent !important;
 }
