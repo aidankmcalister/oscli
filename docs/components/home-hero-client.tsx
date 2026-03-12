@@ -18,7 +18,7 @@ function CopyButton({ text }: { text: string }) {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
+      window.setTimeout(() => setCopied(false), 1600);
     } catch {
       setCopied(false);
     }
@@ -28,10 +28,36 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={copy}
-      className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full border border-fd-border bg-fd-background px-4 py-[0.55rem] text-[0.85rem] leading-none font-medium text-fd-muted-foreground transition-colors duration-75 hover:border-fd-foreground hover:text-fd-foreground"
+      aria-label="Copy install command"
+      className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] font-medium text-fd-muted-foreground transition-colors duration-75 hover:text-fd-foreground"
     >
-      {copied ? "Copied!" : "Copy"}
+      {copied ? (
+        <>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Copied
+        </>
+      ) : (
+        <>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+            <rect x="4" y="4" width="7" height="7" rx="1.2" stroke="currentColor" strokeWidth="1.2"/>
+            <path d="M8 4V2.8A.8.8 0 0 0 7.2 2H1.8A.8.8 0 0 0 1 2.8v5.4A.8.8 0 0 0 1.8 9H3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+          Copy
+        </>
+      )}
     </button>
+  );
+}
+
+function TerminalDots() {
+  return (
+    <div className="flex items-center gap-[5px]">
+      <span className="block h-[9px] w-[9px] rounded-full border border-fd-border bg-fd-background" />
+      <span className="block h-[9px] w-[9px] rounded-full border border-fd-border bg-fd-background" />
+      <span className="block h-[9px] w-[9px] rounded-full border border-fd-border bg-fd-background" />
+    </div>
   );
 }
 
@@ -43,7 +69,7 @@ function TabBar({
   onTabChange: (tab: ActiveTab) => void;
 }) {
   return (
-    <div className="inline-flex items-center gap-0.5 rounded-full border border-fd-border bg-fd-background p-[3px]">
+    <div className="flex items-center gap-0.5 rounded-full border border-fd-border bg-fd-background p-[3px]">
       {(["preview", "code"] as const).map((tab) => (
         <button
           key={tab}
@@ -52,7 +78,7 @@ function TabBar({
           className={[
             "rounded-full px-3 py-[5px] text-[11px] font-medium capitalize transition-all duration-100",
             activeTab === tab
-              ? "bg-fd-foreground text-fd-background shadow-sm"
+              ? "bg-fd-foreground text-fd-background"
               : "text-fd-muted-foreground hover:text-fd-foreground",
           ].join(" ")}
         >
@@ -63,30 +89,16 @@ function TabBar({
   );
 }
 
-function TerminalDots() {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="block h-[10px] w-[10px] rounded-full bg-fd-border" />
-      <span className="block h-[10px] w-[10px] rounded-full bg-fd-border" />
-      <span className="block h-[10px] w-[10px] rounded-full bg-fd-border" />
-    </div>
-  );
-}
-
 function ShikiPanel({ html }: { html: string }) {
   return (
     <div
-      className={[
-        "[&_pre]:!m-0 [&_pre]:!overflow-x-auto [&_pre]:!bg-transparent [&_pre]:!p-0",
-        "[&_pre]:text-[11.5px] [&_pre]:leading-[1.6]",
-        "[&_code]:!bg-transparent [&_code]:!font-mono",
-      ].join(" ")}
+      className="[&_pre]:!m-0 [&_pre]:!overflow-x-auto [&_pre]:!bg-transparent [&_pre]:!p-0 [&_pre]:text-[11.5px] [&_pre]:leading-[1.65] [&_code]:!bg-transparent [&_code]:!font-mono"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function HomeHeroClient({
   setupHtmlLight,
@@ -98,88 +110,87 @@ export function HomeHeroClient({
   const [activeTab, setActiveTab] = useState<ActiveTab>("preview");
 
   return (
-    <section className="min-h-[100svh] overflow-hidden bg-fd-background px-[clamp(1rem,2vw,1.75rem)] py-6 text-fd-foreground">
-      <div className="mx-auto flex min-h-[calc(100svh-3rem)] w-full max-w-[1400px] items-center">
-        <div className="grid w-full items-center gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
+    <section
+      className="overflow-hidden bg-fd-background text-fd-foreground"
+      style={{ height: "calc(100svh - var(--fd-nav-height, 3.5rem))" }}
+    >
+      <div className="mx-auto flex h-full w-full max-w-[1380px] items-center px-[clamp(1.25rem,3vw,2.5rem)]">
+        <div className="grid w-full grid-cols-1 items-center gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-12">
 
           {/* ── Left: hero copy ── */}
-          <div className="flex items-center lg:min-h-[72svh]">
-            <div className="w-full max-w-xl space-y-6 text-left">
+          <div className="space-y-7">
+            <h1 className="text-[clamp(2.5rem,5.8vw,5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-balance text-fd-foreground">
+              The last CLI framework
+              <br />
+              you&apos;ll reach for.
+            </h1>
 
-              <div className="space-y-3">
-                <h1 className="text-[clamp(2.6rem,6vw,5rem)] font-semibold leading-[0.93] tracking-[-0.04em] text-balance text-fd-foreground">
-                  The last CLI framework
-                  <br />
-                  you&apos;ll reach for.
-                </h1>
-                <p className="max-w-sm text-[clamp(0.9rem,1.4vw,1.05rem)] leading-relaxed text-fd-muted-foreground">
-                  TypeScript-first. One builder API for prompts, flags, and output. Typed values everywhere.
-                </p>
-              </div>
+            <p className="max-w-[30ch] text-[clamp(0.95rem,1.3vw,1.1rem)] leading-snug text-fd-muted-foreground">
+              One builder API for prompts, flags, and output — fully typed end to end.
+            </p>
 
-              {/* Install command */}
-              <div className="w-full max-w-md rounded-xl border border-fd-border bg-fd-card px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <code className="overflow-x-auto text-sm font-medium tracking-tight text-fd-foreground">
-                    {installCommand}
-                  </code>
-                  <CopyButton text={installCommand} />
-                </div>
-              </div>
+            {/* Install command */}
+            <div className="flex items-center gap-4 rounded-lg border border-fd-border bg-fd-card px-4 py-3">
+              <code className="flex-1 overflow-x-auto text-[13px] font-medium tracking-tight text-fd-foreground">
+                {installCommand}
+              </code>
+              <CopyButton text={installCommand} />
+            </div>
 
-              {/* CTAs */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                <Link
-                  href="/docs"
-                  className="inline-flex cursor-pointer items-center justify-center rounded-full border border-fd-foreground bg-fd-foreground px-5 py-[0.6rem] text-[0.88rem] leading-none font-medium text-fd-background transition-colors duration-75 hover:bg-fd-card hover:text-fd-foreground"
-                >
-                  Get started
-                </Link>
-                <Link
-                  href="https://github.com/aidankmcalister/oscli"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border border-fd-border bg-fd-card px-5 py-[0.6rem] text-[0.88rem] leading-none font-medium text-fd-foreground transition-colors duration-75 hover:border-fd-foreground"
-                >
-                  GitHub
-                </Link>
-              </div>
-
-              {/* Feature pills */}
-              <div className="flex flex-wrap gap-2">
-                {["Typed prompts", "Flag bypass", "JSON mode", "Test harness"].map((f) => (
-                  <span
-                    key={f}
-                    className="rounded-full border border-fd-border bg-fd-card px-3 py-1 text-[11px] font-medium tracking-wide text-fd-muted-foreground"
-                  >
-                    {f}
-                  </span>
-                ))}
-              </div>
+            {/* CTAs */}
+            <div className="flex items-center gap-5">
+              <Link
+                href="/docs"
+                className="group flex items-center gap-1.5 text-[0.9rem] font-medium text-fd-foreground transition-opacity hover:opacity-70"
+              >
+                Get started
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="transition-transform duration-100 group-hover:translate-x-0.5" aria-hidden>
+                  <path d="M2.5 6.5h8M7 3l3.5 3.5L7 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </Link>
+              <span className="text-fd-border">·</span>
+              <Link
+                href="https://github.com/aidankmcalister/oscli"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[0.9rem] font-medium text-fd-muted-foreground transition-colors hover:text-fd-foreground"
+              >
+                GitHub
+              </Link>
+              <span className="text-fd-border">·</span>
+              <Link
+                href="https://www.npmjs.com/package/@oscli-dev/oscli"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[0.9rem] font-medium text-fd-muted-foreground transition-colors hover:text-fd-foreground"
+              >
+                npm
+              </Link>
             </div>
           </div>
 
           {/* ── Right: demo panel ── */}
-          <div className="mx-auto w-full max-w-[540px] lg:max-w-none">
-            <div className="overflow-hidden rounded-xl border border-fd-border bg-fd-card shadow-sm">
+          <div className="flex items-center">
+            <div className="w-full overflow-hidden rounded-xl border border-fd-border bg-fd-card">
 
               {/* Panel header */}
-              <div className="flex items-center justify-between border-b border-fd-border px-4 py-3">
+              <div className="flex items-center justify-between border-b border-fd-border px-4 py-[10px]">
                 <div className="flex items-center gap-3">
                   <TerminalDots />
-                  <span className="text-[12px] font-medium tracking-wide text-fd-muted-foreground">
+                  <span className="text-[11px] font-medium tracking-wide text-fd-muted-foreground">
                     {activeTab === "preview" ? "terminal" : "setup.ts"}
                   </span>
                 </div>
                 <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
               </div>
 
-              {/* Panel content */}
-              <div className="relative min-h-[340px] p-5">
-                {/* Code view */}
+              {/* Panel content — fixed height, scrollable internally */}
+              <div className="relative h-[min(52svh,440px)] overflow-hidden">
+
+                {/* Code */}
                 <div
                   className={[
-                    "absolute inset-0 p-5 transition-opacity duration-200",
+                    "absolute inset-0 overflow-y-auto p-5 transition-opacity duration-200",
                     activeTab === "code" ? "opacity-100" : "pointer-events-none opacity-0",
                   ].join(" ")}
                   aria-hidden={activeTab !== "code"}
@@ -192,10 +203,10 @@ export function HomeHeroClient({
                   </div>
                 </div>
 
-                {/* Demo view */}
+                {/* Demo */}
                 <div
                   className={[
-                    "absolute inset-0 p-5 transition-opacity duration-200",
+                    "absolute inset-0 overflow-hidden p-5 transition-opacity duration-200",
                     activeTab === "preview" ? "opacity-100" : "pointer-events-none opacity-0",
                   ].join(" ")}
                   aria-hidden={activeTab !== "preview"}
@@ -204,16 +215,16 @@ export function HomeHeroClient({
                     <OscliDemo
                       cli={createAppCli}
                       theme="light"
-                      timing={{ typeDelay: 90, promptDelay: 720, completionDelay: 180 }}
-                      replayDelay={2800}
+                      timing={{ typeDelay: 85, promptDelay: 700, completionDelay: 140 }}
+                      replayDelay={2600}
                     />
                   </div>
                   <div className="hidden dark:block">
                     <OscliDemo
                       cli={createAppCli}
                       theme="dark"
-                      timing={{ typeDelay: 90, promptDelay: 720, completionDelay: 180 }}
-                      replayDelay={2800}
+                      timing={{ typeDelay: 85, promptDelay: 700, completionDelay: 140 }}
+                      replayDelay={2600}
                     />
                   </div>
                 </div>

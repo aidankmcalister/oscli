@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -58,7 +58,6 @@ type AnimatableCLI = {
 type ThemeName = "dark" | "light";
 
 type ThemeTokens = {
-  bg: string;
   fg: string;
   rail: string;
   accent: string;
@@ -78,7 +77,6 @@ type RenderLine =
 
 const themes: Record<ThemeName, ThemeTokens> = {
   dark: {
-    bg: "transparent",
     fg: "#F3F1EB",
     rail: "#333",
     accent: "#22d3ee",
@@ -86,9 +84,8 @@ const themes: Record<ThemeName, ThemeTokens> = {
     muted: "#666",
   },
   light: {
-    bg: "transparent",
     fg: "#141414",
-    rail: "#ccc",
+    rail: "#bbb",
     accent: "#0891b2",
     success: "#16a34a",
     muted: "#999",
@@ -108,60 +105,46 @@ function pickRandom<T>(arr: readonly T[]): T {
 }
 
 function pickRandomSubset<T>(arr: readonly T[], min = 1, max?: number): T[] {
-  const cap = max ?? Math.min(arr.length, 3);
+  const cap = Math.max(min, Math.min(max ?? 3, arr.length));
   const count = min + Math.floor(Math.random() * (cap - min + 1));
-  return [...arr].sort(() => Math.random() - 0.5).slice(0, Math.max(min, count));
+  return [...arr].sort(() => Math.random() - 0.5).slice(0, count);
 }
 
-function generateInputsFromConfigs(
-  configs: Record<string, PromptConfig>,
-): Record<string, unknown> {
+function generateInputs(configs: Record<string, PromptConfig>): Record<string, unknown> {
   const inputs: Record<string, unknown> = {};
 
   for (const [key, cfg] of Object.entries(configs)) {
-    const type = cfg.type ?? "text";
-
-    switch (type) {
+    switch (cfg.type ?? "text") {
       case "text":
-      case "password": {
-        if (cfg.hasDefault && cfg.defaultValue !== undefined) {
-          // ~40% chance to use a random word instead of default
-          inputs[key] = Math.random() > 0.4 ? pickRandom(TEXT_WORDS) : String(cfg.defaultValue);
-        } else {
-          inputs[key] = pickRandom(TEXT_WORDS);
-        }
+      case "password":
+        inputs[key] =
+          cfg.hasDefault && cfg.defaultValue !== undefined && Math.random() < 0.4
+            ? String(cfg.defaultValue)
+            : pickRandom(TEXT_WORDS);
         break;
-      }
 
       case "select":
       case "search": {
         const choices = cfg.choices ?? [];
-        if (choices.length > 0) {
-          inputs[key] = pickRandom(choices);
-        } else if (cfg.hasDefault) {
-          inputs[key] = cfg.defaultValue;
-        }
+        if (choices.length > 0) inputs[key] = pickRandom(choices);
+        else if (cfg.hasDefault) inputs[key] = cfg.defaultValue;
         break;
       }
 
       case "multiselect": {
         const choices = cfg.choices ?? [];
-        if (choices.length > 0) {
+        if (choices.length > 0)
           inputs[key] = pickRandomSubset(choices, 1, Math.min(choices.length, 3));
-        }
         break;
       }
 
-      case "list": {
-        const words = pickRandomSubset(TEXT_WORDS, cfg.min ?? 1, cfg.max ?? 3);
-        inputs[key] = words;
+      case "list":
+        inputs[key] = pickRandomSubset(TEXT_WORDS, cfg.min ?? 1, cfg.max ?? 3);
         break;
-      }
 
-      case "confirm": {
+      case "confirm":
         inputs[key] = Math.random() > 0.35;
         break;
-      }
 
       case "number": {
         const lo = cfg.min ?? 1;
@@ -171,17 +154,15 @@ function generateInputsFromConfigs(
       }
 
       case "date": {
-        const now = new Date();
-        const offset = Math.floor(Math.random() * 180) + 1;
-        const future = new Date(now.getTime() + offset * 24 * 60 * 60 * 1000);
-        inputs[key] = future;
+        const d = new Date();
+        d.setDate(d.getDate() + Math.floor(Math.random() * 180) + 1);
+        inputs[key] = d;
         break;
       }
 
       default:
-        if (cfg.hasDefault && cfg.defaultValue !== undefined) {
+        if (cfg.hasDefault && cfg.defaultValue !== undefined)
           inputs[key] = cfg.defaultValue;
-        }
     }
   }
 
@@ -191,9 +172,7 @@ function generateInputsFromConfigs(
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 function isPromptLine(line: RenderLine, key: string): boolean {
@@ -207,31 +186,24 @@ function isPromptLine(line: RenderLine, key: string): boolean {
 }
 
 function renderOptionLine(
-  optionText: string,
+  text: string,
   icon: string,
   active: boolean,
-  tokens: ThemeTokens,
+  t: ThemeTokens,
 ) {
-  const isSelected = icon === "●" || icon === "◉";
-  const iconColor = isSelected ? tokens.accent : tokens.muted;
-  const textColor = active || isSelected ? tokens.fg : tokens.muted;
-
+  const selected = icon === "●" || icon === "◉";
   return (
     <>
-      {active ? (
-        <span style={{ color: tokens.accent }}>›</span>
-      ) : (
-        <span>{" "}</span>
-      )}
-      <span>{" "}</span>
-      <span style={{ color: iconColor }}>{icon}</span>
-      <span>{" "}</span>
-      <span style={{ color: textColor }}>{optionText}</span>
+      {active ? <span style={{ color: t.accent }}>›</span> : <span> </span>}
+      <span> </span>
+      <span style={{ color: selected ? t.accent : t.muted }}>{icon}</span>
+      <span> </span>
+      <span style={{ color: active || selected ? t.fg : t.muted }}>{text}</span>
     </>
   );
 }
 
-function renderPreviewContent(line: string, tokens: ThemeTokens) {
+function renderPreviewLine(line: string, t: ThemeTokens) {
   if (
     line.includes("↑↓") ||
     line.includes("enter select") ||
@@ -239,48 +211,22 @@ function renderPreviewContent(line: string, tokens: ThemeTokens) {
     line.includes("space toggle") ||
     line.includes("type to filter")
   ) {
-    return (
-      <span style={{ color: tokens.muted, opacity: 0.6, fontSize: "0.85em" }}>
-        {line}
-      </span>
-    );
+    return <span style={{ color: t.muted, opacity: 0.55, fontSize: "0.82em" }}>{line}</span>;
   }
 
-  if (
-    line.includes(" / ") &&
-    (line.startsWith("● ") || line.startsWith("○ "))
-  ) {
-    const [left, right] = line.split(" / ");
-    const leftIcon = left!.slice(0, 1);
-    const leftText = left!.slice(2);
-    const rightIcon = right!.slice(0, 1);
-    const rightText = right!.slice(2);
-
+  if (line.includes(" / ") && (line.startsWith("● ") || line.startsWith("○ "))) {
+    const [l, r] = line.split(" / ");
+    const li = l!.slice(0, 1);
+    const ri = r!.slice(0, 1);
     return (
       <>
-        <span
-          style={{ color: leftIcon === "●" ? tokens.accent : tokens.muted }}
-        >
-          {leftIcon}
-        </span>
-        <span>{" "}</span>
-        <span
-          style={{ color: leftIcon === "●" ? tokens.fg : tokens.muted }}
-        >
-          {leftText}
-        </span>
-        <span style={{ color: tokens.muted }}>{" / "}</span>
-        <span
-          style={{ color: rightIcon === "●" ? tokens.accent : tokens.muted }}
-        >
-          {rightIcon}
-        </span>
-        <span>{" "}</span>
-        <span
-          style={{ color: rightIcon === "●" ? tokens.fg : tokens.muted }}
-        >
-          {rightText}
-        </span>
+        <span style={{ color: li === "●" ? t.accent : t.muted }}>{li}</span>
+        <span> </span>
+        <span style={{ color: li === "●" ? t.fg : t.muted }}>{l!.slice(2)}</span>
+        <span style={{ color: t.muted }}>{"  /  "}</span>
+        <span style={{ color: ri === "●" ? t.accent : t.muted }}>{ri}</span>
+        <span> </span>
+        <span style={{ color: ri === "●" ? t.fg : t.muted }}>{r!.slice(2)}</span>
       </>
     );
   }
@@ -288,10 +234,9 @@ function renderPreviewContent(line: string, tokens: ThemeTokens) {
   if (line.startsWith("› ") || line.startsWith("  ")) {
     const active = line.startsWith("› ");
     const content = line.slice(2);
-    const icon = content.slice(0, 1);
-
-    if (["●", "○", "◉"].includes(icon) && content.slice(1, 2) === " ") {
-      return renderOptionLine(content.slice(2), icon, active, tokens);
+    const icon = content[0] ?? "";
+    if (["●", "○", "◉"].includes(icon) && content[1] === " ") {
+      return renderOptionLine(content.slice(2), icon, active, t);
     }
   }
 
@@ -302,12 +247,12 @@ function renderPreviewContent(line: string, tokens: ThemeTokens) {
 
 export interface OscliDemoProps {
   cli: AnimatableCLI;
-  /** Override inputs instead of auto-generating them from prompt configs. */
+  /** Provide fixed inputs instead of auto-generating random ones. */
   inputs?: Record<string, unknown>;
   timing?: DemoTiming;
   theme?: ThemeName;
   onRunComplete?: () => void;
-  /** Delay in ms before auto-replaying after a run completes. Default 3000. */
+  /** Delay in ms before auto-replaying (default 3000). Ignored when inputs prop is set. */
   replayDelay?: number;
   className?: string;
   style?: React.CSSProperties;
@@ -323,240 +268,188 @@ export function OscliDemo({
   className,
   style,
 }: OscliDemoProps) {
-  const tokens = themes[theme];
+  const t = themes[theme];
   const [lines, setLines] = useState<RenderLine[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [isFading, setIsFading] = useState(false);
-  const [runId, setRunId] = useState(0);
-  const cancelRef = useRef(false);
-  const replayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Derive inputs: use prop if provided, otherwise auto-generate
-  const derivedInputs = React.useMemo(() => {
-    if (inputsProp) return inputsProp;
-    if (cli._promptConfigs) {
-      return generateInputsFromConfigs(cli._promptConfigs);
-    }
-    return {};
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputsProp, runId, cli]);
 
   useEffect(() => {
-    cancelRef.current = false;
+    // Each effect closure captures its own `cancelled` flag.
+    // This is the correct pattern — never use a shared ref for this.
+    let cancelled = false;
+
+    const autoReplay = !inputsProp && Boolean(cli._promptConfigs);
 
     const run = async () => {
-      setLines([]);
-      setActiveKey(null);
-      setIsFading(false);
+      let currentInputs =
+        inputsProp ??
+        (cli._promptConfigs ? generateInputs(cli._promptConfigs) : {});
 
-      for await (const event of cli.animate({
-        inputs: derivedInputs,
-        timing,
-      })) {
-        if (cancelRef.current) break;
+      while (!cancelled) {
+        setLines([]);
+        setActiveKey(null);
+        setIsFading(false);
 
-        if (event.type === "intro") {
-          setLines((cur) => [
-            ...cur,
-            { kind: "intro", message: event.message },
-          ]);
-          continue;
-        }
+        for await (const event of cli.animate({ inputs: currentInputs, timing })) {
+          if (cancelled) break;
 
-        if (event.type === "prompt_start") {
-          setActiveKey(event.key);
-          setLines((cur) => [
-            ...cur,
-            { kind: "prompt-label", key: event.key, label: event.label },
-          ]);
-          continue;
-        }
-
-        if (event.type === "prompt_preview") {
-          setLines((cur) => {
-            const next = [...cur];
-            const last = next[next.length - 1];
-            if (
-              last &&
-              "key" in last &&
-              last.key === event.key &&
-              (last.kind === "active-text" || last.kind === "active-preview")
-            ) {
-              next.pop();
-            }
-            next.push({
-              kind: "active-preview",
-              key: event.key,
-              lines: event.lines,
-            });
-            return next;
-          });
-          continue;
-        }
-
-        if (event.type === "char") {
-          setLines((cur) => {
-            const next = [...cur];
-            const last = next[next.length - 1];
-
-            if (
-              last &&
-              "key" in last &&
-              last.key === event.key &&
-              last.kind === "active-preview"
-            ) {
-              next.pop();
-            }
-
-            if (
-              !next.some(
-                (l) =>
-                  "key" in l &&
-                  l.key === event.key &&
-                  l.kind === "active-text",
-              )
-            ) {
-              next.push({ kind: "active-text", key: event.key, full: "" });
-            }
-
-            for (let i = next.length - 1; i >= 0; i--) {
-              const l = next[i]!;
-              if (l.kind === "active-text" && l.key === event.key) {
-                next[i] = { ...l, full: event.full };
-                break;
-              }
-            }
-            return next;
-          });
-          continue;
-        }
-
-        if (event.type === "prompt_submit") {
-          setActiveKey(null);
-          setLines((cur) => {
-            const next = [...cur];
-            while (
-              next.length > 0 &&
-              isPromptLine(next[next.length - 1]!, event.key)
-            ) {
-              next.pop();
-            }
-            next.push({
-              kind: "summary",
-              key: event.key,
-              label: event.label,
-              displayValue: event.displayValue,
-            });
-            return next;
-          });
-          continue;
-        }
-
-        if (event.type === "outro") {
-          setActiveKey(null);
-          setLines((cur) => [
-            ...cur,
-            { kind: "outro", message: event.message },
-          ]);
-          continue;
-        }
-
-        if (event.type === "run_complete") {
-          onRunComplete?.();
-
-          // Schedule auto-replay with fresh random inputs
-          if (!inputsProp && cli._promptConfigs) {
-            replayTimerRef.current = setTimeout(() => {
-              if (!cancelRef.current) {
-                setIsFading(true);
-                setTimeout(() => {
-                  if (!cancelRef.current) {
-                    setRunId((id) => id + 1);
-                  }
-                }, 350);
-              }
-            }, replayDelay);
+          if (event.type === "intro") {
+            setLines((prev) => [...prev, { kind: "intro", message: event.message }]);
+            continue;
           }
-          continue;
+
+          if (event.type === "prompt_start") {
+            setActiveKey(event.key);
+            setLines((prev) => [
+              ...prev,
+              { kind: "prompt-label", key: event.key, label: event.label },
+            ]);
+            continue;
+          }
+
+          if (event.type === "prompt_preview") {
+            setLines((prev) => {
+              const next = [...prev];
+              const last = next[next.length - 1];
+              if (
+                last &&
+                "key" in last &&
+                last.key === event.key &&
+                (last.kind === "active-text" || last.kind === "active-preview")
+              ) {
+                next.pop();
+              }
+              next.push({ kind: "active-preview", key: event.key, lines: event.lines });
+              return next;
+            });
+            continue;
+          }
+
+          if (event.type === "char") {
+            setLines((prev) => {
+              const next = [...prev];
+              const last = next[next.length - 1];
+              if (
+                last &&
+                "key" in last &&
+                last.key === event.key &&
+                last.kind === "active-preview"
+              ) {
+                next.pop();
+              }
+              if (!next.some((l) => "key" in l && l.key === event.key && l.kind === "active-text")) {
+                next.push({ kind: "active-text", key: event.key, full: "" });
+              }
+              for (let i = next.length - 1; i >= 0; i--) {
+                const l = next[i]!;
+                if (l.kind === "active-text" && l.key === event.key) {
+                  next[i] = { ...l, full: event.full };
+                  break;
+                }
+              }
+              return next;
+            });
+            continue;
+          }
+
+          if (event.type === "prompt_submit") {
+            setActiveKey(null);
+            setLines((prev) => {
+              const next = [...prev];
+              while (next.length > 0 && isPromptLine(next[next.length - 1]!, event.key)) {
+                next.pop();
+              }
+              next.push({
+                kind: "summary",
+                key: event.key,
+                label: event.label,
+                displayValue: event.displayValue,
+              });
+              return next;
+            });
+            continue;
+          }
+
+          if (event.type === "outro") {
+            setActiveKey(null);
+            setLines((prev) => [...prev, { kind: "outro", message: event.message }]);
+            continue;
+          }
+
+          if (event.type === "run_complete") {
+            onRunComplete?.();
+            continue;
+          }
+
+          if (event.type === "loop_restart") {
+            setIsFading(true);
+            await sleep(300);
+            if (cancelled) break;
+            setLines([]);
+            setActiveKey(null);
+            setIsFading(false);
+          }
         }
 
-        if (event.type === "loop_restart") {
-          setIsFading(true);
-          await sleep(300);
-          if (cancelRef.current) break;
-          setLines([]);
-          setActiveKey(null);
-          setIsFading(false);
-        }
+        if (cancelled || !autoReplay) break;
+
+        // Pause, then fade out, then replay with fresh random inputs
+        await sleep(replayDelay);
+        if (cancelled) break;
+
+        setIsFading(true);
+        await sleep(340);
+        if (cancelled) break;
+
+        currentInputs = generateInputs(cli._promptConfigs!);
       }
     };
 
     void run();
 
     return () => {
-      cancelRef.current = true;
-      if (replayTimerRef.current !== null) {
-        clearTimeout(replayTimerRef.current);
-        replayTimerRef.current = null;
-      }
+      cancelled = true;
     };
-  }, [cli, derivedInputs, onRunComplete, replayDelay, timing, inputsProp]);
+  // Intentionally minimal deps — cli and inputsProp identity drive reruns
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cli, inputsProp]);
 
   return (
     <div
       className={className}
-      style={{
-        width: "100%",
-        height: "100%",
-        ...style,
-      }}
+      style={{ width: "100%", height: "100%", ...style }}
     >
       <style>
         {"@keyframes oscli-blink{0%,100%{opacity:1}50%{opacity:0}}"}
-        {"@keyframes oscli-fade-in{from{opacity:0;transform:translateY(2px)}to{opacity:1;transform:translateY(0)}}"}
+        {"@keyframes oscli-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}"}
       </style>
       <div
         style={{
-          background: tokens.bg,
-          color: tokens.fg,
-          fontFamily:
-            "'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace",
-          fontSize: "clamp(11px, 1.1vw, 13px)",
-          lineHeight: 1.7,
+          color: t.fg,
+          fontFamily: "'JetBrains Mono','Fira Code',ui-monospace,monospace",
+          fontSize: "clamp(11px, 1.05vw, 13px)",
+          lineHeight: 1.75,
           opacity: isFading ? 0 : 1,
-          transition: "opacity 350ms ease",
+          transition: "opacity 340ms ease",
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
           width: "100%",
         }}
       >
-        {lines.map((line, index) => {
+        {lines.map((line, i) => {
           if (line.kind === "intro") {
             return (
-              <div
-                key={`intro-${index}`}
-                style={{
-                  animation: "oscli-fade-in 180ms ease both",
-                  animationDelay: `${index * 20}ms`,
-                }}
-              >
-                <span style={{ color: tokens.rail }}>┌</span>
-                {line.message ? (
-                  <span>{`  ${line.message}`}</span>
-                ) : null}
+              <div key={`intro-${i}`} style={{ animation: "oscli-in 160ms ease both" }}>
+                <span style={{ color: t.rail }}>┌</span>
+                {line.message ? <span>{`  ${line.message}`}</span> : null}
               </div>
             );
           }
 
           if (line.kind === "prompt-label") {
             return (
-              <div
-                key={`label-${line.key}-${index}`}
-                style={{
-                  animation: "oscli-fade-in 180ms ease both",
-                }}
-              >
-                <span style={{ color: tokens.rail }}>│</span>
+              <div key={`label-${line.key}-${i}`} style={{ animation: "oscli-in 160ms ease both" }}>
+                <span style={{ color: t.rail }}>│</span>
                 <span>{`  ${line.label}`}</span>
               </div>
             );
@@ -564,18 +457,13 @@ export function OscliDemo({
 
           if (line.kind === "active-text") {
             return (
-              <div key={`active-${line.key}-${index}`}>
-                <span style={{ color: tokens.rail }}>│</span>
+              <div key={`active-${line.key}-${i}`}>
+                <span style={{ color: t.rail }}>│</span>
                 <span>{"  "}</span>
-                <span style={{ color: tokens.accent }}>›</span>
+                <span style={{ color: t.accent }}>›</span>
                 <span>{` ${line.full}`}</span>
                 {activeKey === line.key ? (
-                  <span
-                    style={{
-                      color: tokens.accent,
-                      animation: "oscli-blink 0.65s step-end infinite",
-                    }}
-                  >
+                  <span style={{ color: t.accent, animation: "oscli-blink 0.65s step-end infinite" }}>
                     _
                   </span>
                 ) : null}
@@ -585,12 +473,12 @@ export function OscliDemo({
 
           if (line.kind === "active-preview") {
             return (
-              <React.Fragment key={`preview-${line.key}-${index}`}>
-                {line.lines.map((previewLine, pi) => (
-                  <div key={`preview-${line.key}-${index}-${pi}`}>
-                    <span style={{ color: tokens.rail }}>│</span>
+              <React.Fragment key={`preview-${line.key}-${i}`}>
+                {line.lines.map((pl, pi) => (
+                  <div key={`pl-${line.key}-${i}-${pi}`}>
+                    <span style={{ color: t.rail }}>│</span>
                     <span>{"  "}</span>
-                    {renderPreviewContent(previewLine, tokens)}
+                    {renderPreviewLine(pl, t)}
                   </div>
                 ))}
               </React.Fragment>
@@ -599,32 +487,21 @@ export function OscliDemo({
 
           if (line.kind === "summary") {
             return (
-              <div
-                key={`summary-${line.key}-${index}`}
-                style={{
-                  animation: "oscli-fade-in 160ms ease both",
-                }}
-              >
-                <span style={{ color: tokens.rail }}>│</span>
-                <span>{" "}</span>
-                <span style={{ color: tokens.success }}>✓</span>
+              <div key={`summary-${line.key}-${i}`} style={{ animation: "oscli-in 150ms ease both" }}>
+                <span style={{ color: t.rail }}>│</span>
+                <span> </span>
+                <span style={{ color: t.success }}>✓</span>
                 <span>{"  "}</span>
-                <span style={{ color: tokens.muted }}>{`${line.label}:`}</span>
+                <span style={{ color: t.muted }}>{`${line.label}:`}</span>
                 <span>{"  "}</span>
                 <span>{line.displayValue}</span>
               </div>
             );
           }
 
-          // outro
           return (
-            <div
-              key={`outro-${index}`}
-              style={{
-                animation: "oscli-fade-in 200ms ease both",
-              }}
-            >
-              <span style={{ color: tokens.rail }}>└</span>
+            <div key={`outro-${i}`} style={{ animation: "oscli-in 180ms ease both" }}>
+              <span style={{ color: t.rail }}>└</span>
               {line.message ? <span>{`  ${line.message}`}</span> : null}
             </div>
           );

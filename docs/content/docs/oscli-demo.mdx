@@ -1,0 +1,122 @@
+---
+title: OscliDemo
+description: Animated CLI demo component for React — embed a live, auto-replaying terminal preview of your CLI anywhere.
+---
+
+## Overview
+
+`OscliDemo` is a React component shipped in the `@oscli-dev/react` package. It takes a `cli` instance and renders an animated terminal simulation that types in values, navigates selects, toggles confirms, and replays automatically — no TTY required.
+
+```bash
+npm install @oscli-dev/react
+```
+
+## Basic usage
+
+Pass your `cli` instance and the component handles everything else.
+
+```tsx
+import { OscliDemo } from "@oscli-dev/react";
+import { cli } from "./my-cli";
+
+export function MyDemoSection() {
+  return (
+    <div style={{ height: 400 }}>
+      <OscliDemo cli={cli} />
+    </div>
+  );
+}
+```
+
+The component fills its parent container. Give the parent a defined height.
+
+## How it works
+
+`OscliDemo` calls `cli.animate()` internally and streams the resulting events to build up the terminal line-by-line as the animation runs. It reads the prompt configs from the CLI instance to auto-generate realistic random inputs for each prompt type — text prompts get random project names, selects pick random choices, confirms flip randomly, and so on.
+
+After each run completes, it fades out and replays with a fresh set of random inputs.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `cli` | `AnimatableCLI` | required | The CLI instance returned by `createCLI()` |
+| `inputs` | `Record<string, unknown>` | — | Override inputs instead of auto-generating them |
+| `timing` | `DemoTiming` | — | Control animation speed |
+| `theme` | `"dark" \| "light"` | `"dark"` | Color theme |
+| `replayDelay` | `number` | `3000` | Milliseconds to pause before auto-replaying |
+| `onRunComplete` | `() => void` | — | Called when a run finishes |
+| `className` | `string` | — | CSS class on the root element |
+| `style` | `CSSProperties` | — | Inline styles on the root element |
+
+### `DemoTiming`
+
+```ts
+type DemoTiming = {
+  typeDelay?: number;       // ms per character (default 85)
+  promptDelay?: number;     // ms pause before starting a prompt (default 360)
+  completionDelay?: number; // ms pause after submitting a prompt (default 620)
+};
+```
+
+## Providing fixed inputs
+
+Pass `inputs` to control exactly what gets animated — useful for docs examples where you want a deterministic sequence.
+
+```tsx
+<OscliDemo
+  cli={cli}
+  inputs={{
+    project: "my-app",
+    framework: "next",
+    typescript: true,
+  }}
+/>
+```
+
+When `inputs` is provided, auto-replay is disabled. Use `onRunComplete` to trigger a replay externally if needed.
+
+## Theming
+
+The `theme` prop switches between a dark and light color palette. For sites that support both modes, render two instances and toggle visibility with CSS:
+
+```tsx
+<div className="block dark:hidden">
+  <OscliDemo cli={cli} theme="light" />
+</div>
+<div className="hidden dark:block">
+  <OscliDemo cli={cli} theme="dark" />
+</div>
+```
+
+## Example
+
+```tsx
+import { createCLI } from "@oscli-dev/oscli";
+import { OscliDemo } from "@oscli-dev/react";
+
+const cli = createCLI((b) => ({
+  description: "create-app",
+  theme: "basic",
+  prompts: {
+    project: b.text().label("Project").default("my-app"),
+    framework: b
+      .select({ choices: ["next", "remix", "astro", "vite"] as const })
+      .label("Framework"),
+    typescript: b.confirm().label("Use TypeScript?").default(true),
+  },
+}));
+
+export function Demo() {
+  return (
+    <div style={{ height: 320 }}>
+      <OscliDemo
+        cli={cli}
+        theme="dark"
+        timing={{ typeDelay: 90, promptDelay: 700 }}
+        replayDelay={3000}
+      />
+    </div>
+  );
+}
+```
