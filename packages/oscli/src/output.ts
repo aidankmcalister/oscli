@@ -13,8 +13,37 @@ let lastLiveLineWidth = 0;
 let hasPersistentCorner = false;
 let outputSuppressed = false;
 
+type OutputStreamLike = {
+  isTTY?: boolean;
+  columns?: number;
+  write(value: string): unknown;
+};
+
+const noopStream: OutputStreamLike = {
+  isTTY: false,
+  write() {
+    return true;
+  },
+};
+
+function getStdout(): OutputStreamLike {
+  if (typeof process !== "object" || process === null) {
+    return noopStream;
+  }
+
+  return (process as { stdout?: OutputStreamLike }).stdout ?? noopStream;
+}
+
+function getStderr(): OutputStreamLike {
+  if (typeof process !== "object" || process === null) {
+    return noopStream;
+  }
+
+  return (process as { stderr?: OutputStreamLike }).stderr ?? noopStream;
+}
+
 function writeStdoutAnsi(value: string): void {
-  process.stdout.write(value);
+  getStdout().write(value);
 }
 
 export type LogLevel = "info" | "warn" | "error" | "success" | "plain";
@@ -77,13 +106,13 @@ function canRenderPersistentCorner(stream: "stdout" | "stderr"): boolean {
     stream === "stdout" &&
     !outputSuppressed &&
     railEnabled &&
-    process.stdout.isTTY === true &&
+    getStdout().isTTY === true &&
     theme.symbols.outro.length > 0
   );
 }
 
 export function clearPersistentCorner(): void {
-  if (!hasPersistentCorner || process.stdout.isTTY !== true) {
+  if (!hasPersistentCorner || getStdout().isTTY !== true) {
     return;
   }
 
@@ -96,7 +125,7 @@ function writePersistentCorner(stream: "stdout" | "stderr"): void {
     return;
   }
 
-  process.stdout.write(`${theme.color.border(theme.symbols.outro)}\n`);
+  getStdout().write(`${theme.color.border(theme.symbols.outro)}\n`);
   hasPersistentCorner = true;
 }
 
@@ -109,7 +138,7 @@ export function writeLine(line: string, stream: "stdout" | "stderr" = "stdout"):
     clearPersistentCorner();
   }
 
-  const target = stream === "stdout" ? process.stdout : process.stderr;
+  const target = stream === "stdout" ? getStdout() : getStderr();
   const decorated = decorateLine(line);
   const formatted =
     activeNoColor || target.isTTY !== true ? stripAnsi(decorated) : decorated;
@@ -126,7 +155,7 @@ export function createLogChain(
   let flushed = false;
 
   const applyModifiers = (value: string): string => {
-    if (activeNoColor || process.stdout.isTTY !== true) {
+    if (activeNoColor || getStdout().isTTY !== true) {
       return value;
     }
 
@@ -271,18 +300,18 @@ export function writeLiveLine(line: string): void {
 
   const decorated = decorateLine(line);
   const formatted =
-    activeNoColor || process.stdout.isTTY !== true
+    activeNoColor || getStdout().isTTY !== true
       ? stripAnsi(decorated)
       : decorated;
 
-  if (!process.stdout.isTTY) {
-    process.stdout.write(`${formatted}\n`);
+  if (getStdout().isTTY !== true) {
+    getStdout().write(`${formatted}\n`);
     return;
   }
 
   const width = visibleLength(formatted);
   const padding = " ".repeat(Math.max(0, lastLiveLineWidth - width));
-  process.stdout.write(`\r${formatted}${padding}`);
+  getStdout().write(`\r${formatted}${padding}`);
   lastLiveLineWidth = Math.max(lastLiveLineWidth, width);
 }
 
@@ -292,8 +321,8 @@ export function finalizeLiveLine(line: string): void {
   }
 
   writeLiveLine(line);
-  if (process.stdout.isTTY) {
-    process.stdout.write("\n");
+  if (getStdout().isTTY === true) {
+    getStdout().write("\n");
     lastLiveLineWidth = 0;
   }
   writeSectionGap();

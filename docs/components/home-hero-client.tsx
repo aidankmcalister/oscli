@@ -6,10 +6,6 @@ import { OscliDemo } from "@oscli-dev/react";
 import { cli as createAppDemoCli } from "@/lib/create-app-demo";
 
 const installCommand = "bun add @oscli-dev/oscli";
-const demoAnswers = {
-  project: "my-app",
-  framework: "astro",
-};
 
 type ActiveTab = "code" | "preview";
 
@@ -262,9 +258,7 @@ export function HomeHeroClient({
                 >
                   <OscliDemo
                     cli={createAppDemoCli}
-                    theme="auto"
-                    answers={demoAnswers}
-                    speed="normal"
+                    answers={{ framework: "next" }}
                   />
                 </div>
               </div>

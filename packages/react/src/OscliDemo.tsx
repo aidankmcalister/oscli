@@ -166,6 +166,7 @@ type AnimatableCLI = {
   _promptConfigs?: Record<string, PromptConfig>;
   animate(options: {
     inputs: Record<string, unknown>;
+    ignoreDefaults?: boolean;
     timing?: { typeDelay?: number; promptDelay?: number; completionDelay?: number };
   }): AsyncGenerator<AnimateEvent>;
 };
@@ -561,6 +562,7 @@ export function OscliDemo<TCli extends AnimatableCLI = AnimatableCLI>({
 
         for await (const event of cli.animate({
           inputs,
+          ignoreDefaults: true,
           timing: {
             typeDelay: speedConfig.typeDelay,
             promptDelay: speedConfig.promptDelay,

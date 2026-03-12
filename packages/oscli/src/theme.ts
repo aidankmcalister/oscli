@@ -116,7 +116,10 @@ const colorFormatterCache = new Map<ColorName, (value: string) => string>();
 
 function shouldColor(): boolean {
   if (_shouldColor === null) {
-    _shouldColor = !activeNoColor && process.stdout.isTTY === true;
+    const stdout = typeof process === "object" && process !== null
+      ? (process as { stdout?: { isTTY?: boolean } }).stdout
+      : undefined;
+    _shouldColor = !activeNoColor && stdout?.isTTY === true;
   }
 
   return _shouldColor;

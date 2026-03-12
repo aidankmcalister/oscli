@@ -291,6 +291,56 @@ describe("cli.animate", () => {
     });
   });
 
+  it("can ignore prompt defaults during demo playback", async () => {
+    const cli = createCLI((b) => ({
+      description: "default-free-demo",
+      prompts: {
+        framework: b
+          .select({ choices: ["next", "remix", "astro"] as const })
+          .label("Framework")
+          .default("next"),
+        features: b
+          .multiselect({ choices: ["tailwind", "testing", "auth"] as const })
+          .label("Features")
+          .default(["tailwind", "testing"]),
+        install: b.confirm().label("Install dependencies?").default(true),
+        skipped: b.text().label("Skipped").default("fallback"),
+      },
+    }));
+
+    const events = await collectEvents(
+      cli.animate({
+        inputs: {
+          framework: "astro",
+          features: ["auth"],
+          install: false,
+        },
+        ignoreDefaults: true,
+        timing: {
+          typeDelay: 0,
+          promptDelay: 0,
+          completionDelay: 0,
+        },
+      }),
+    );
+
+    expect(events).toContainEqual({
+      type: "prompt_preview",
+      key: "features",
+      label: "Features",
+      promptType: "multiselect",
+      lines: [
+        "› ○ tailwind",
+        "  ○ testing",
+        "  ○ auth",
+        "↑↓ navigate   space toggle   enter confirm",
+      ],
+    });
+    expect(events).not.toContainEqual(
+      expect.objectContaining({ key: "skipped" }),
+    );
+  });
+
   it("emits loop_restart before starting the next cycle when looping is enabled", async () => {
     const cli = createCLI((b) => ({
       description: "loop-demo",
@@ -326,6 +376,10 @@ describe("cli.animate", () => {
           .select({ choices: ["next", "remix", "astro"] as const })
           .label("Framework")
           .default("next"),
+        features: b
+          .multiselect({ choices: ["tailwind", "testing", "auth"] as const })
+          .label("Features")
+          .default(["tailwind"]),
       },
     }));
 
@@ -358,7 +412,9 @@ describe("cli.animate", () => {
           inputs: {
             project: "demo-app",
             framework: "astro",
+            features: ["tailwind", "auth"],
           },
+          ignoreDefaults: true,
           timing: {
             typeDelay: 0,
             promptDelay: 0,
@@ -393,6 +449,9 @@ describe("cli.animate", () => {
         type: "outro",
         message: "Project ready in ./demo-app",
       });
+      expect(events).not.toContainEqual(
+        expect.objectContaining({ key: "features" }),
+      );
       expect(stdout).not.toHaveBeenCalled();
     } finally {
       stdout.mockRestore();
