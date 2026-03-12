@@ -2,27 +2,145 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Speed presets ────────────────────────────────────────────────────────────
+
+export type DemoSpeed = "slow" | "normal" | "fast";
+
+type SpeedConfig = {
+  typeDelay: number;
+  promptDelay: number;
+  fadeDuration: number;
+  replayDelay: number;
+};
+
+const SPEED_PRESETS: Record<DemoSpeed, SpeedConfig> = {
+  slow:   { typeDelay: 180, promptDelay: 900,  fadeDuration: 500, replayDelay: 4500 },
+  normal: { typeDelay: 120, promptDelay: 620,  fadeDuration: 400, replayDelay: 3500 },
+  fast:   { typeDelay: 85,  promptDelay: 420,  fadeDuration: 340, replayDelay: 3000 },
+};
+
+// ─── Theme ────────────────────────────────────────────────────────────────────
+
+/**
+ * Custom terminal color tokens. Any omitted key falls back to the system
+ * base theme derived from `prefers-color-scheme`.
+ */
+export type OscliDemoTheme = {
+  background?: string;
+  foreground?: string;
+  muted?: string;
+  border?: string;
+  cursor?: string;
+  success?: string;
+  warn?: string;
+  info?: string;
+  error?: string;
+  accent?: string;
+};
+
+type ResolvedTheme = {
+  fg: string;
+  rail: string;
+  accent: string;
+  success: string;
+  warn: string;
+  info: string;
+  error: string;
+  muted: string;
+  cursor: string;
+};
+
+const DARK_TOKENS: ResolvedTheme = {
+  fg:      "#F3F1EB",
+  rail:    "#333",
+  accent:  "#22d3ee",
+  success: "#4ade80",
+  warn:    "#f59e0b",
+  info:    "#60a5fa",
+  error:   "#f87171",
+  muted:   "#666",
+  cursor:  "#F3F1EB",
+};
+
+const LIGHT_TOKENS: ResolvedTheme = {
+  fg:      "#141414",
+  rail:    "#bbb",
+  accent:  "#0891b2",
+  success: "#16a34a",
+  warn:    "#d97706",
+  info:    "#2563eb",
+  error:   "#dc2626",
+  muted:   "#999",
+  cursor:  "#141414",
+};
+
+function buildThemeTokens(
+  theme: "light" | "dark" | "auto" | string | OscliDemoTheme | undefined,
+  prefersDark: boolean,
+): ResolvedTheme {
+  if (theme === "light") return LIGHT_TOKENS;
+  if (theme === "dark")  return DARK_TOKENS;
+
+  if (typeof theme === "object" && theme !== null) {
+    const base = prefersDark ? DARK_TOKENS : LIGHT_TOKENS;
+    return {
+      fg:      theme.foreground ?? base.fg,
+      rail:    theme.border     ?? base.rail,
+      accent:  theme.accent     ?? base.accent,
+      success: theme.success    ?? base.success,
+      warn:    theme.warn       ?? base.warn,
+      info:    theme.info       ?? base.info,
+      error:   theme.error      ?? base.error,
+      muted:   theme.muted      ?? base.muted,
+      cursor:  theme.cursor     ?? base.cursor,
+    };
+  }
+
+  // "auto" or an unrecognised string (e.g. a future Shiki theme name) —
+  // follow the system preference. Full Shiki integration is a future concern.
+  return prefersDark ? DARK_TOKENS : LIGHT_TOKENS;
+}
+
+// ─── Type inference from the CLI instance ─────────────────────────────────────
+
+/**
+ * Extracts typed prompt answers from a `createCLI()` instance.
+ *
+ * `cli.storage` is typed as `Partial<StorageShape<TPrompts>>`, which already
+ * carries the correct value type per prompt key — so conditional inference
+ * here gives accurate per-prompt types (including literal unions for selects)
+ * with zero manual bookkeeping.
+ */
+export type DemoAnswersFromCli<TCli> =
+  TCli extends { storage: infer TStorage } ? TStorage : Record<string, unknown>;
+
+/**
+ * A manual playback sequence for branch-heavy CLIs where automatic inference
+ * is insufficient.
+ *
+ * Each step is one of:
+ * - a pinned prompt answer (takes precedence over `answers`)
+ * - a wait pause (ms)
+ * - an informational log line to inject into the output
+ *
+ * Treat this as an escape hatch, not the primary authoring model.
+ */
+export type OscliDemoScript<TCli = unknown> = Array<
+  | { prompt: keyof DemoAnswersFromCli<TCli> & string; answer: unknown }
+  | { action: "wait"; ms?: number }
+  | { action: "log"; level?: "info" | "warn" | "success"; message: string }
+>;
+
+// ─── Internal CLI interface ───────────────────────────────────────────────────
 
 type AnimateEvent =
   | { type: "intro"; message: string }
   | { type: "prompt_start"; key: string; label: string; promptType: string }
-  | {
-      type: "prompt_preview";
-      key: string;
-      label: string;
-      promptType: string;
-      lines: string[];
-    }
+  | { type: "prompt_preview"; key: string; label: string; promptType: string; lines: string[] }
   | { type: "char"; key: string; value: string; full: string }
-  | {
-      type: "prompt_submit";
-      key: string;
-      label: string;
-      displayValue: string;
-    }
+  | { type: "prompt_submit"; key: string; label: string; displayValue: string }
   | { type: "outro"; message: string }
   | { type: "run_complete" }
   | { type: "loop_restart" }
@@ -31,23 +149,6 @@ type AnimateEvent =
   | { type: "log_line"; level: string; message: string }
   | { type: "box_render"; title?: string; content: string }
   | { type: "success_line"; message: string };
-
-type DemoTiming = {
-  typeDelay?: number;
-  promptDelay?: number;
-  completionDelay?: number;
-  loop?: boolean;
-  loopDelay?: number;
-};
-
-/** Convenience speed presets. If `timing` is also provided, its values take precedence. */
-export type DemoSpeed = "slow" | "normal" | "fast";
-
-const SPEED_PRESETS: Record<DemoSpeed, Required<Pick<DemoTiming, "typeDelay" | "promptDelay" | "completionDelay">>> = {
-  slow:   { typeDelay: 160, promptDelay: 800, completionDelay: 0 },
-  normal: { typeDelay: 85,  promptDelay: 420, completionDelay: 0 },
-  fast:   { typeDelay: 30,  promptDelay: 150, completionDelay: 0 },
-};
 
 type PromptConfig = {
   type?: string;
@@ -65,19 +166,83 @@ type AnimatableCLI = {
   _promptConfigs?: Record<string, PromptConfig>;
   animate(options: {
     inputs: Record<string, unknown>;
-    timing?: DemoTiming;
+    timing?: { typeDelay?: number; promptDelay?: number; completionDelay?: number };
   }): AsyncGenerator<AnimateEvent>;
 };
 
-type ThemeName = "dark" | "light";
+// ─── Public props ─────────────────────────────────────────────────────────────
 
-type ThemeTokens = {
-  fg: string;
-  rail: string;
-  accent: string;
-  success: string;
-  muted: string;
+export type OscliDemoProps<TCli extends AnimatableCLI = AnimatableCLI> = {
+  /**
+   * The `createCLI()` instance. Single source of truth for prompt structure,
+   * choices, labels, defaults, and playback metadata.
+   */
+  cli: TCli;
+
+  /**
+   * Animation speed preset. Influences typing delay, pause between prompts,
+   * fade duration, and the pause before each replay.
+   * @default "normal"
+   */
+  speed?: DemoSpeed;
+
+  /**
+   * Typed per-prompt answers inferred from the CLI definition.
+   * Keys and value types are checked at compile time.
+   * Pinned prompts stay constant across all replay runs;
+   * omitted prompts are chosen randomly each run.
+   *
+   * @example
+   * answers={{ region: "us-east-1", confirmDeploy: true }}
+   */
+  answers?: DemoAnswersFromCli<TCli>;
+
+  /**
+   * Controls how many times the demo replays after completing.
+   * - omitted / `true` → replay infinitely
+   * - `false`          → run once, then stop
+   * - `number`         → run exactly that many times in total
+   * @default true
+   */
+  replay?: boolean | number;
+
+  /**
+   * Terminal theme.
+   * - `"auto"`         → follows `prefers-color-scheme` (SSR-safe)
+   * - `"dark"`         → force dark mode
+   * - `"light"`        → force light mode
+   * - `OscliDemoTheme` → custom token object merged over the system base
+   * - any other string → treated as a Shiki theme name (falls back to dark
+   *                      in v1; full Shiki integration is a future addition)
+   * @default "auto"
+   */
+  theme?: "light" | "dark" | "auto" | string | OscliDemoTheme;
+
+  /**
+   * Controls the fade-out transition between replay runs.
+   * - omitted → uses the duration from the `speed` preset
+   * - `false` → no fade; the demo instantly resets and starts the next run
+   * - `number` → custom fade duration in ms
+   */
+  fade?: false | number;
+
+  /**
+   * Manual playback sequence for branch-heavy CLIs where automatic inference
+   * is insufficient. Script `prompt` steps take precedence over `answers`.
+   * Use this as an escape hatch, not the primary authoring model.
+   */
+  script?: OscliDemoScript<TCli>;
+
+  className?: string;
+  style?: React.CSSProperties;
+
+  /**
+   * Called after each completed run. `runIndex` is zero-based.
+   */
+  onRunComplete?: (runIndex: number) => void;
 };
+
+// ─── Internal render-line model ───────────────────────────────────────────────
 
 type RenderLine =
   | { kind: "intro"; message: string }
@@ -91,32 +256,13 @@ type RenderLine =
   | { kind: "box"; title?: string; content: string }
   | { kind: "success"; message: string };
 
-// ─── Theme ───────────────────────────────────────────────────────────────────
-
-const themes: Record<ThemeName, ThemeTokens> = {
-  dark: {
-    fg: "#F3F1EB",
-    rail: "#333",
-    accent: "#22d3ee",
-    success: "#4ade80",
-    muted: "#666",
-  },
-  light: {
-    fg: "#141414",
-    rail: "#bbb",
-    accent: "#0891b2",
-    success: "#16a34a",
-    muted: "#999",
-  },
-};
-
-// ─── Random input generation ──────────────────────────────────────────────────
+// ─── Input generation ─────────────────────────────────────────────────────────
 
 const TEXT_WORDS = [
   "studio-app", "orbit-kit", "northwind", "field-notes", "launchpad",
   "beacon", "velocity", "prism", "forge", "atlas", "nexus", "relay",
   "anchor", "summit", "keystone", "vector", "lattice", "catalyst",
-];
+] as const;
 
 function pickRandom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]!;
@@ -130,38 +276,40 @@ function pickRandomSubset<T>(arr: readonly T[], min = 1, max?: number): T[] {
 
 function generateInputs(
   configs: Record<string, PromptConfig>,
-  forced: Record<string, unknown> = {},
+  pinned: Record<string, unknown>,
 ): Record<string, unknown> {
   const inputs: Record<string, unknown> = {};
 
   for (const [key, cfg] of Object.entries(configs)) {
-    // Forced answers always win
-    if (Object.prototype.hasOwnProperty.call(forced, key)) {
-      inputs[key] = forced[key];
+    if (Object.prototype.hasOwnProperty.call(pinned, key)) {
+      inputs[key] = pinned[key];
       continue;
     }
 
     switch (cfg.type ?? "text") {
       case "text":
       case "password":
-        inputs[key] =
-          cfg.hasDefault && cfg.defaultValue !== undefined && Math.random() < 0.4
-            ? String(cfg.defaultValue)
-            : pickRandom(TEXT_WORDS);
+        // Never use the prompt's default — always pick a random word so the
+        // demo types something visible and the animation has something to show.
+        inputs[key] = pickRandom(TEXT_WORDS);
         break;
 
       case "select":
       case "search": {
         const choices = cfg.choices ?? [];
-        if (choices.length > 0) inputs[key] = pickRandom(choices);
-        else if (cfg.hasDefault) inputs[key] = cfg.defaultValue;
+        // Pick randomly from all choices, excluding the first item when there
+        // are multiple options so the cursor always has somewhere to travel.
+        const pool = choices.length > 1 ? choices.slice(1) : choices;
+        inputs[key] = pool.length > 0 ? pickRandom(pool) : undefined;
         break;
       }
 
       case "multiselect": {
         const choices = cfg.choices ?? [];
-        if (choices.length > 0)
-          inputs[key] = pickRandomSubset(choices, 1, Math.min(choices.length, 3));
+        inputs[key] =
+          choices.length > 0
+            ? pickRandomSubset(choices, 1, Math.min(choices.length, 3))
+            : [];
         break;
       }
 
@@ -170,7 +318,7 @@ function generateInputs(
         break;
 
       case "confirm":
-        inputs[key] = Math.random() > 0.35;
+        inputs[key] = Math.random() > 0.5;
         break;
 
       case "number": {
@@ -188,29 +336,46 @@ function generateInputs(
       }
 
       default:
-        if (cfg.hasDefault && cfg.defaultValue !== undefined)
-          inputs[key] = cfg.defaultValue;
+        inputs[key] = undefined;
+        break;
     }
   }
 
   return inputs;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+/**
+ * Build the pinned-answer map by merging `answers` with any prompt steps
+ * from `script`. Script steps win on conflict.
+ */
+function buildPinned(
+  answers: Record<string, unknown>,
+  script: OscliDemoScript<unknown> | undefined,
+): Record<string, unknown> {
+  const pinned = { ...answers };
+  if (!script) return pinned;
+  for (const step of script) {
+    if ("prompt" in step && typeof step.prompt === "string") {
+      pinned[step.prompt] = step.answer;
+    }
+  }
+  return pinned;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function resolveTiming(speed?: DemoSpeed, timing?: DemoTiming): DemoTiming {
-  const preset = speed ? SPEED_PRESETS[speed] : SPEED_PRESETS.normal;
-  return { ...preset, ...timing };
-}
-
-function resolveFadeDuration(fade: boolean | number | undefined): number {
-  if (fade === false) return 0;
-  if (typeof fade === "number") return fade;
-  return 340; // default
+/** Returns true if the loop should start another run. */
+function shouldContinueReplaying(
+  replay: boolean | number | undefined,
+  completedRuns: number,
+): boolean {
+  if (replay === false) return false;
+  if (replay === undefined || replay === true) return true;
+  return completedRuns < replay;
 }
 
 function isPromptLine(line: RenderLine, key: string): boolean {
@@ -223,7 +388,42 @@ function isPromptLine(line: RenderLine, key: string): boolean {
   );
 }
 
-function renderOptionLine(text: string, icon: string, active: boolean, t: ThemeTokens) {
+function isPreviewPromptType(promptType: string): boolean {
+  return (
+    promptType === "select" ||
+    promptType === "search" ||
+    promptType === "multiselect" ||
+    promptType === "confirm-toggle"
+  );
+}
+
+// ─── System color-scheme hook (SSR-safe) ──────────────────────────────────────
+
+function usePrefersDark(): boolean {
+  const [prefersDark, setPrefersDark] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true; // SSR default
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e: MediaQueryListEvent) => setPrefersDark(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  return prefersDark;
+}
+
+// ─── Render helpers ───────────────────────────────────────────────────────────
+
+function renderOptionLine(
+  text: string,
+  icon: string,
+  active: boolean,
+  t: ResolvedTheme,
+) {
   const selected = icon === "●" || icon === "◉";
   return (
     <>
@@ -236,7 +436,8 @@ function renderOptionLine(text: string, icon: string, active: boolean, t: ThemeT
   );
 }
 
-function renderPreviewLine(line: string, t: ThemeTokens) {
+function renderPreviewLine(line: string, t: ResolvedTheme) {
+  // Keyboard hint lines
   if (
     line.includes("↑↓") ||
     line.includes("enter select") ||
@@ -244,9 +445,14 @@ function renderPreviewLine(line: string, t: ThemeTokens) {
     line.includes("space toggle") ||
     line.includes("type to filter")
   ) {
-    return <span style={{ color: t.muted, opacity: 0.55, fontSize: "0.82em" }}>{line}</span>;
+    return (
+      <span style={{ color: t.muted, opacity: 0.55, fontSize: "0.82em" }}>
+        {line}
+      </span>
+    );
   }
 
+  // Confirm toggle: "● Yes  /  ○ No"
   if (line.includes(" / ") && (line.startsWith("● ") || line.startsWith("○ "))) {
     const [l, r] = line.split(" / ");
     const li = l!.slice(0, 1);
@@ -264,6 +470,7 @@ function renderPreviewLine(line: string, t: ThemeTokens) {
     );
   }
 
+  // Select / multiselect option lines: "›  ● Option" or "   ○ Option"
   if (line.startsWith("› ") || line.startsWith("  ")) {
     const active = line.startsWith("› ");
     const content = line.slice(2);
@@ -276,251 +483,285 @@ function renderPreviewLine(line: string, t: ThemeTokens) {
   return <span>{line}</span>;
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
-export interface OscliDemoProps {
-  cli: AnimatableCLI;
-
-  /**
-   * Animation speed preset. Controls typing speed, pause between prompts,
-   * and pause after submission. Overridden by individual `timing` values.
-   * @default "normal"
-   */
-  speed?: DemoSpeed;
-
-  /**
-   * Fine-grained timing control. Values here override the selected `speed` preset.
-   */
-  timing?: DemoTiming;
-
-  /**
-   * Force specific prompt answers. Keys match prompt names defined in `createCLI`.
-   * Forced answers persist across auto-replay runs. Other prompts are still
-   * auto-generated randomly each run.
-   *
-   * @example
-   * forcedAnswers={{ project: "my-app", framework: "next" }}
-   */
-  forcedAnswers?: Record<string, unknown>;
-
-  /**
-   * Provide fixed inputs for every prompt. Disables auto-generation and auto-replay.
-   * Use `forcedAnswers` instead if you only want to pin certain prompts.
-   */
-  inputs?: Record<string, unknown>;
-
-  /**
-   * Controls the fade transition between replay runs.
-   * - `true` (default): 340ms fade
-   * - `false`: instant clear, no fade
-   * - `number`: custom fade duration in ms
-   */
-  fade?: boolean | number;
-
-  theme?: "dark" | "light";
-  onRunComplete?: () => void;
-
-  /** Delay in ms before auto-replaying (default 3000). Ignored when `inputs` is set. */
-  replayDelay?: number;
-
-  className?: string;
-  style?: React.CSSProperties;
-}
-
-export function OscliDemo({
+/**
+ * Renders an animated replay of an `oscli` CLI flow.
+ *
+ * Inspects the CLI definition and simulates the full interaction sequence —
+ * typing, selecting, confirming, spinners, output — without executing real
+ * application code. Fully dynamic and randomised by default.
+ *
+ * @example
+ * // Minimal — fully automatic, infinite replay
+ * <OscliDemo cli={cli} />
+ *
+ * @example
+ * // Pin specific answers, run three times total
+ * <OscliDemo cli={cli} answers={{ region: "us-east-1" }} replay={3} />
+ */
+export function OscliDemo<TCli extends AnimatableCLI = AnimatableCLI>({
   cli,
-  speed,
-  timing,
-  forcedAnswers,
-  inputs: inputsProp,
-  fade = true,
-  theme = "dark",
-  onRunComplete,
-  replayDelay = 3000,
+  speed = "normal",
+  answers,
+  replay,
+  theme: themeProp = "auto",
+  fade,
+  script,
   className,
   style,
-}: OscliDemoProps) {
-  const t = themes[theme];
+  onRunComplete,
+}: OscliDemoProps<TCli>) {
+  const prefersDark = usePrefersDark();
+  const t = buildThemeTokens(themeProp, prefersDark);
+  const speedConfig = SPEED_PRESETS[speed];
+
+  // `false` = instant reset, number = custom ms, omitted = speed preset default.
+  const fadeDuration = fade === false ? 0 : (fade ?? speedConfig.fadeDuration);
+
   const [lines, setLines] = useState<RenderLine[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [isFading, setIsFading] = useState(false);
 
-  const fadeDuration = resolveFadeDuration(fade);
-  const resolvedTiming = resolveTiming(speed, timing);
+  // Read replay and onRunComplete through refs so their changes never restart
+  // the animation loop — only cli / answers / script / speed should do that.
+  const replayRef = useRef(replay);
+  replayRef.current = replay;
+
+  const onRunCompleteRef = useRef(onRunComplete);
+  onRunCompleteRef.current = onRunComplete;
 
   useEffect(() => {
     let cancelled = false;
-    const autoReplay = !inputsProp && Boolean(cli._promptConfigs);
+    const hasPromptConfigs = Boolean(cli._promptConfigs);
+
+    const pinned = buildPinned(
+      (answers ?? {}) as Record<string, unknown>,
+      script as OscliDemoScript<unknown> | undefined,
+    );
+
+    // completedRuns tracks total finished runs for replay-count logic.
+    let completedRuns = 0;
 
     const run = async () => {
-      let currentInputs =
-        inputsProp ??
-        (cli._promptConfigs
-          ? generateInputs(cli._promptConfigs, forcedAnswers ?? {})
-          : {});
-
       while (!cancelled) {
+        // Build inputs for this run. Pinned answers stay fixed every run;
+        // unpinned prompts are chosen randomly from the prompt config metadata.
+        const inputs =
+          hasPromptConfigs && cli._promptConfigs
+            ? generateInputs(cli._promptConfigs, pinned)
+            : { ...pinned };
+
         setLines([]);
         setActiveKey(null);
         setIsFading(false);
 
-        for await (const event of cli.animate({ inputs: currentInputs, timing: resolvedTiming })) {
-          if (cancelled) break;
+        for await (const event of cli.animate({
+          inputs,
+          timing: {
+            typeDelay: speedConfig.typeDelay,
+            promptDelay: speedConfig.promptDelay,
+            completionDelay: 0,
+          },
+        })) {
+          if (cancelled) return;
 
-          if (event.type === "intro") {
-            setLines((prev) => [...prev, { kind: "intro", message: event.message }]);
-            continue;
-          }
+          switch (event.type) {
+            case "intro":
+              setLines((prev) => [
+                ...prev,
+                { kind: "intro", message: event.message },
+              ]);
+              break;
 
-          if (event.type === "prompt_start") {
-            setActiveKey(event.key);
-            const isTextType = ["text", "password", "number", "date"].includes(event.promptType);
-            setLines((prev) => {
-              const next = [...prev, { kind: "prompt-label" as const, key: event.key, label: event.label }];
-              if (isTextType) {
-                next.push({ kind: "active-text" as const, key: event.key, full: "" });
-              }
-              return next;
-            });
-            continue;
-          }
-
-          if (event.type === "prompt_preview") {
-            setLines((prev) => {
-              const next = [...prev];
-              const last = next[next.length - 1];
-              if (
-                last &&
-                "key" in last &&
-                last.key === event.key &&
-                (last.kind === "active-text" || last.kind === "active-preview")
-              ) {
-                next.pop();
-              }
-              next.push({ kind: "active-preview", key: event.key, lines: event.lines });
-              return next;
-            });
-            continue;
-          }
-
-          if (event.type === "char") {
-            setLines((prev) => {
-              const next = [...prev];
-              const last = next[next.length - 1];
-              if (
-                last &&
-                "key" in last &&
-                last.key === event.key &&
-                last.kind === "active-preview"
-              ) {
-                next.pop();
-              }
-              if (!next.some((l) => "key" in l && l.key === event.key && l.kind === "active-text")) {
-                next.push({ kind: "active-text", key: event.key, full: "" });
-              }
-              for (let i = next.length - 1; i >= 0; i--) {
-                const l = next[i]!;
-                if (l.kind === "active-text" && l.key === event.key) {
-                  next[i] = { ...l, full: event.full };
-                  break;
+            case "prompt_start": {
+              const isTextType = [
+                "text", "password", "number", "date",
+              ].includes(event.promptType);
+              setActiveKey(event.key);
+              setLines((prev) => {
+                if (isPreviewPromptType(event.promptType)) return [...prev];
+                const next: RenderLine[] = [
+                  ...prev,
+                  { kind: "prompt-label", key: event.key, label: event.label },
+                ];
+                if (isTextType) {
+                  next.push({ kind: "active-text", key: event.key, full: "" });
                 }
-              }
-              return next;
-            });
-            continue;
-          }
-
-          if (event.type === "prompt_submit") {
-            setActiveKey(null);
-            setLines((prev) => {
-              const next = [...prev];
-              while (next.length > 0 && isPromptLine(next[next.length - 1]!, event.key)) {
-                next.pop();
-              }
-              next.push({
-                kind: "summary",
-                key: event.key,
-                label: event.label,
-                displayValue: event.displayValue,
+                return next;
               });
-              return next;
-            });
-            continue;
-          }
-
-          if (event.type === "spin_start") {
-            setLines((prev) => [...prev, { kind: "spin", label: event.label, done: false }]);
-            continue;
-          }
-
-          if (event.type === "spin_complete") {
-            setLines((prev) => {
-              const next = [...prev];
-              for (let i = next.length - 1; i >= 0; i--) {
-                const l = next[i]!;
-                if (l.kind === "spin" && l.label === event.label && !l.done) {
-                  next[i] = { ...l, done: true };
-                  break;
-                }
-              }
-              return next;
-            });
-            continue;
-          }
-
-          if (event.type === "log_line") {
-            setLines((prev) => [...prev, { kind: "log-line", level: event.level, message: event.message }]);
-            continue;
-          }
-
-          if (event.type === "box_render") {
-            setLines((prev) => [...prev, { kind: "box", title: event.title, content: event.content }]);
-            continue;
-          }
-
-          if (event.type === "success_line") {
-            setLines((prev) => [...prev, { kind: "success", message: event.message }]);
-            continue;
-          }
-
-          if (event.type === "outro") {
-            setActiveKey(null);
-            setLines((prev) => [...prev, { kind: "outro", message: event.message }]);
-            continue;
-          }
-
-          if (event.type === "run_complete") {
-            onRunComplete?.();
-            continue;
-          }
-
-          if (event.type === "loop_restart") {
-            if (fadeDuration > 0) {
-              setIsFading(true);
-              await sleep(fadeDuration);
-              if (cancelled) break;
+              break;
             }
-            setLines([]);
-            setActiveKey(null);
-            setIsFading(false);
+
+            case "prompt_preview":
+              setLines((prev) => {
+                const next = [...prev];
+                const last = next[next.length - 1];
+                // Replace any stale active-text or prior preview for this key
+                if (
+                  last &&
+                  "key" in last &&
+                  last.key === event.key &&
+                  (last.kind === "active-text" || last.kind === "active-preview")
+                ) {
+                  next.pop();
+                }
+                // Ensure the label line precedes the preview
+                const previous = next[next.length - 1];
+                if (
+                  !previous ||
+                  !("key" in previous) ||
+                  previous.key !== event.key ||
+                  previous.kind !== "prompt-label"
+                ) {
+                  next.push({
+                    kind: "prompt-label",
+                    key: event.key,
+                    label: event.label,
+                  });
+                }
+                next.push({
+                  kind: "active-preview",
+                  key: event.key,
+                  lines: event.lines,
+                });
+                return next;
+              });
+              break;
+
+            case "char":
+              setLines((prev) => {
+                const next = [...prev];
+                const last = next[next.length - 1];
+                // If a preview was showing, remove it — back to text input
+                if (
+                  last &&
+                  "key" in last &&
+                  last.key === event.key &&
+                  last.kind === "active-preview"
+                ) {
+                  next.pop();
+                }
+                // Ensure there is an active-text line to update
+                if (
+                  !next.some(
+                    (l) =>
+                      "key" in l &&
+                      l.key === event.key &&
+                      l.kind === "active-text",
+                  )
+                ) {
+                  next.push({ kind: "active-text", key: event.key, full: "" });
+                }
+                for (let i = next.length - 1; i >= 0; i--) {
+                  const l = next[i]!;
+                  if (l.kind === "active-text" && l.key === event.key) {
+                    next[i] = { ...l, full: event.full };
+                    break;
+                  }
+                }
+                return next;
+              });
+              break;
+
+            case "prompt_submit":
+              setActiveKey(null);
+              setLines((prev) => {
+                const next = [...prev];
+                // Strip all intermediate lines for this prompt
+                while (
+                  next.length > 0 &&
+                  isPromptLine(next[next.length - 1]!, event.key)
+                ) {
+                  next.pop();
+                }
+                next.push({
+                  kind: "summary",
+                  key: event.key,
+                  label: event.label,
+                  displayValue: event.displayValue,
+                });
+                return next;
+              });
+              break;
+
+            case "spin_start":
+              setLines((prev) => [
+                ...prev,
+                { kind: "spin", label: event.label, done: false },
+              ]);
+              break;
+
+            case "spin_complete":
+              setLines((prev) => {
+                const next = [...prev];
+                for (let i = next.length - 1; i >= 0; i--) {
+                  const l = next[i]!;
+                  if (l.kind === "spin" && l.label === event.label && !l.done) {
+                    next[i] = { ...l, done: true };
+                    break;
+                  }
+                }
+                return next;
+              });
+              break;
+
+            case "log_line":
+              setLines((prev) => [
+                ...prev,
+                { kind: "log-line", level: event.level, message: event.message },
+              ]);
+              break;
+
+            case "box_render":
+              setLines((prev) => [
+                ...prev,
+                { kind: "box", title: event.title, content: event.content },
+              ]);
+              break;
+
+            case "success_line":
+              setLines((prev) => [
+                ...prev,
+                { kind: "success", message: event.message },
+              ]);
+              break;
+
+            case "outro":
+              setActiveKey(null);
+              setLines((prev) => [
+                ...prev,
+                { kind: "outro", message: event.message },
+              ]);
+              break;
+
+            case "run_complete":
+              // Fire before incrementing so the callback index is zero-based
+              onRunCompleteRef.current?.(completedRuns);
+              break;
+
+            case "loop_restart":
+              // We manage looping externally; the internal signal is a no-op.
+              break;
           }
         }
 
-        if (cancelled || !autoReplay) break;
+        if (cancelled) return;
 
-        // Pause before replay
-        await sleep(replayDelay);
-        if (cancelled) break;
+        completedRuns++;
 
-        // Fade out
+        if (!shouldContinueReplaying(replayRef.current, completedRuns)) break;
+
+        // Pause at end-of-run before resetting
+        await sleep(speedConfig.replayDelay);
+        if (cancelled) return;
+
+        // Fade out before next run (skipped entirely when fadeDuration is 0)
         if (fadeDuration > 0) {
           setIsFading(true);
           await sleep(fadeDuration);
-          if (cancelled) break;
+          if (cancelled) return;
         }
-
-        // New random inputs for next run (forced answers still applied)
-        currentInputs = generateInputs(cli._promptConfigs!, forcedAnswers ?? {});
       }
     };
 
@@ -529,12 +770,29 @@ export function OscliDemo({
     return () => {
       cancelled = true;
     };
-  // cli and inputsProp identity changes are the intentional triggers for restarts
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cli, inputsProp]);
+    // `cli`, `answers`, `script`, and `speed` changes all warrant a fresh run.
+    // `replay` and `onRunComplete` are read through refs; they never restart.
+    // Note: if `answers` / `script` are defined inline rather than memoised,
+    // they will trigger a restart on every parent render — wrap in useMemo if needed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cli, answers, script, speed]);
+
+  // ─── Render ──────────────────────────────────────────────────────────────────
+
+  const hasOutro = lines.some((l) => l.kind === "outro");
+  const isRunning = lines.length > 0;
 
   return (
-    <div className={className} style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", ...style }}>
+    <div
+      className={className}
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        ...style,
+      }}
+    >
       <style>{"@keyframes oscli-blink{0%,100%{opacity:1}50%{opacity:0}}"}</style>
       <div
         style={{
@@ -579,7 +837,12 @@ export function OscliDemo({
                 <span style={{ color: t.accent }}>›</span>
                 <span>{` ${line.full}`}</span>
                 {activeKey === line.key ? (
-                  <span style={{ color: t.accent, animation: "oscli-blink 0.65s step-end infinite" }}>
+                  <span
+                    style={{
+                      color: t.cursor,
+                      animation: "oscli-blink 0.65s step-end infinite",
+                    }}
+                  >
                     _
                   </span>
                 ) : null}
@@ -623,24 +886,33 @@ export function OscliDemo({
                 {line.done ? (
                   <span style={{ color: t.success }}>✓</span>
                 ) : (
-                  <span style={{ color: t.accent, animation: "oscli-blink 0.8s step-end infinite" }}>⠋</span>
+                  <span
+                    style={{
+                      color: t.accent,
+                      animation: "oscli-blink 0.8s step-end infinite",
+                    }}
+                  >
+                    ⠋
+                  </span>
                 )}
                 <span>{"  "}</span>
-                <span style={{ color: line.done ? t.muted : t.fg }}>{line.label}</span>
+                <span style={{ color: line.done ? t.muted : t.fg }}>
+                  {line.label}
+                </span>
               </div>
             );
           }
 
           if (line.kind === "log-line") {
             const levelColor =
-              line.level === "info" ? t.accent
-              : line.level === "warn" ? "#f59e0b"
-              : line.level === "error" ? "#f87171"
+              line.level === "info"    ? t.info
+              : line.level === "warn"  ? t.warn
+              : line.level === "error" ? t.error
               : line.level === "success" ? t.success
               : t.muted;
             const levelIcon =
-              line.level === "info" ? "ℹ"
-              : line.level === "warn" ? "⚠"
+              line.level === "info"    ? "ℹ"
+              : line.level === "warn"  ? "⚠"
               : line.level === "error" ? "✖"
               : line.level === "success" ? "✓"
               : "·";
@@ -697,7 +969,9 @@ export function OscliDemo({
             </div>
           );
         })}
-        {!lines.some((l) => l.kind === "outro") && lines.length > 0 && (
+
+        {/* Trailing box-close shown while a run is in flight (no outro yet) */}
+        {isRunning && !hasOutro && (
           <div>
             <span style={{ color: t.rail }}>└</span>
           </div>

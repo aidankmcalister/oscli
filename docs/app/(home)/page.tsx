@@ -10,7 +10,7 @@ import {
 const setupCode = [
   'import { createCLI } from "@oscli-dev/oscli"',
   "",
-  "const cli = createCLI((b) => ({",
+  "export const cli = createCLI((b) => ({",
   '  description: "create-app",',
   '  theme: "basic",',
   "  prompts: {",
@@ -20,7 +20,7 @@ const setupCode = [
   '    }).label("Framework").default("next"),',
   "    features: b.multiselect({",
   '      choices: ["tailwind", "eslint", "testing", "auth"] as const,',
-  '    }).label("Features"),',
+  '    }).label("Features").default(["tailwind", "eslint"]),',
   '    typescript: b.confirm().label("Use TypeScript?").default(true),',
   "    packageManager: b.select({",
   '      choices: ["npm", "bun", "pnpm", "yarn"] as const,',
@@ -28,16 +28,6 @@ const setupCode = [
   '    gitInit: b.confirm().label("Initialize git?").default(true),',
   "  },",
   "}))",
-  "",
-  "await cli.run(async () => {",
-  "  await cli.prompt.project()",
-  "  await cli.prompt.framework()",
-  "  await cli.prompt.features()",
-  "  await cli.prompt.typescript()",
-  "  await cli.prompt.packageManager()",
-  "  await cli.prompt.gitInit()",
-  "  cli.success(`Created ${cli.storage.project}`)",
-  "})",
 ].join("\n");
 
 const getHighlighter = cache(async () =>

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "start": "next start",
     "types:check": "fumadocs-mdx && next typegen && tsc --noEmit",
     "postinstall": "fumadocs-mdx",
@@ -12,9 +12,9 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "@base-ui/react": "^1.2.0",
     "@oscli-dev/oscli": "^0.1.2",
     "@oscli-dev/react": "^0.1.0",
-    "@base-ui/react": "^1.2.0",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-select": "^2.2.6",

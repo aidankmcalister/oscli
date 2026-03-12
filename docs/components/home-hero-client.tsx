@@ -6,6 +6,9 @@ import { OscliDemo } from "@oscli-dev/react";
 import { createAppDemoCli } from "@/lib/create-app-demo";
 
 const installCommand = "bun add @oscli-dev/oscli";
+const demoAnswers = {
+  project: "my-app",
+};
 
 type ActiveTab = "code" | "preview";
 
@@ -220,7 +223,7 @@ export function HomeHeroClient({
                 <div className="flex items-center gap-3">
                   <TerminalDots />
                   <span className="text-[11px] font-medium tracking-wide text-fd-muted-foreground">
-                    {activeTab === "preview" ? "terminal" : "setup.ts"}
+                    {activeTab === "preview" ? "terminal" : "cli.ts"}
                   </span>
                 </div>
                 <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
@@ -256,30 +259,12 @@ export function HomeHeroClient({
                   ].join(" ")}
                   aria-hidden={activeTab !== "preview"}
                 >
-                  <div className="block dark:hidden">
-                    <OscliDemo
-                      cli={createAppDemoCli}
-                      theme="light"
-                      timing={{
-                        typeDelay: 100,
-                        promptDelay: 1300,
-                        completionDelay: 0,
-                      }}
-                      replayDelay={2600}
-                    />
-                  </div>
-                  <div className="hidden dark:block">
-                    <OscliDemo
-                      cli={createAppDemoCli}
-                      theme="dark"
-                      timing={{
-                        typeDelay: 100,
-                        promptDelay: 1300,
-                        completionDelay: 0,
-                      }}
-                      replayDelay={2600}
-                    />
-                  </div>
+                  <OscliDemo
+                    cli={createAppDemoCli}
+                    theme="auto"
+                    answers={demoAnswers}
+                    speed="normal"
+                  />
                 </div>
               </div>
             </div>

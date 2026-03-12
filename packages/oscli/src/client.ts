@@ -222,7 +222,11 @@ function loadProgressModule() {
 }
 
 function loadCommanderModule() {
-  commanderModulePromise ??= import("commander");
+  // Keep commander out of browser bundles that only use createCLI().animate().
+  commanderModulePromise ??= import(
+    /* webpackIgnore: true */
+    "commander"
+  );
   return commanderModulePromise;
 }
 
@@ -1433,11 +1437,9 @@ export function createCLI<
             runtimeConfig.type === "select" ||
             runtimeConfig.type === "search"
           ) {
-            const startIndex = resolveAnimateChoiceIndex(
-              runtimeConfig,
-              runtimeConfig.defaultValue,
-              0,
-            );
+            // Always start from the top of the list so the cursor visibly
+            // travels from index 0 to the target, regardless of any default.
+            const startIndex = 0;
             const targetIndex = resolveAnimateChoiceIndex(
               runtimeConfig,
               value,
@@ -1453,6 +1455,9 @@ export function createCLI<
               promptType: animatePromptType(runtimeConfig),
               lines: buildSelectPreviewLines(runtimeConfig, startIndex),
             };
+
+            // Dwell on the initial position so it's visible before moving.
+            await wait(humanizePause(Math.max(timing.typeDelay * 1.8, 120)));
 
             for (const index of moveIndexToward(startIndex, targetIndex)) {
               yield {
@@ -1491,6 +1496,9 @@ export function createCLI<
               ),
             };
 
+            // Dwell on index 0 so it's visible before cursor movement begins.
+            await wait(humanizePause(Math.max(timing.typeDelay * 2.2, 200)));
+
             const choiceOrder = choices.map((choice, index) => ({
               label: String(choice),
               index,
@@ -1514,7 +1522,7 @@ export function createCLI<
                   ),
                 };
                 await wait(
-                  humanizePause(Math.max(timing.typeDelay * 1.8, 120)),
+                  humanizePause(Math.max(timing.typeDelay * 2.2, 200)),
                 );
               }
 
@@ -1536,37 +1544,39 @@ export function createCLI<
                   currentSelections,
                 ),
               };
-              await wait(humanizePause(Math.max(timing.typeDelay * 1.4, 140)));
+              await wait(humanizePause(Math.max(timing.typeDelay * 2.2, 240)));
             }
           } else if (
             runtimeConfig.type === "confirm" &&
             runtimeConfig.confirmMode === "toggle"
           ) {
-            const startValue = hasPromptDefault(runtimeConfig)
-              ? Boolean(runtimeConfig.defaultValue)
-              : true;
             const targetValue = Boolean(value);
 
             await wait(humanizePause(timing.promptDelay));
+
+            // Always show the opposite state first so there is always a visible
+            // toggle animation, regardless of the default value.
+            yield {
+              type: "prompt_preview",
+              key: name,
+              label,
+              promptType: animatePromptType(runtimeConfig),
+              lines: buildConfirmPreviewLines(!targetValue),
+            };
+
+            // Dwell on the initial state before toggling.
+            await wait(humanizePause(Math.max(timing.typeDelay * 3, 340)));
 
             yield {
               type: "prompt_preview",
               key: name,
               label,
               promptType: animatePromptType(runtimeConfig),
-              lines: buildConfirmPreviewLines(startValue),
+              lines: buildConfirmPreviewLines(targetValue),
             };
 
-            if (startValue !== targetValue) {
-              yield {
-                type: "prompt_preview",
-                key: name,
-                label,
-                promptType: animatePromptType(runtimeConfig),
-                lines: buildConfirmPreviewLines(targetValue),
-              };
-              await wait(humanizePause(Math.max(timing.typeDelay * 1.6, 120)));
-            }
+            // Dwell on the chosen state before submitting.
+            await wait(humanizePause(Math.max(timing.typeDelay * 3, 340)));
           } else {
             await wait(humanizePause(timing.promptDelay));
           }
