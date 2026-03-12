@@ -1,6 +1,6 @@
 {
   "name": "@oscli-dev/react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React components for oscli demos and interactive CLI previews.",
   "type": "module",
   "main": "./dist/index.js",
@@ -13,7 +13,8 @@
   },
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "rm -rf dist && bunx tsc -p tsconfig.build.json",
