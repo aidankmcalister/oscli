@@ -280,6 +280,13 @@ describe("cli.animate", () => {
       key: "install",
       label: "Install dependencies?",
       promptType: "confirm-toggle",
+      lines: ["● Yes  /  ○ No"],
+    });
+    expect(events).toContainEqual({
+      type: "prompt_preview",
+      key: "install",
+      label: "Install dependencies?",
+      promptType: "confirm-toggle",
       lines: ["○ Yes  /  ● No"],
     });
   });

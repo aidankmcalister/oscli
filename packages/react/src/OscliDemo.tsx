@@ -455,17 +455,19 @@ function renderPreviewLine(line: string, t: ResolvedTheme) {
   // Confirm toggle: "● Yes  /  ○ No"
   if (line.includes(" / ") && (line.startsWith("● ") || line.startsWith("○ "))) {
     const [l, r] = line.split(" / ");
-    const li = l!.slice(0, 1);
-    const ri = r!.slice(0, 1);
+    const left = l?.trim() ?? "";
+    const right = r?.trim() ?? "";
+    const li = left.slice(0, 1);
+    const ri = right.slice(0, 1);
     return (
       <>
         <span style={{ color: li === "●" ? t.accent : t.muted }}>{li}</span>
         <span> </span>
-        <span style={{ color: li === "●" ? t.fg : t.muted }}>{l!.slice(2)}</span>
+        <span style={{ color: li === "●" ? t.fg : t.muted }}>{left.slice(2)}</span>
         <span style={{ color: t.muted }}>{"  /  "}</span>
         <span style={{ color: ri === "●" ? t.accent : t.muted }}>{ri}</span>
         <span> </span>
-        <span style={{ color: ri === "●" ? t.fg : t.muted }}>{r!.slice(2)}</span>
+        <span style={{ color: ri === "●" ? t.fg : t.muted }}>{right.slice(2)}</span>
       </>
     );
   }

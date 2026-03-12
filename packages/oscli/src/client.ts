@@ -1550,16 +1550,16 @@ export function createCLI<
             runtimeConfig.type === "confirm" &&
             runtimeConfig.confirmMode === "toggle"
           ) {
+            const startValue = true;
             const targetValue = Boolean(value);
 
-            // Always show the opposite state first so there is always a visible
-            // toggle animation, regardless of the default value.
+            // Start from the first option, consistent with select-style prompts.
             yield {
               type: "prompt_preview",
               key: name,
               label,
               promptType: animatePromptType(runtimeConfig),
-              lines: buildConfirmPreviewLines(!targetValue),
+              lines: buildConfirmPreviewLines(startValue),
             };
 
             // Show the initial state immediately, then dwell before toggling.
@@ -1567,13 +1567,15 @@ export function createCLI<
               humanizePause(Math.max(timing.promptDelay, timing.typeDelay * 3, 340)),
             );
 
-            yield {
-              type: "prompt_preview",
-              key: name,
-              label,
-              promptType: animatePromptType(runtimeConfig),
-              lines: buildConfirmPreviewLines(targetValue),
-            };
+            if (startValue !== targetValue) {
+              yield {
+                type: "prompt_preview",
+                key: name,
+                label,
+                promptType: animatePromptType(runtimeConfig),
+                lines: buildConfirmPreviewLines(targetValue),
+              };
+            }
 
             // Dwell on the chosen state before submitting.
             await wait(humanizePause(Math.max(timing.typeDelay * 3, 340)));
