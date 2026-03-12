@@ -3,10 +3,8 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import type { Metadata } from "next";
 import "./global.css";
-import { Fraunces, JetBrains_Mono, Montserrat, Geist } from "next/font/google";
+import { Fraunces, JetBrains_Mono, Montserrat } from "next/font/google";
 import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -51,7 +49,7 @@ export default function Layout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={cn(montserrat.variable, fraunces.variable, jetbrainsMono.variable, "font-sans", geist.variable)}
+      className={cn(montserrat.variable, fraunces.variable, jetbrainsMono.variable, "font-sans")}
       suppressHydrationWarning
     >
       <body className="flex min-h-screen flex-col bg-fd-background font-sans text-fd-foreground">
