@@ -35,6 +35,15 @@ type DemoTiming = {
   loopDelay?: number;
 };
 
+/** Convenience speed presets. If `timing` is also provided, its values take precedence. */
+export type DemoSpeed = "slow" | "normal" | "fast";
+
+const SPEED_PRESETS: Record<DemoSpeed, Required<Pick<DemoTiming, "typeDelay" | "promptDelay" | "completionDelay">>> = {
+  slow:   { typeDelay: 160, promptDelay: 1100, completionDelay: 320 },
+  normal: { typeDelay: 85,  promptDelay: 700,  completionDelay: 140 },
+  fast:   { typeDelay: 30,  promptDelay: 240,  completionDelay: 50  },
+};
+
 type PromptConfig = {
   type?: string;
   label?: string;
@@ -110,10 +119,19 @@ function pickRandomSubset<T>(arr: readonly T[], min = 1, max?: number): T[] {
   return [...arr].sort(() => Math.random() - 0.5).slice(0, count);
 }
 
-function generateInputs(configs: Record<string, PromptConfig>): Record<string, unknown> {
+function generateInputs(
+  configs: Record<string, PromptConfig>,
+  forced: Record<string, unknown> = {},
+): Record<string, unknown> {
   const inputs: Record<string, unknown> = {};
 
   for (const [key, cfg] of Object.entries(configs)) {
+    // Forced answers always win
+    if (Object.prototype.hasOwnProperty.call(forced, key)) {
+      inputs[key] = forced[key];
+      continue;
+    }
+
     switch (cfg.type ?? "text") {
       case "text":
       case "password":
@@ -175,6 +193,17 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function resolveTiming(speed?: DemoSpeed, timing?: DemoTiming): DemoTiming {
+  const preset = speed ? SPEED_PRESETS[speed] : SPEED_PRESETS.normal;
+  return { ...preset, ...timing };
+}
+
+function resolveFadeDuration(fade: boolean | number | undefined): number {
+  if (fade === false) return 0;
+  if (typeof fade === "number") return fade;
+  return 340; // default
+}
+
 function isPromptLine(line: RenderLine, key: string): boolean {
   return (
     "key" in line &&
@@ -185,12 +214,7 @@ function isPromptLine(line: RenderLine, key: string): boolean {
   );
 }
 
-function renderOptionLine(
-  text: string,
-  icon: string,
-  active: boolean,
-  t: ThemeTokens,
-) {
+function renderOptionLine(text: string, icon: string, active: boolean, t: ThemeTokens) {
   const selected = icon === "●" || icon === "◉";
   return (
     <>
@@ -247,21 +271,60 @@ function renderPreviewLine(line: string, t: ThemeTokens) {
 
 export interface OscliDemoProps {
   cli: AnimatableCLI;
-  /** Provide fixed inputs instead of auto-generating random ones. */
-  inputs?: Record<string, unknown>;
+
+  /**
+   * Animation speed preset. Controls typing speed, pause between prompts,
+   * and pause after submission. Overridden by individual `timing` values.
+   * @default "normal"
+   */
+  speed?: DemoSpeed;
+
+  /**
+   * Fine-grained timing control. Values here override the selected `speed` preset.
+   */
   timing?: DemoTiming;
-  theme?: ThemeName;
+
+  /**
+   * Force specific prompt answers. Keys match prompt names defined in `createCLI`.
+   * Forced answers persist across auto-replay runs. Other prompts are still
+   * auto-generated randomly each run.
+   *
+   * @example
+   * forcedAnswers={{ project: "my-app", framework: "next" }}
+   */
+  forcedAnswers?: Record<string, unknown>;
+
+  /**
+   * Provide fixed inputs for every prompt. Disables auto-generation and auto-replay.
+   * Use `forcedAnswers` instead if you only want to pin certain prompts.
+   */
+  inputs?: Record<string, unknown>;
+
+  /**
+   * Controls the fade transition between replay runs.
+   * - `true` (default): 340ms fade
+   * - `false`: instant clear, no fade
+   * - `number`: custom fade duration in ms
+   */
+  fade?: boolean | number;
+
+  theme?: "dark" | "light";
   onRunComplete?: () => void;
-  /** Delay in ms before auto-replaying (default 3000). Ignored when inputs prop is set. */
+
+  /** Delay in ms before auto-replaying (default 3000). Ignored when `inputs` is set. */
   replayDelay?: number;
+
   className?: string;
   style?: React.CSSProperties;
 }
 
 export function OscliDemo({
   cli,
-  inputs: inputsProp,
+  speed,
   timing,
+  forcedAnswers,
+  inputs: inputsProp,
+  fade = true,
   theme = "dark",
   onRunComplete,
   replayDelay = 3000,
@@ -273,24 +336,26 @@ export function OscliDemo({
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [isFading, setIsFading] = useState(false);
 
-  useEffect(() => {
-    // Each effect closure captures its own `cancelled` flag.
-    // This is the correct pattern — never use a shared ref for this.
-    let cancelled = false;
+  const fadeDuration = resolveFadeDuration(fade);
+  const resolvedTiming = resolveTiming(speed, timing);
 
+  useEffect(() => {
+    let cancelled = false;
     const autoReplay = !inputsProp && Boolean(cli._promptConfigs);
 
     const run = async () => {
       let currentInputs =
         inputsProp ??
-        (cli._promptConfigs ? generateInputs(cli._promptConfigs) : {});
+        (cli._promptConfigs
+          ? generateInputs(cli._promptConfigs, forcedAnswers ?? {})
+          : {});
 
       while (!cancelled) {
         setLines([]);
         setActiveKey(null);
         setIsFading(false);
 
-        for await (const event of cli.animate({ inputs: currentInputs, timing })) {
+        for await (const event of cli.animate({ inputs: currentInputs, timing: resolvedTiming })) {
           if (cancelled) break;
 
           if (event.type === "intro") {
@@ -382,9 +447,11 @@ export function OscliDemo({
           }
 
           if (event.type === "loop_restart") {
-            setIsFading(true);
-            await sleep(300);
-            if (cancelled) break;
+            if (fadeDuration > 0) {
+              setIsFading(true);
+              await sleep(fadeDuration);
+              if (cancelled) break;
+            }
             setLines([]);
             setActiveKey(null);
             setIsFading(false);
@@ -393,15 +460,19 @@ export function OscliDemo({
 
         if (cancelled || !autoReplay) break;
 
-        // Pause, then fade out, then replay with fresh random inputs
+        // Pause before replay
         await sleep(replayDelay);
         if (cancelled) break;
 
-        setIsFading(true);
-        await sleep(340);
-        if (cancelled) break;
+        // Fade out
+        if (fadeDuration > 0) {
+          setIsFading(true);
+          await sleep(fadeDuration);
+          if (cancelled) break;
+        }
 
-        currentInputs = generateInputs(cli._promptConfigs!);
+        // New random inputs for next run (forced answers still applied)
+        currentInputs = generateInputs(cli._promptConfigs!, forcedAnswers ?? {});
       }
     };
 
@@ -410,19 +481,13 @@ export function OscliDemo({
     return () => {
       cancelled = true;
     };
-  // Intentionally minimal deps — cli and inputsProp identity drive reruns
+  // cli and inputsProp identity changes are the intentional triggers for restarts
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cli, inputsProp]);
 
   return (
-    <div
-      className={className}
-      style={{ width: "100%", height: "100%", ...style }}
-    >
-      <style>
-        {"@keyframes oscli-blink{0%,100%{opacity:1}50%{opacity:0}}"}
-        {"@keyframes oscli-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}"}
-      </style>
+    <div className={className} style={{ width: "100%", height: "100%", ...style }}>
+      <style>{"@keyframes oscli-blink{0%,100%{opacity:1}50%{opacity:0}}"}</style>
       <div
         style={{
           color: t.fg,
@@ -430,7 +495,7 @@ export function OscliDemo({
           fontSize: "clamp(11px, 1.05vw, 13px)",
           lineHeight: 1.75,
           opacity: isFading ? 0 : 1,
-          transition: "opacity 340ms ease",
+          transition: fadeDuration > 0 ? `opacity ${fadeDuration}ms ease` : undefined,
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
           width: "100%",
@@ -439,7 +504,7 @@ export function OscliDemo({
         {lines.map((line, i) => {
           if (line.kind === "intro") {
             return (
-              <div key={`intro-${i}`} style={{ animation: "oscli-in 160ms ease both" }}>
+              <div key={`intro-${i}`}>
                 <span style={{ color: t.rail }}>┌</span>
                 {line.message ? <span>{`  ${line.message}`}</span> : null}
               </div>
@@ -448,7 +513,7 @@ export function OscliDemo({
 
           if (line.kind === "prompt-label") {
             return (
-              <div key={`label-${line.key}-${i}`} style={{ animation: "oscli-in 160ms ease both" }}>
+              <div key={`label-${line.key}-${i}`}>
                 <span style={{ color: t.rail }}>│</span>
                 <span>{`  ${line.label}`}</span>
               </div>
@@ -487,7 +552,7 @@ export function OscliDemo({
 
           if (line.kind === "summary") {
             return (
-              <div key={`summary-${line.key}-${i}`} style={{ animation: "oscli-in 150ms ease both" }}>
+              <div key={`summary-${line.key}-${i}`}>
                 <span style={{ color: t.rail }}>│</span>
                 <span> </span>
                 <span style={{ color: t.success }}>✓</span>
@@ -499,8 +564,9 @@ export function OscliDemo({
             );
           }
 
+          // outro
           return (
-            <div key={`outro-${i}`} style={{ animation: "oscli-in 180ms ease both" }}>
+            <div key={`outro-${i}`}>
               <span style={{ color: t.rail }}>└</span>
               {line.message ? <span>{`  ${line.message}`}</span> : null}
             </div>
