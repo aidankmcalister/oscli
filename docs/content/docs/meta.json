@@ -2,15 +2,19 @@
   "title": "oscli docs",
   "pages": [
     "index",
+    "---Core API---",
     "prompts",
     "flags",
-    "theme",
     "output-and-logging",
     "visual-primitives",
+    "---Customization---",
+    "theme",
+    "---Advanced---",
     "multi-command",
-    "testing",
     "json-mode",
     "non-interactive-and-ci",
+    "---Tooling---",
+    "testing",
     "oscli-demo"
   ]
 }
