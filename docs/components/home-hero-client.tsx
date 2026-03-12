@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { OscliDemo } from "@oscli-dev/react";
-import { createAppDemoCli } from "@/lib/create-app-demo";
+import { cli as createAppDemoCli } from "@/lib/create-app-demo";
 
 const installCommand = "bun add @oscli-dev/oscli";
 const demoAnswers = {
   project: "my-app",
+  framework: "astro",
 };
 
 type ActiveTab = "code" | "preview";

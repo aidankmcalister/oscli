@@ -14,6 +14,15 @@ Default to using Bun instead of Node.js.
 - Use `bunx <package> <command>` instead of `npx <package> <command>`
 - Bun automatically loads .env, so don't use dotenv.
 
+## Documentation follow-through
+
+- After changing user-facing behavior, public APIs, examples, or docs-site
+  output, update the closest relevant docs before finishing.
+- Keep docs changes minimal and specific. Prefer the smallest accurate diff
+  over broad rewrites.
+- Skip docs edits for purely internal refactors. If you skip them, say why in
+  your final summary.
+
 ## APIs
 
 - `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.

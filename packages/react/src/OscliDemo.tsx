@@ -524,6 +524,7 @@ export function OscliDemo<TCli extends AnimatableCLI = AnimatableCLI>({
   const [lines, setLines] = useState<RenderLine[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [isFading, setIsFading] = useState(false);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
 
   // Read replay and onRunComplete through refs so their changes never restart
   // the animation loop — only cli / answers / script / speed should do that.
@@ -779,6 +780,12 @@ export function OscliDemo<TCli extends AnimatableCLI = AnimatableCLI>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cli, answers, script, speed]);
 
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    viewport.scrollTop = viewport.scrollHeight;
+  }, [lines]);
+
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   const hasOutro = lines.some((l) => l.kind === "outro");
@@ -797,6 +804,7 @@ export function OscliDemo<TCli extends AnimatableCLI = AnimatableCLI>({
     >
       <style>{"@keyframes oscli-blink{0%,100%{opacity:1}50%{opacity:0}}"}</style>
       <div
+        ref={viewportRef}
         style={{
           color: t.fg,
           fontFamily: "'JetBrains Mono','Fira Code',ui-monospace,monospace",

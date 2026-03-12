@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createCLI, type AnimateEvent } from "../src/client";
 
 async function collectEvents(
@@ -315,5 +315,87 @@ describe("cli.animate", () => {
 
     expect(events.at(-1)).toEqual({ type: "loop_restart" });
     expect(events).toContainEqual({ type: "run_complete" });
+  });
+
+  it("replays output from a registered main handler after the prompt flow", async () => {
+    const cli = createCLI((b) => ({
+      description: "create-app",
+      prompts: {
+        project: b.text().label("Project").default("my-app"),
+        framework: b
+          .select({ choices: ["next", "remix", "astro"] as const })
+          .label("Framework")
+          .default("next"),
+      },
+    }));
+
+    cli.main(async () => {
+      await cli.prompt.project();
+      await cli.prompt.framework();
+      await cli.spin("Scaffolding project", async () => {});
+      cli.box({
+        title: "Generated files",
+        content: cli.tree({
+          [cli.storage.project ?? "my-app"]: {
+            src: {
+              "app.ts": null,
+            },
+          },
+        }),
+      });
+      cli.log("info", `Framework: ${cli.storage.framework}`).flush();
+      cli.success(`Created ${cli.storage.project}`);
+      cli.outro(`Project ready in ./${cli.storage.project}`);
+    });
+
+    const stdout = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
+    try {
+      const events = await collectEvents(
+        cli.animate({
+          inputs: {
+            project: "demo-app",
+            framework: "astro",
+          },
+          timing: {
+            typeDelay: 0,
+            promptDelay: 0,
+            completionDelay: 0,
+          },
+        }),
+      );
+
+      expect(events).toContainEqual({
+        type: "spin_start",
+        label: "Scaffolding project",
+      });
+      expect(events).toContainEqual({
+        type: "spin_complete",
+        label: "Scaffolding project",
+      });
+      expect(events).toContainEqual({
+        type: "box_render",
+        title: "Generated files",
+        content: expect.stringContaining("demo-app"),
+      });
+      expect(events).toContainEqual({
+        type: "log_line",
+        level: "info",
+        message: "Framework: astro",
+      });
+      expect(events).toContainEqual({
+        type: "success_line",
+        message: "Created demo-app",
+      });
+      expect(events).toContainEqual({
+        type: "outro",
+        message: "Project ready in ./demo-app",
+      });
+      expect(stdout).not.toHaveBeenCalled();
+    } finally {
+      stdout.mockRestore();
+    }
   });
 });

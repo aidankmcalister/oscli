@@ -72,6 +72,30 @@ await cli.run(async () => {
 });
 ```
 
+## Register once, run later
+
+If you want the same CLI instance to drive terminal execution and tools like
+`<OscliDemo />`, register the single-command handler once with `cli.main()`,
+then call `cli.run()` at the entrypoint.
+
+```ts
+const cli = createCLI((b) => ({
+  description: "project setup",
+  prompts: {
+    project: b.text().label("Project").default("my-app"),
+  },
+}));
+
+cli.main(async () => {
+  await cli.prompt.project();
+  cli.success(`Created ${cli.storage.project}`);
+});
+
+if (import.meta.main) {
+  await cli.run();
+}
+```
+
 ## What you get
 
 The core package covers the runtime pieces most CLIs need.

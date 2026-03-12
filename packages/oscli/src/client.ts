@@ -1683,6 +1683,9 @@ export function createCLI<
         yield { type: "loop_restart" };
       }
     },
+    main: (fn: CommandHandler) => {
+      mainHandler = fn;
+    },
     command: (name: string, fn: () => Promise<void> | void) => {
       commandHandlers.set(name, fn);
     },
@@ -2032,11 +2035,13 @@ export function createCLI<
 
         const finalValue = (resolved as { ok: true; value: unknown }).value as StorageShape<TPrompts>[typeof key];
         storage.set(key, finalValue);
-        writePromptSummary(
-          label,
-          formatPromptSummaryValue(runtimeConfig, finalValue),
-          summaryWidth,
-        );
+        if (!animateEventPush) {
+          writePromptSummary(
+            label,
+            formatPromptSummaryValue(runtimeConfig, finalValue),
+            summaryWidth,
+          );
+        }
         return finalValue;
       }
 
@@ -2044,18 +2049,22 @@ export function createCLI<
         const bypassValue = promptBypassValues.get(key) as StorageShape<TPrompts>[typeof key];
         promptBypassValues.delete(key);
         storage.set(key, bypassValue);
-        writePromptSummary(
-          label,
-          formatPromptSummaryValue(runtimeConfig, bypassValue),
-          summaryWidth,
-        );
+        if (!animateEventPush) {
+          writePromptSummary(
+            label,
+            formatPromptSummaryValue(runtimeConfig, bypassValue),
+            summaryWidth,
+          );
+        }
         return bypassValue;
       }
 
       if (runtimeConfig.type === "confirm" && autoYes) {
         const value = true as StorageShape<TPrompts>[typeof key];
         storage.set(key, value);
-        writePromptSummary(label, "(--yes)", summaryWidth);
+        if (!animateEventPush) {
+          writePromptSummary(label, "(--yes)", summaryWidth);
+        }
         return value;
       }
 

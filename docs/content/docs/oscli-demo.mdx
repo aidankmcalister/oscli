@@ -34,6 +34,29 @@ export function DemoSection() {
 }
 ```
 
+## Replay real CLI logic
+
+If your CLI has logs, spinners, boxes, branches, or other runtime behavior
+after prompts, register the single-command handler on the CLI once.
+`OscliDemo` replays the prompt flow and the emitted output from that handler.
+
+```tsx
+import { createCLI } from "@oscli-dev/oscli";
+
+export const cli = createCLI((b) => ({
+  description: "create-app",
+  prompts: {
+    project: b.text().label("Project").default("my-app"),
+  },
+}));
+
+cli.main(async () => {
+  await cli.prompt.project();
+  await cli.spin("Scaffolding project", async () => {});
+  cli.success(`Created ${cli.storage.project}`);
+});
+```
+
 ## Common props
 
 Use these props most often.
@@ -41,28 +64,28 @@ Use these props most often.
 | Prop | What it does |
 | --- | --- |
 | `cli` | Uses the CLI instance returned by `createCLI()`. |
+| `answers` | Pins typed prompt answers while leaving other prompts auto-generated. |
+| `replay` | Runs once, forever, or for a fixed number of total plays. |
 | `speed` | Applies the built-in `"slow"`, `"normal"`, or `"fast"` preset. |
-| `timing` | Sets exact delays for typing and prompt transitions. |
-| `forcedAnswers` | Pins some generated answers while keeping replay enabled. |
-| `inputs` | Uses fixed inputs and disables auto-replay. |
-| `theme` | Switches between `"dark"` and `"light"`. |
+| `theme` | Uses `"auto"`, `"light"`, `"dark"`, or custom theme tokens. |
 | `fade` | Turns replay fading on, off, or sets a custom duration. |
-| `replayDelay` | Controls the pause before the next replay. |
+| `script` | Adds a manual playback sequence for custom demo steps. |
 | `className`, `style`, `onRunComplete` | Control presentation and lifecycle hooks. |
 
 ## Deterministic runs
 
-Use `inputs` when you want the same run every time. Use `forcedAnswers` when
-you want replay to continue, but keep some answers stable.
+Use `answers` when you want stable prompt values. Set `replay={false}` when
+you want the demo to run once and stop.
 
 ```tsx
 <OscliDemo
   cli={cli}
-  inputs={{
+  answers={{
     project: "my-app",
     framework: "next",
     approved: true,
   }}
+  replay={false}
 />
 ```
 

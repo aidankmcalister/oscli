@@ -28,6 +28,23 @@ describe("createCLI", () => {
     expect(called).toBe(true);
   });
 
+  it("runs a registered main handler when run() is called without an override", async () => {
+    const cli = createCLI(() => ({
+      description: "Registered handler",
+    }));
+
+    let called = false;
+    cli.main(async () => {
+      called = true;
+    });
+
+    await withArgv(["node", "oscli"], async () => {
+      await cli.run();
+    });
+
+    expect(called).toBe(true);
+  });
+
   it("exposes helpers for table and box output", () => {
     const cli = createCLI(() => ({
       description: "Helpers",
