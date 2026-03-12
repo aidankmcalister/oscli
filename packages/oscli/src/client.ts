@@ -1444,6 +1444,8 @@ export function createCLI<
               startIndex,
             );
 
+            await wait(humanizePause(timing.promptDelay));
+
             yield {
               type: "prompt_preview",
               key: name,
@@ -1451,8 +1453,6 @@ export function createCLI<
               promptType: animatePromptType(runtimeConfig),
               lines: buildSelectPreviewLines(runtimeConfig, startIndex),
             };
-
-            await wait(humanizePause(timing.promptDelay));
 
             for (const index of moveIndexToward(startIndex, targetIndex)) {
               yield {
@@ -1477,6 +1477,8 @@ export function createCLI<
             let activeIndex = 0;
             let currentSelections = new Set(defaultValues);
 
+            await wait(humanizePause(timing.promptDelay));
+
             yield {
               type: "prompt_preview",
               key: name,
@@ -1488,8 +1490,6 @@ export function createCLI<
                 currentSelections,
               ),
             };
-
-            await wait(humanizePause(timing.promptDelay));
 
             const choiceOrder = choices.map((choice, index) => ({
               label: String(choice),
@@ -1547,6 +1547,8 @@ export function createCLI<
               : true;
             const targetValue = Boolean(value);
 
+            await wait(humanizePause(timing.promptDelay));
+
             yield {
               type: "prompt_preview",
               key: name,
@@ -1554,8 +1556,6 @@ export function createCLI<
               promptType: animatePromptType(runtimeConfig),
               lines: buildConfirmPreviewLines(startValue),
             };
-
-            await wait(humanizePause(timing.promptDelay));
 
             if (startValue !== targetValue) {
               yield {

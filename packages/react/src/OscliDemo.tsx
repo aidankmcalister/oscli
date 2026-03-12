@@ -44,9 +44,9 @@ type DemoTiming = {
 export type DemoSpeed = "slow" | "normal" | "fast";
 
 const SPEED_PRESETS: Record<DemoSpeed, Required<Pick<DemoTiming, "typeDelay" | "promptDelay" | "completionDelay">>> = {
-  slow:   { typeDelay: 160, promptDelay: 1100, completionDelay: 0 },
-  normal: { typeDelay: 85,  promptDelay: 700,  completionDelay: 0 },
-  fast:   { typeDelay: 30,  promptDelay: 240,  completionDelay: 0 },
+  slow:   { typeDelay: 160, promptDelay: 800, completionDelay: 0 },
+  normal: { typeDelay: 85,  promptDelay: 420, completionDelay: 0 },
+  fast:   { typeDelay: 30,  promptDelay: 150, completionDelay: 0 },
 };
 
 type PromptConfig = {
@@ -534,7 +534,7 @@ export function OscliDemo({
   }, [cli, inputsProp]);
 
   return (
-    <div className={className} style={{ width: "100%", height: "100%", ...style }}>
+    <div className={className} style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", ...style }}>
       <style>{"@keyframes oscli-blink{0%,100%{opacity:1}50%{opacity:0}}"}</style>
       <div
         style={{
@@ -547,6 +547,9 @@ export function OscliDemo({
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
           width: "100%",
+          flex: 1,
+          overflowY: "auto",
+          overflowX: "hidden",
         }}
       >
         {lines.map((line, i) => {
@@ -616,7 +619,7 @@ export function OscliDemo({
             return (
               <div key={`spin-${i}`}>
                 <span style={{ color: t.rail }}>│</span>
-                <span>{"  "}</span>
+                <span>{" "}</span>
                 {line.done ? (
                   <span style={{ color: t.success }}>✓</span>
                 ) : (
@@ -644,7 +647,7 @@ export function OscliDemo({
             return (
               <div key={`log-${i}`}>
                 <span style={{ color: t.rail }}>│</span>
-                <span>{"  "}</span>
+                <span>{" "}</span>
                 <span style={{ color: levelColor }}>{levelIcon}</span>
                 <span>{"  "}</span>
                 <span style={{ color: t.muted }}>{line.message}</span>
