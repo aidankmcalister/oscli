@@ -31,104 +31,194 @@ function mask(value: string): string {
   return "*".repeat(Math.min(String(value).length, 18));
 }
 
-const orbitCli = createCLI((b) => ({
-  description: "orbit",
+// ─── FORGE ────────────────────────────────────────────────────────────────────
+// Project scaffolding — emerald green, rounded sidebar
+const forgeCli = createCLI((b) => ({
+  title: "forge",
   theme: {
     sidebar: "rounded",
-    active: "cyan",
-    border: "blue",
+    active: "green",
+    border: "green",
     symbols: {
-      cursor: "◆",
-      radio_on: "◈",
-      radio_off: "◇",
+      cursor: "→",
+      radio_on: "◉",
+      radio_off: "○",
       check_on: "◆",
       check_off: "◇",
     },
   },
   prompts: {
-    mission: b.text().label("Mission").default("Aurora"),
-    destination: b
-      .search({
-        choices: [
-          "moon-base",
-          "mars-lab",
-          "europa-station",
-          "orbit-ring",
-        ] as const,
-      })
-      .label("Destination"),
-    payload: b
-      .multiselect({
-        choices: ["mapping", "relay", "habitat", "research"] as const,
-      })
-      .label("Payload")
+    project: b.text().label("Project name").default("helios"),
+    template: b
+      .select({ choices: ["ts-library", "react-app", "api-server", "cli-tool"] as const })
+      .label("Template"),
+    features: b
+      .multiselect({ choices: ["testing", "linting", "docker", "ci-cd"] as const })
+      .label("Include")
       .min(1)
-      .max(3),
-    launchWindow: b.date().label("Launch window").format("YYYY-MM-DD"),
-    autopilot: b.confirm().label("Enable autopilot?").default(true),
+      .max(4),
+    pkgManager: b
+      .select({ choices: ["bun", "pnpm", "npm"] as const })
+      .label("Package manager"),
+    git: b.confirm("simple").label("Init git repo?").default(true),
   },
 }));
 
-orbitCli.main(async () => {
-  orbitCli.box({
-    title: "ORBIT",
+forgeCli.main(async () => {
+  forgeCli.box({
+    title: "FORGE",
     content: lines(
-      "      .-^-.      ",
-      "   .-'     '-.   ",
-      "  /  /| |\\  \\\\  ",
-      "  |  \\| |/  |   ",
-      "   '-._____.-'   ",
+      "  scaffold  ·  build  ·  ship  ",
+      "  ────────────────────────────  ",
+      "  typescript  ·  bun  ·  turbo  ",
     ),
   });
 
-  await orbitCli.prompt.mission();
-  await orbitCli.prompt.destination();
-  await orbitCli.prompt.payload();
-  await orbitCli.prompt.launchWindow();
-  await orbitCli.prompt.autopilot();
+  await forgeCli.prompt.project();
+  await forgeCli.prompt.template();
+  await forgeCli.prompt.features();
+  await forgeCli.prompt.pkgManager();
+  await forgeCli.prompt.git();
 
-  const mission = orbitCli.storage.mission ?? "Aurora";
-  const destination = orbitCli.storage.destination ?? "moon-base";
-  const payload = orbitCli.storage.payload ?? [];
+  const project = forgeCli.storage.project ?? "helios";
+  const template = forgeCli.storage.template ?? "ts-library";
 
-  await orbitCli.spin("Fueling thrusters", async () => {
-    await sleep(420);
+  await forgeCli.spin("Installing dependencies", async () => {
+    await sleep(400);
   });
 
-  await orbitCli.progress(
-    "Launch checklist",
-    ["Nav lock", "Fuel pressure", "Payload seal", "Telemetry link"] as const,
+  await forgeCli.progress(
+    "Scaffolding",
+    ["Create directories", "Write configs", "Setup tooling", "Init git"] as const,
     async () => {
-      await sleep(260);
+      await sleep(230);
     },
   );
 
-  orbitCli.box({
-    title: "Flight plan",
-    content: orbitCli.tree({
-      [mission]: {
-        flight: {
-          "manifest.json": null,
-          "telemetry.map": null,
+  forgeCli.box({
+    title: `${project}/`,
+    content: forgeCli.tree({
+      [project]: {
+        src: {
+          "index.ts": null,
+          "types.ts": null,
         },
-        payload: Object.fromEntries(
-          payload.map((item) => [`${item}.cargo`, null]),
-        ),
-        "launch-window.txt": null,
+        tests: {
+          [`${project}.test.ts`]: null,
+        },
+        ".github": {
+          workflows: { "ci.yml": null },
+        },
+        "eslint.config.ts": null,
+        "package.json": null,
+        "tsconfig.json": null,
+        "README.md": null,
       },
     }),
   });
 
-  if (!orbitCli.storage.autopilot) {
-    orbitCli.log("warn", "Manual piloting enabled for orbital insertion.").flush();
-  }
-
-  orbitCli.success(`Mission ${mission} cleared for ${destination}.`);
-  orbitCli.outro("Launch window locked.");
+  forgeCli.success(`${template} project scaffolded at ./${project}`);
+  forgeCli.outro("Run bun dev to get started.");
 });
 
+// ─── RELAY ────────────────────────────────────────────────────────────────────
+// Deployment pipeline — sky blue, rounded sidebar
+const relayCli = createCLI((b) => ({
+  title: "relay",
+  theme: {
+    sidebar: "rounded",
+    active: "cyan",
+    border: "cyan",
+    symbols: {
+      cursor: "▶",
+      radio_on: "●",
+      radio_off: "○",
+      check_on: "◉",
+      check_off: "○",
+    },
+  },
+  prompts: {
+    service: b
+      .search({
+        choices: [
+          "api-gateway",
+          "auth-service",
+          "billing-worker",
+          "data-pipeline",
+          "edge-proxy",
+        ] as const,
+      })
+      .label("Service"),
+    tag: b.text().label("Image tag").default("v2.4.1"),
+    environment: b
+      .select({ choices: ["staging", "canary", "production"] as const })
+      .label("Environment"),
+    regions: b
+      .multiselect({
+        choices: ["us-east-1", "eu-west-1", "ap-southeast-1"] as const,
+      })
+      .label("Deploy to")
+      .min(1),
+    approve: b.confirm("simple").label("Approve rollout?").default(true),
+  },
+}));
+
+relayCli.main(async () => {
+  relayCli.box({
+    title: "RELAY",
+    content: lines(
+      "  build → push → deploy → verify  ",
+      "  ─────────────────────────────── ",
+      "  zero-downtime  ·  multi-region  ",
+    ),
+  });
+
+  await relayCli.prompt.service();
+  await relayCli.prompt.tag();
+  await relayCli.prompt.environment();
+  await relayCli.prompt.regions();
+  await relayCli.prompt.approve();
+
+  const service = relayCli.storage.service ?? "api-gateway";
+  const tag = relayCli.storage.tag ?? "v2.4.1";
+  const environment = relayCli.storage.environment ?? "production";
+
+  await relayCli.spin("Building image", async () => {
+    await sleep(360);
+  });
+
+  await relayCli.spin("Pushing to registry", async () => {
+    await sleep(280);
+  });
+
+  await relayCli.progress(
+    "Rolling out",
+    ["us-east-1", "eu-west-1", "ap-southeast-1"] as const,
+    async () => {
+      await sleep(300);
+    },
+  );
+
+  relayCli.box({
+    title: "Deployment",
+    content: relayCli.table(
+      ["Region", "Status", "Version", "Health"],
+      [
+        ["us-east-1", "live", tag, "100%"],
+        ["eu-west-1", "live", tag, "100%"],
+        ["ap-southeast-1", "live", tag, "100%"],
+      ],
+    ),
+  });
+
+  relayCli.success(`${service}@${tag} deployed to ${environment}.`);
+  relayCli.outro("Rollout complete. All regions healthy.");
+});
+
+// ─── VAULTSMITH ───────────────────────────────────────────────────────────────
+// Secret manager — amber gold, no sidebar
 const vaultsmithCli = createCLI((b) => ({
-  description: "vaultsmith",
+  title: "vaultsmith",
   theme: {
     sidebar: false,
     active: "yellow",
@@ -153,9 +243,10 @@ vaultsmithCli.main(async () => {
   vaultsmithCli.box({
     title: "VAULTSMITH",
     content: lines(
-      "╭────────────────────╮",
-      "│   vaultsmith / kms │",
-      "╰────────────────────╯",
+      "  ┌──────────────────┐  ",
+      "  │  key management  │  ",
+      "  └──────────────────┘  ",
+      "  AES-256-GCM  ·  PBKDF2  ",
     ),
   });
 
@@ -166,190 +257,128 @@ vaultsmithCli.main(async () => {
   await vaultsmithCli.prompt.auditTrail();
 
   const workspace = vaultsmithCli.storage.workspace ?? "ledger";
-  const keys = vaultsmithCli.storage.keys ?? [];
+  const keys = (vaultsmithCli.storage.keys as string[]) ?? [];
   const rootSecret = vaultsmithCli.storage.rootSecret ?? "vault_live_seed";
   const rotationDays = vaultsmithCli.storage.rotationDays ?? 30;
 
   vaultsmithCli.box({
-    title: `${workspace}.env.vault`,
+    title: `${workspace}.vault`,
     content: lines(
-      ...keys.map((key) => `${key}=••••••••••`),
-      `ROOT_SECRET=${mask(rootSecret)}`,
-      `ROTATION_DAYS=${rotationDays}`,
+      ...keys.map((k) => `${k}=••••••••••`),
+      `ROOT_SECRET=${mask(String(rootSecret))}`,
+      `ROTATION=${rotationDays}d`,
+      `ALGORITHM=AES-256-GCM`,
     ),
   });
 
-  await vaultsmithCli.spin("Encrypting secrets", async () => {
-    await sleep(360);
+  await vaultsmithCli.spin("Sealing vault", async () => {
+    await sleep(380);
   });
 
   if (vaultsmithCli.storage.auditTrail) {
-    vaultsmithCli.log(
-      "info",
-      "Audit trail enabled for future rotations.",
-    ).flush();
+    vaultsmithCli
+      .log("info", "Audit trail enabled — all access events will be logged.")
+      .flush();
   }
 
-  vaultsmithCli.success(`Sealed ${keys.length + 1} entries for ${workspace}.`);
+  vaultsmithCli.success(`Sealed ${keys.length + 1} secrets for ${workspace}.`);
   vaultsmithCli.outro("Vault snapshot written.");
 });
 
-const paletteLabCli = createCLI((b) => ({
-  description: "palette-lab",
+// ─── AXIOM ────────────────────────────────────────────────────────────────────
+// Schema migrations — violet, rounded sidebar
+const axiomCli = createCLI((b) => ({
+  title: "axiom",
   theme: {
     sidebar: "rounded",
     active: "magenta",
-    cursor: "magenta",
     border: "magenta",
     symbols: {
-      cursor: "✦",
-      radio_on: "◆",
+      cursor: "◆",
+      radio_on: "◈",
       radio_off: "◇",
-      check_on: "◈",
+      check_on: "◆",
       check_off: "◇",
     },
   },
   prompts: {
-    brand: b.text().label("Brand").default("Monocle"),
-    reference: b
-      .search({
-        choices: ["editorial", "neo-brutal", "soft-ui", "retro-grid"] as const,
-      })
-      .label("Reference"),
-    outputs: b
+    schema: b.text().label("Schema file").default("schema.prisma"),
+    operations: b
       .multiselect({
-        choices: ["css-vars", "tailwind", "figma", "storybook"] as const,
+        choices: [
+          "add-index",
+          "rename-column",
+          "drop-constraint",
+          "add-fk",
+        ] as const,
       })
-      .label("Outputs")
-      .min(1)
-      .max(3),
-    contrast: b.number().label("Contrast target").min(70).max(98),
-    darkMode: b.confirm().label("Generate dark mode?").default(true),
+      .label("Operations")
+      .min(1),
+    target: b
+      .select({ choices: ["staging", "production"] as const })
+      .label("Target env"),
+    dryRun: b.confirm("simple").label("Dry run?").default(false),
   },
 }));
 
-paletteLabCli.main(async () => {
-  paletteLabCli.box({
-    title: "PALETTE LAB",
+axiomCli.main(async () => {
+  axiomCli.box({
+    title: "AXIOM",
     content: lines(
-      "■■■■  ░░░░  ■■■■",
-      "░░■■  ■■■■  ░░■■",
-      "■■■■  ░░░░  ■■■■",
+      "  diff  ·  plan  ·  apply  ·  rollback  ",
+      "  ─────────────────────────────────────  ",
+      "  zero-downtime schema migrations        ",
     ),
   });
 
-  await paletteLabCli.prompt.brand();
-  await paletteLabCli.prompt.reference();
-  await paletteLabCli.prompt.outputs();
-  await paletteLabCli.prompt.contrast();
-  await paletteLabCli.prompt.darkMode();
+  await axiomCli.prompt.schema();
+  await axiomCli.prompt.operations();
+  await axiomCli.prompt.target();
+  await axiomCli.prompt.dryRun();
 
-  const brand = paletteLabCli.storage.brand ?? "Monocle";
-  const reference = paletteLabCli.storage.reference ?? "editorial";
-  const outputs = paletteLabCli.storage.outputs ?? [];
+  const target = axiomCli.storage.target ?? "production";
 
-  await paletteLabCli.progress(
-    "Mixing palette",
-    ["Sampling", "Balancing", "Contrast pass", "Exporting"] as const,
+  await axiomCli.spin("Analyzing schema diff", async () => {
+    await sleep(340);
+  });
+
+  axiomCli.box({
+    title: "Migration plan",
+    content: lines(
+      "  + CREATE INDEX idx_users_email ON users(email)",
+      "  ~ RENAME COLUMN events.user_id → events.user_uuid",
+      "  + ADD CONSTRAINT sessions_user_fk",
+    ),
+  });
+
+  await axiomCli.progress(
+    "Applying",
+    ["users", "events", "sessions"] as const,
     async () => {
-      await sleep(230);
+      await sleep(280);
     },
   );
 
-  paletteLabCli.box({
-    title: "Build sheet",
-    content: paletteLabCli.table(
-      ["Field", "Value"],
+  axiomCli.box({
+    title: "Migration result",
+    content: axiomCli.table(
+      ["Table", "Operation", "Duration", "Status"],
       [
-        ["brand", brand],
-        ["reference", reference],
-        ["outputs", outputs.join(", ") || "none"],
-        ["contrast", `${paletteLabCli.storage.contrast ?? 90}`],
-        ["dark mode", paletteLabCli.storage.darkMode ? "yes" : "no"],
+        ["users", "add-index", "42ms", "applied"],
+        ["events", "rename-column", "18ms", "applied"],
+        ["sessions", "add-fk", "31ms", "applied"],
       ],
     ),
   });
 
-  paletteLabCli.success(`Generated ${outputs.length} exports for ${brand}.`);
-  paletteLabCli.outro("Tokens ready for review.");
+  axiomCli.success(`3 migrations applied to ${target}.`);
+  axiomCli.outro("Schema is up to date.");
 });
 
-const releaseTrainCli = createCLI((b) => ({
-  description: "release-train",
-  theme: {
-    sidebar: "rounded",
-    active: "green",
-    cursor: "green",
-    border: "green",
-    symbols: {
-      cursor: "▹",
-      radio_on: "●",
-      radio_off: "○",
-      check_on: "◉",
-      check_off: "○",
-    },
-  },
-  prompts: {
-    version: b.text().label("Version").default("1.8.0"),
-    channel: b
-      .select({ choices: ["canary", "beta", "stable"] as const })
-      .label("Channel"),
-    shipDate: b.date().label("Ship date").format("YYYY-MM-DD"),
-    notify: b.confirm("simple").label("Send changelog email?").default(true),
-  },
-}));
-
-releaseTrainCli.main(async () => {
-  releaseTrainCli.box({
-    title: "RELEASE TRAIN",
-    content: lines(
-      "╭─ tag ─╮   ╭─ docs ─╮",
-      "╰─ build╯──▶╰─ ship ─╯",
-    ),
-  });
-
-  await releaseTrainCli.prompt.version();
-  await releaseTrainCli.prompt.channel();
-  await releaseTrainCli.prompt.shipDate();
-  await releaseTrainCli.prompt.notify();
-
-  await releaseTrainCli.spin("Compiling release notes", async () => {
-    await sleep(320);
-  });
-
-  await releaseTrainCli.progress(
-    "Publishing artifacts",
-    ["cli", "react", "docs"] as const,
-    async () => {
-      await sleep(250);
-    },
-  );
-
-  releaseTrainCli.box({
-    title: "Published tags",
-    content: releaseTrainCli.tree({
-      releases: {
-        [`v${releaseTrainCli.storage.version ?? "1.8.0"}`]: {
-          "cli.tgz": null,
-          "react.tgz": null,
-          "docs.json": null,
-        },
-      },
-    }),
-  });
-
-  if (releaseTrainCli.storage.notify) {
-    releaseTrainCli.log("info", "Queued changelog email for subscribers.").flush();
-  }
-
-  releaseTrainCli.success(
-    `Shipped ${releaseTrainCli.storage.version ?? "1.8.0"} to ${releaseTrainCli.storage.channel ?? "stable"}.`,
-  );
-  releaseTrainCli.outro("Release train cleared the station.");
-});
-
+// ─── SENTINEL ─────────────────────────────────────────────────────────────────
+// Incident monitor — red/coral, no sidebar, no prompts
 const sentinelCli = createCLI(() => ({
-  description: "sentinel",
+  title: "sentinel",
   theme: {
     sidebar: false,
     active: "red",
@@ -360,23 +389,17 @@ const sentinelCli = createCLI(() => ({
   },
 }));
 
-const sentinelFindings = [
-  ["api-gateway", "latency spike", "us-east-1", "high"],
-  ["billing-worker", "retry storm", "eu-west-1", "medium"],
-  ["session-cache", "evictions", "ap-southeast-1", "low"],
-] as const;
-
 sentinelCli.main(async () => {
   sentinelCli.box({
     title: "SENTINEL",
     content: lines(
-      "▓█▀▀ ▓█████  ███▄    █ ▄▄▄█████▓ ██▓ ███▄    █ ▓█████  ██▓    ",
-      "▓█   ▀▓█   ▀  ██ ▀█   █ ▓  ██▒ ▓▒▓██▒ ██ ▀█   █ ▓█   ▀ ▓██▒    ",
-      "▒███  ▒███   ▓██  ▀█ ██▒▒ ▓██░ ▒░▒██▒▓██  ▀█ ██▒▒███   ▒██░    ",
+      "  monitor  ·  triage  ·  escalate  ",
+      "  ─────────────────────────────── ",
+      "  real-time incident detection     ",
     ),
   });
 
-  await sentinelCli.spin("Polling edge regions", async () => {
+  await sentinelCli.spin("Scanning edge nodes", async () => {
     await sleep(380);
   });
 
@@ -385,50 +408,84 @@ sentinelCli.main(async () => {
   });
 
   await sentinelCli.progress(
-    "Correlating incidents",
-    ["gateway", "workers", "cache", "alerts"] as const,
+    "Correlating",
+    [
+      "api-gateway",
+      "billing-worker",
+      "edge-proxy",
+      "session-cache",
+      "auth-service",
+    ] as const,
     async () => {
-      await sleep(210);
+      await sleep(190);
     },
   );
 
   sentinelCli.box({
     title: "Active findings",
     content: sentinelCli.table(
-      ["Service", "Issue", "Region", "Severity"],
-      sentinelFindings.map((row) => [...row]),
+      ["Service", "Issue", "Region", "Sev"],
+      [
+        ["api-gateway", "latency spike", "us-east-1", "high"],
+        ["billing-worker", "retry storm", "eu-west-1", "medium"],
+        ["edge-proxy", "cert expiring", "ap-se-1", "medium"],
+        ["session-cache", "mem pressure", "us-east-1", "low"],
+      ],
     ),
   });
 
-  sentinelCli.log("warn", "billing-worker is retrying above the safe threshold.").flush();
   sentinelCli.log("error", "api-gateway latency is outside the SLO window.").flush();
-  sentinelCli.log("info", "session-cache evictions are stabilizing.").flush();
+  sentinelCli.log("warn", "billing-worker retry rate above safe threshold.").flush();
+  sentinelCli.log("info", "edge-proxy cert expires in 14 days — renew soon.").flush();
   sentinelCli.success("Escalation bundle prepared for on-call.");
   sentinelCli.outro("Incident room is live.");
 });
 
 export const homeDemos: HomeDemo[] = [
   {
-    id: "orbit",
-    title: "orbit",
-    cli: orbitCli,
+    id: "forge",
+    title: "forge",
+    cli: forgeCli,
     answers: {
-      mission: "Aurora",
-      destination: "europa-station",
-      payload: ["relay", "research"],
-      launchWindow: new Date("2026-11-14"),
-      autopilot: false,
+      project: "helios",
+      template: "ts-library",
+      features: ["testing", "linting", "ci-cd"],
+      pkgManager: "bun",
+      git: true,
     },
     terminalTheme: {
-      foreground: "#edf5ff",
-      muted: "#6b7d92",
-      border: "#2a3240",
-      cursor: "#edf5ff",
-      accent: "#6ee7ff",
-      success: "#73f0a5",
-      warn: "#ffd166",
-      info: "#8db7ff",
-      error: "#ff8f8f",
+      foreground: "#e8f5e9",
+      muted: "#5a7a5e",
+      border: "#1a3320",
+      cursor: "#e8f5e9",
+      accent: "#69f0ae",
+      success: "#b9f6ca",
+      warn: "#ffd54f",
+      info: "#80deea",
+      error: "#ff8a80",
+    },
+  },
+  {
+    id: "relay",
+    title: "relay",
+    cli: relayCli,
+    answers: {
+      service: "api-gateway",
+      tag: "v2.4.1",
+      environment: "production",
+      regions: ["us-east-1", "eu-west-1", "ap-southeast-1"],
+      approve: true,
+    },
+    terminalTheme: {
+      foreground: "#e1f5fe",
+      muted: "#4d7a8f",
+      border: "#0d2d3d",
+      cursor: "#e1f5fe",
+      accent: "#4dd0e1",
+      success: "#80cbc4",
+      warn: "#ffcc80",
+      info: "#81d4fa",
+      error: "#ef9a9a",
     },
   },
   {
@@ -455,48 +512,25 @@ export const homeDemos: HomeDemo[] = [
     },
   },
   {
-    id: "palette-lab",
-    title: "palette-lab",
-    cli: paletteLabCli,
+    id: "axiom",
+    title: "axiom",
+    cli: axiomCli,
     answers: {
-      brand: "Monocle",
-      reference: "editorial",
-      outputs: ["css-vars", "figma", "storybook"],
-      contrast: 92,
-      darkMode: true,
+      schema: "schema.prisma",
+      operations: ["add-index", "rename-column", "add-fk"],
+      target: "production",
+      dryRun: false,
     },
     terminalTheme: {
-      foreground: "#fff1f7",
-      muted: "#9a7890",
-      border: "#3b2335",
-      cursor: "#fff1f7",
-      accent: "#ff7bd5",
-      success: "#7ef0b5",
-      warn: "#ffd38a",
-      info: "#a5b8ff",
-      error: "#ff8fa8",
-    },
-  },
-  {
-    id: "release-train",
-    title: "release-train",
-    cli: releaseTrainCli,
-    answers: {
-      version: "1.8.0",
-      channel: "stable",
-      shipDate: new Date("2026-03-20"),
-      notify: true,
-    },
-    terminalTheme: {
-      foreground: "#eefcf3",
-      muted: "#75887a",
-      border: "#24342a",
-      cursor: "#eefcf3",
-      accent: "#6ee7a2",
-      success: "#8df39f",
-      warn: "#f5d26a",
-      info: "#8fc6ff",
-      error: "#ff8d8d",
+      foreground: "#f3e8ff",
+      muted: "#8a6da8",
+      border: "#2d1a45",
+      cursor: "#f3e8ff",
+      accent: "#ce93d8",
+      success: "#a5d6a7",
+      warn: "#ffe082",
+      info: "#90caf9",
+      error: "#ef9a9a",
     },
   },
   {
@@ -504,15 +538,15 @@ export const homeDemos: HomeDemo[] = [
     title: "sentinel",
     cli: sentinelCli,
     terminalTheme: {
-      foreground: "#f7ecec",
-      muted: "#907575",
-      border: "#352727",
-      cursor: "#f7ecec",
-      accent: "#ff8b7a",
-      success: "#84e4a6",
-      warn: "#ffcb6b",
-      info: "#95b8ff",
-      error: "#ff7b7b",
+      foreground: "#fce4ec",
+      muted: "#9e6b75",
+      border: "#3d1a22",
+      cursor: "#fce4ec",
+      accent: "#ff8a80",
+      success: "#a5d6a7",
+      warn: "#ffe082",
+      info: "#90caf9",
+      error: "#ff5252",
     },
   },
 ];
