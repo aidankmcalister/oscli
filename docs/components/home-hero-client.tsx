@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { OscliDemo } from "@oscli-dev/react";
-import { cli as createAppDemoCli } from "@/lib/create-app-demo";
+import { homeDemos } from "@/lib/home-demos";
 
 const installCommand = "bun add @oscli-dev/oscli";
-
-type ActiveTab = "code" | "preview";
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
+const DEMO_ADVANCE_DELAY = 2200;
+const DEMO_EXIT_DURATION = 320;
+const DEMO_ENTER_DURATION = 500;
+const DEMO_ENTER_ANIMATION =
+  "animate-in fade-in-0 slide-in-from-bottom-2 zoom-in-95 duration-500 ease-out";
+const DEMO_EXIT_ANIMATION =
+  "animate-out fade-out-0 zoom-out-95 duration-300 ease-in";
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -92,53 +95,106 @@ function TerminalDots() {
   );
 }
 
-function TabBar({
-  activeTab,
-  onTabChange,
+function DemoPager({
+  activeIndex,
+  onSelect,
 }: {
-  activeTab: ActiveTab;
-  onTabChange: (tab: ActiveTab) => void;
+  activeIndex: number;
+  onSelect: (index: number) => void;
 }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-full border border-fd-border bg-fd-background p-[3px]">
-      {(["preview", "code"] as const).map((tab) => (
+    <div className="flex items-center gap-1.5">
+      {homeDemos.map((demo, index) => (
         <button
-          key={tab}
+          key={demo.id}
           type="button"
-          onClick={() => onTabChange(tab)}
+          onClick={() => onSelect(index)}
+          aria-label={`Show ${demo.title} demo`}
           className={[
-            "rounded-full px-3 py-[5px] text-[11px] font-medium capitalize transition-all duration-100",
-            activeTab === tab
-              ? "bg-fd-foreground text-fd-background"
-              : "text-fd-muted-foreground hover:text-fd-foreground",
+            "h-2.5 rounded-full transition-all duration-150",
+            activeIndex === index
+              ? "w-5 bg-fd-foreground"
+              : "w-2.5 bg-fd-border hover:bg-fd-muted-foreground",
           ].join(" ")}
-        >
-          {tab === "preview" ? "Demo" : "Code"}
-        </button>
+        />
       ))}
     </div>
   );
 }
 
-function ShikiPanel({ html }: { html: string }) {
-  return (
-    <div
-      className="[&_pre]:!m-0 [&_pre]:!overflow-x-auto [&_pre]:!bg-transparent [&_pre]:!p-0 [&_pre]:text-[11.5px] [&_pre]:leading-[1.65] [&_code]:!bg-transparent [&_code]:!font-mono"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
-}
+export function HomeHeroClient() {
+  const [activeDemoIndex, setActiveDemoIndex] = useState(0);
+  const advanceTimeoutRef = useRef<number | null>(null);
+  const transitionTimeoutRef = useRef<number | null>(null);
+  const transitionResetRef = useRef<number | null>(null);
+  const activeDemoIndexRef = useRef(0);
+  const [panelAnimation, setPanelAnimation] = useState("");
+  const activeDemo = homeDemos[activeDemoIndex]!;
+  activeDemoIndexRef.current = activeDemoIndex;
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (advanceTimeoutRef.current !== null) {
+        window.clearTimeout(advanceTimeoutRef.current);
+      }
+      if (transitionTimeoutRef.current !== null) {
+        window.clearTimeout(transitionTimeoutRef.current);
+      }
+      if (transitionResetRef.current !== null) {
+        window.clearTimeout(transitionResetRef.current);
+      }
+    };
+  }, []);
 
-export function HomeHeroClient({
-  setupHtmlLight,
-  setupHtmlDark,
-}: {
-  setupHtmlLight: string;
-  setupHtmlDark: string;
-}) {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("preview");
+  function clearAdvanceTimeout() {
+    if (advanceTimeoutRef.current !== null) {
+      window.clearTimeout(advanceTimeoutRef.current);
+      advanceTimeoutRef.current = null;
+    }
+  }
+
+  function clearTransitionTimeouts() {
+    if (transitionTimeoutRef.current !== null) {
+      window.clearTimeout(transitionTimeoutRef.current);
+      transitionTimeoutRef.current = null;
+    }
+    if (transitionResetRef.current !== null) {
+      window.clearTimeout(transitionResetRef.current);
+      transitionResetRef.current = null;
+    }
+  }
+
+  function transitionToDemo(index: number) {
+    if (index === activeDemoIndexRef.current) {
+      return;
+    }
+
+    clearAdvanceTimeout();
+    clearTransitionTimeouts();
+    setPanelAnimation(DEMO_EXIT_ANIMATION);
+
+    transitionTimeoutRef.current = window.setTimeout(() => {
+      setActiveDemoIndex(index);
+      setPanelAnimation(DEMO_ENTER_ANIMATION);
+      transitionResetRef.current = window.setTimeout(() => {
+        setPanelAnimation("");
+        transitionResetRef.current = null;
+      }, DEMO_ENTER_DURATION);
+      transitionTimeoutRef.current = null;
+    }, DEMO_EXIT_DURATION);
+  }
+
+  function queueNextDemo() {
+    clearAdvanceTimeout();
+    advanceTimeoutRef.current = window.setTimeout(() => {
+      transitionToDemo((activeDemoIndexRef.current + 1) % homeDemos.length);
+      advanceTimeoutRef.current = null;
+    }, DEMO_ADVANCE_DELAY);
+  }
+
+  function selectDemo(index: number) {
+    transitionToDemo(index);
+  }
 
   return (
     <section
@@ -147,7 +203,6 @@ export function HomeHeroClient({
     >
       <div className="mx-auto flex h-full w-full max-w-[1380px] items-center px-[clamp(1.25rem,3vw,2.5rem)]">
         <div className="grid w-full grid-cols-1 items-center gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-12">
-          {/* ── Left: hero copy ── */}
           <div className="space-y-7">
             <h1 className="text-[clamp(2.5rem,5.8vw,5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-balance text-fd-foreground">
               Build polished CLIs
@@ -156,10 +211,10 @@ export function HomeHeroClient({
             </h1>
 
             <p className="max-w-[30ch] text-[clamp(0.95rem,1.3vw,1.1rem)] leading-snug text-fd-muted-foreground">
-              Typed prompts, flags, and output with one builder API.
+              Prompts, logs, tables, trees, diffs, spinners, and progress from
+              one builder API.
             </p>
 
-            {/* Install command */}
             <div className="flex items-center gap-4 rounded-lg border border-fd-border bg-fd-card px-4 py-3">
               <code className="flex-1 overflow-x-auto text-[13px] font-medium tracking-tight text-fd-foreground">
                 {installCommand}
@@ -167,7 +222,6 @@ export function HomeHeroClient({
               <CopyButton text={installCommand} />
             </div>
 
-            {/* CTAs */}
             <div className="flex items-center gap-5">
               <Link
                 href="/docs"
@@ -212,53 +266,31 @@ export function HomeHeroClient({
             </div>
           </div>
 
-          {/* ── Right: demo panel ── */}
           <div className="flex items-center">
             <div className="w-full overflow-hidden rounded-xl border border-fd-border bg-fd-card">
-              {/* Panel header */}
               <div className="flex items-center justify-between border-b border-fd-border px-4 py-[10px]">
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <TerminalDots />
                   <span className="text-[11px] font-medium tracking-wide text-fd-muted-foreground">
-                    {activeTab === "preview" ? "terminal" : "cli.ts"}
+                    terminal
                   </span>
                 </div>
-                <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+                <DemoPager
+                  activeIndex={activeDemoIndex}
+                  onSelect={selectDemo}
+                />
               </div>
 
-              {/* Panel content — fixed height, scrollable internally */}
-              <div className="relative h-[min(52svh,440px)] overflow-hidden">
-                {/* Code */}
-                <div
-                  className={[
-                    "absolute inset-0 overflow-y-auto p-5 transition-opacity duration-200",
-                    activeTab === "code"
-                      ? "opacity-100"
-                      : "pointer-events-none opacity-0",
-                  ].join(" ")}
-                  aria-hidden={activeTab !== "code"}
-                >
-                  <div className="block dark:hidden">
-                    <ShikiPanel html={setupHtmlLight} />
-                  </div>
-                  <div className="hidden dark:block">
-                    <ShikiPanel html={setupHtmlDark} />
-                  </div>
-                </div>
-
-                {/* Demo */}
-                <div
-                  className={[
-                    "absolute inset-0 overflow-hidden p-5 transition-opacity duration-200",
-                    activeTab === "preview"
-                      ? "opacity-100"
-                      : "pointer-events-none opacity-0",
-                  ].join(" ")}
-                  aria-hidden={activeTab !== "preview"}
-                >
+              <div className="h-[min(56svh,460px)] overflow-hidden p-5">
+                <div className={`h-full ${panelAnimation}`.trim()}>
                   <OscliDemo
-                    cli={createAppDemoCli}
-                    answers={{ framework: "next" }}
+                    key={activeDemo.id}
+                    cli={activeDemo.cli}
+                    answers={activeDemo.answers}
+                    replay={false}
+                    fade={false}
+                    speed="fast"
+                    onRunComplete={queueNextDemo}
                   />
                 </div>
               </div>

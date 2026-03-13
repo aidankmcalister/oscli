@@ -1,4 +1,4 @@
-import { isRailEnabled } from "../output";
+import { isRailEnabled, stdoutColumns } from "../output";
 import { activeTheme as theme, visibleLength } from "../theme";
 
 function railWidth(): number {
@@ -14,7 +14,7 @@ export function renderDivider(
   _noColor: boolean,
   _isTTY: boolean,
 ): string {
-  const columns = process.stdout.columns ?? 80;
+  const columns = stdoutColumns(80);
   const availableWidth = Math.max(8, columns - railWidth() - 1);
 
   if (!label) {

@@ -1,4 +1,5 @@
 import { activeTheme as theme } from "../theme";
+import { stdoutIsTTY } from "../output";
 
 type Cell = string | number | boolean | null | undefined;
 
@@ -36,7 +37,7 @@ function renderLegacyTable(headers: string[], rows: string[][]): string {
 export function table(headers: string[], rows: Cell[][]): string {
   const normalizedRows = normalizeRows(rows);
 
-  if (!process.stdout.isTTY) {
+  if (!stdoutIsTTY()) {
     return renderLegacyTable(headers, normalizedRows);
   }
 

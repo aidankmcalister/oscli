@@ -149,6 +149,27 @@ type AnimateEvent =
   | { type: "loop_restart" }
   | { type: "spin_start"; label: string }
   | { type: "spin_complete"; label: string }
+  | {
+      type: "progress_start";
+      label: string;
+      steps: string[];
+      currentStepIndex: number;
+      percent: number;
+    }
+  | {
+      type: "progress_update";
+      label: string;
+      steps: string[];
+      currentStepIndex: number;
+      percent: number;
+    }
+  | {
+      type: "progress_complete";
+      label: string;
+      steps: string[];
+      currentStepIndex: number;
+      percent: number;
+    }
   | { type: "log_line"; level: string; message: string }
   | { type: "box_render"; title?: string; content: string }
   | { type: "success_line"; message: string };
@@ -256,6 +277,14 @@ type RenderLine =
   | { kind: "summary"; key: string; label: string; displayValue: string }
   | { kind: "outro"; message: string }
   | { kind: "spin"; label: string; done: boolean }
+  | {
+      kind: "progress";
+      label: string;
+      steps: string[];
+      currentStepIndex: number;
+      percent: number;
+      done: boolean;
+    }
   | { kind: "log-line"; level: string; message: string }
   | { kind: "box"; title?: string; content: string }
   | { kind: "success"; message: string };
@@ -489,6 +518,12 @@ function renderPreviewLine(line: string, t: ResolvedTheme) {
   return <span>{line}</span>;
 }
 
+function renderProgressBar(percent: number, width = 18): string {
+  const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+  const filled = Math.round((clamped / 100) * width);
+  return `[${"#".repeat(filled)}${"-".repeat(Math.max(0, width - filled))}]`;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 /**
@@ -716,6 +751,59 @@ export function OscliDemo<TCli extends AnimatableCLI = AnimatableCLI>({
               });
               break;
 
+            case "progress_start":
+              setLines((prev) => [
+                ...prev,
+                {
+                  kind: "progress",
+                  label: event.label,
+                  steps: event.steps,
+                  currentStepIndex: event.currentStepIndex,
+                  percent: event.percent,
+                  done: false,
+                },
+              ]);
+              break;
+
+            case "progress_update":
+              setLines((prev) => {
+                const next = [...prev];
+                for (let i = next.length - 1; i >= 0; i--) {
+                  const l = next[i]!;
+                  if (l.kind === "progress" && l.label === event.label && !l.done) {
+                    next[i] = {
+                      ...l,
+                      steps: event.steps,
+                      currentStepIndex: event.currentStepIndex,
+                      percent: event.percent,
+                    };
+                    break;
+                  }
+                }
+                return next;
+              });
+              break;
+
+            case "progress_complete":
+              setLines((prev) => {
+                const next = [...prev];
+                for (let i = next.length - 1; i >= 0; i--) {
+                  const l = next[i]!;
+                  if (l.kind === "progress" && l.label === event.label && !l.done) {
+                    next[i] = {
+                      ...l,
+                      steps: event.steps,
+                      currentStepIndex: event.currentStepIndex,
+                      percent: event.percent,
+                      done: true,
+                    };
+                    break;
+                  }
+                }
+                return next;
+              });
+              break;
+
             case "log_line":
               setLines((prev) => [
                 ...prev,
@@ -794,9 +882,12 @@ export function OscliDemo<TCli extends AnimatableCLI = AnimatableCLI>({
   }, [lines]);
 
   useEffect(() => {
-    const hasActiveSpinner = lines.some(
-      (line) => line.kind === "spin" && !line.done,
-    );
+    const hasActiveSpinner = lines.some((line) => {
+      return (
+        (line.kind === "spin" && !line.done) ||
+        (line.kind === "progress" && !line.done)
+      );
+    });
     if (!hasActiveSpinner) {
       setSpinnerFrameIndex(0);
       return;
@@ -930,6 +1021,46 @@ export function OscliDemo<TCli extends AnimatableCLI = AnimatableCLI>({
                   {line.label}
                 </span>
               </div>
+            );
+          }
+
+          if (line.kind === "progress") {
+            const activeStep =
+              line.steps[
+                Math.max(
+                  0,
+                  Math.min(line.currentStepIndex, line.steps.length - 1),
+                )
+              ] ?? "";
+            const progressColor = line.done ? t.success : t.accent;
+
+            return (
+              <React.Fragment key={`progress-${i}`}>
+                <div>
+                  <span style={{ color: t.rail }}>│</span>
+                  <span>{" "}</span>
+                  <span style={{ color: progressColor }}>
+                    {line.done ? "✓" : SPINNER_FRAMES[spinnerFrameIndex]}
+                  </span>
+                  <span>{"  "}</span>
+                  <span style={{ color: line.done ? t.success : t.fg }}>
+                    {line.label}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ color: t.rail }}>│</span>
+                  <span>{"    "}</span>
+                  <span style={{ color: t.muted }}>{activeStep}</span>
+                  <span>{"  "}</span>
+                  <span style={{ color: progressColor }}>
+                    {renderProgressBar(line.percent)}
+                  </span>
+                  <span>{"  "}</span>
+                  <span style={{ color: progressColor }}>
+                    {Math.round(line.percent)}%
+                  </span>
+                </div>
+              </React.Fragment>
             );
           }
 

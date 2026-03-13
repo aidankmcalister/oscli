@@ -182,6 +182,27 @@ export type AnimateEvent =
   | { type: "loop_restart" }
   | { type: "spin_start"; label: string }
   | { type: "spin_complete"; label: string }
+  | {
+      type: "progress_start";
+      label: string;
+      steps: string[];
+      currentStepIndex: number;
+      percent: number;
+    }
+  | {
+      type: "progress_update";
+      label: string;
+      steps: string[];
+      currentStepIndex: number;
+      percent: number;
+    }
+  | {
+      type: "progress_complete";
+      label: string;
+      steps: string[];
+      currentStepIndex: number;
+      percent: number;
+    }
   | { type: "log_line"; level: string; message: string }
   | { type: "box_render"; title?: string; content: string }
   | { type: "success_line"; message: string };
@@ -209,6 +230,7 @@ type ResolvedAnimateTiming = {
 };
 
 const MIN_ANIMATE_SPIN_DURATION = 1000;
+const MIN_ANIMATE_PROGRESS_STEP_DURATION = 700;
 
 let spinnerModulePromise: Promise<typeof import("./primitives/spinner")> | null = null;
 let progressModulePromise: Promise<typeof import("./primitives/progress")> | null = null;
@@ -2017,6 +2039,63 @@ export function createCLI<
       steps: readonly TStep[],
       fn: (step: TStep, index: number) => Promise<void>,
     ) => {
+      if (animateEventPush) {
+        const progressSteps = steps.map((step) => String(step));
+        const total = progressSteps.length;
+
+        if (total === 0) {
+          animateEventPush({
+            type: "progress_complete",
+            label,
+            steps: progressSteps,
+            currentStepIndex: 0,
+            percent: 100,
+          });
+          return;
+        }
+
+        animateEventPush({
+          type: "progress_start",
+          label,
+          steps: progressSteps,
+          currentStepIndex: 0,
+          percent: 0,
+        });
+
+        for (let index = 0; index < steps.length; index += 1) {
+          const step = steps[index] as TStep;
+          const startedAt = Date.now();
+          await fn(step, index);
+
+          const remaining = Math.max(
+            0,
+            MIN_ANIMATE_PROGRESS_STEP_DURATION - (Date.now() - startedAt),
+          );
+          if (remaining > 0) {
+            await wait(remaining);
+          }
+
+          if (index < steps.length - 1) {
+            animateEventPush({
+              type: "progress_update",
+              label,
+              steps: progressSteps,
+              currentStepIndex: index + 1,
+              percent: Math.round(((index + 1) / total) * 100),
+            });
+          }
+        }
+
+        animateEventPush({
+          type: "progress_complete",
+          label,
+          steps: progressSteps,
+          currentStepIndex: progressSteps.length - 1,
+          percent: 100,
+        });
+        return;
+      }
+
       const { progress: runProgress } = await loadProgressModule();
       await runProgress(label, steps, fn, {
         isTTY: cli._isTTY,

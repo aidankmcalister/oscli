@@ -460,4 +460,73 @@ describe("cli.animate", () => {
       stdout.mockRestore();
     }
   });
+
+  it("replays progress output from a registered main handler", async () => {
+    const cli = createCLI((b) => ({
+      description: "deploy",
+      prompts: {
+        service: b.text().label("Service").default("api"),
+      },
+    }));
+
+    cli.main(async () => {
+      await cli.prompt.service();
+      await cli.progress(
+        "Deploy pipeline",
+        ["Validate", "Build", "Deploy"] as const,
+        async () => {},
+      );
+      cli.outro(`Deployment finished for ${cli.storage.service}.`);
+    });
+
+    const startedAt = Date.now();
+    const events = await collectEvents(
+      cli.animate({
+        inputs: {
+          service: "gateway",
+        },
+        ignoreDefaults: true,
+        timing: {
+          typeDelay: 0,
+          promptDelay: 0,
+          completionDelay: 0,
+        },
+      }),
+    );
+    const elapsed = Date.now() - startedAt;
+
+    expect(events).toContainEqual({
+      type: "progress_start",
+      label: "Deploy pipeline",
+      steps: ["Validate", "Build", "Deploy"],
+      currentStepIndex: 0,
+      percent: 0,
+    });
+    expect(events).toContainEqual({
+      type: "progress_update",
+      label: "Deploy pipeline",
+      steps: ["Validate", "Build", "Deploy"],
+      currentStepIndex: 1,
+      percent: 33,
+    });
+    expect(events).toContainEqual({
+      type: "progress_update",
+      label: "Deploy pipeline",
+      steps: ["Validate", "Build", "Deploy"],
+      currentStepIndex: 2,
+      percent: 67,
+    });
+    expect(events).toContainEqual({
+      type: "progress_complete",
+      label: "Deploy pipeline",
+      steps: ["Validate", "Build", "Deploy"],
+      currentStepIndex: 2,
+      percent: 100,
+    });
+    expect(events).toContainEqual({
+      type: "outro",
+      message: "Deployment finished for gateway.",
+    });
+    expect(elapsed).toBeGreaterThanOrEqual(2000);
+  });
 });

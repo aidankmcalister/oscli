@@ -3,6 +3,7 @@ import {
   stripSharedIndent,
   visibleLength,
 } from "../theme";
+import { stdoutColumns, stdoutIsTTY } from "../output";
 
 export type BoxOptions = {
   title?: string;
@@ -25,7 +26,7 @@ function renderLegacyBox(options: BoxOptions): string {
 }
 
 export function box(options: BoxOptions): string {
-  if (!process.stdout.isTTY) {
+  if (!stdoutIsTTY()) {
     return renderLegacyBox(options);
   }
 
@@ -37,7 +38,7 @@ export function box(options: BoxOptions): string {
   );
   const maxBoxWidth = Math.max(
     32,
-    (process.stdout.columns ?? 120) - 6,
+    stdoutColumns(120) - 6,
   );
   const contentWidth = Math.max(
     26,

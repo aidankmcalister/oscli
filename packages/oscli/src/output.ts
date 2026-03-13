@@ -42,6 +42,14 @@ function getStderr(): OutputStreamLike {
   return (process as { stderr?: OutputStreamLike }).stderr ?? noopStream;
 }
 
+export function stdoutIsTTY(): boolean {
+  return getStdout().isTTY === true;
+}
+
+export function stdoutColumns(fallback = 80): number {
+  return getStdout().columns ?? fallback;
+}
+
 function writeStdoutAnsi(value: string): void {
   getStdout().write(value);
 }
@@ -106,13 +114,13 @@ function canRenderPersistentCorner(stream: "stdout" | "stderr"): boolean {
     stream === "stdout" &&
     !outputSuppressed &&
     railEnabled &&
-    getStdout().isTTY === true &&
+    stdoutIsTTY() &&
     theme.symbols.outro.length > 0
   );
 }
 
 export function clearPersistentCorner(): void {
-  if (!hasPersistentCorner || getStdout().isTTY !== true) {
+  if (!hasPersistentCorner || !stdoutIsTTY()) {
     return;
   }
 
@@ -155,7 +163,7 @@ export function createLogChain(
   let flushed = false;
 
   const applyModifiers = (value: string): string => {
-    if (activeNoColor || getStdout().isTTY !== true) {
+    if (activeNoColor || !stdoutIsTTY()) {
       return value;
     }
 
