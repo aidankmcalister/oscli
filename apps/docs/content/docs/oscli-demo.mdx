@@ -48,7 +48,7 @@ that handler.
 import { createCLI } from "@oscli-dev/oscli";
 
 export const cli = createCLI((b) => ({
-  description: "create-app",
+  title: "create-app",
   prompts: {
     project: b.text().label("Project").default("my-app"),
   },

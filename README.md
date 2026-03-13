@@ -50,7 +50,7 @@ Start with one flow, resolve prompts, and read typed values from
 import { createCLI } from "@oscli-dev/oscli";
 
 const cli = createCLI((b) => ({
-  description: "project setup",
+  title: "project setup",
   prompts: {
     project: b.text().label("Project").default("my-app"),
     approved: b.confirm().label("Continue?").default(true),
@@ -80,7 +80,7 @@ tools like `<OscliDemo />`, register the single-command handler once with
 
 ```ts
 const cli = createCLI((b) => ({
-  description: "project setup",
+  title: "project setup",
   prompts: {
     project: b.text().label("Project").default("my-app"),
   },

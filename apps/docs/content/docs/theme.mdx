@@ -95,7 +95,7 @@ These are the built-in presets.
 
 ```ts title="src/cli.ts"
 export const cli = createCLI(() => ({
-  description: "default theme",
+  title: "default theme",
   theme: "default",
 }));
 ```
@@ -104,7 +104,7 @@ export const cli = createCLI(() => ({
 
 ```ts title="src/cli.ts"
 export const cli = createCLI(() => ({
-  description: "basic theme",
+  title: "basic theme",
   theme: "basic",
 }));
 ```
@@ -113,7 +113,7 @@ export const cli = createCLI(() => ({
 
 ```ts title="src/cli.ts"
 export const cli = createCLI(() => ({
-  description: "rounded theme",
+  title: "rounded theme",
   theme: "rounded",
 }));
 ```
@@ -156,7 +156,7 @@ Use `ThemeOverride` when you want to change only a few fields.
 
 ```ts title="src/cli.ts"
 export const cli = createCLI((b) => ({
-  description: "themed tool",
+  title: "themed tool",
   theme: {
     active: "cyan",
     success: "green",

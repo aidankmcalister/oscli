@@ -9,7 +9,7 @@ const findings = [
 ] as const;
 
 const cli = createCLI((b) => ({
-  description: "Audit a project.",
+  title: "Audit a project.",
   theme: "basic",
   flags: {
     path: b.flag().string().label("Project path").default("."),

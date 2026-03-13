@@ -5,7 +5,7 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 type GenerateType = "component" | "hook" | "util" | "api-route";
 
 const cli = createCLI((b) => ({
-  description: "Generate project boilerplate.",
+  title: "Generate project boilerplate.",
   theme: "basic",
   prompts: {
     generateType: b

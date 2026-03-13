@@ -35,7 +35,7 @@ themes stay consistent across commands.
 import { createCLI } from "@oscli-dev/oscli";
 
 export const cli = createCLI((b) => ({
-  description: "workspace tool",
+  title: "workspace tool",
   prompts: {
     name: b.text().label("Name").default("my-app"),
   },

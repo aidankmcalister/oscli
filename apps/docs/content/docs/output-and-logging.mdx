@@ -21,8 +21,8 @@ export const outputMethods = {
     description: "Creates a reusable style builder that returns strings.",
   },
   intro: {
-    type: "cli.intro(message)",
-    description: "Prints the opening line and enables the rail.",
+    type: "cli.intro(message, style?)",
+    description: "Prints the opening line and enables the rail. Accepts an optional TitleStyle for color/bold/uppercase.",
   },
   outro: {
     type: "cli.outro(message)",

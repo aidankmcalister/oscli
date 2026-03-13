@@ -9,5 +9,8 @@ export {
   type ExitOptions,
   type TestOptions,
   type TestResult,
+  type TitleConfig,
+  type TitleStyle,
 } from "./client";
+export { type AsciiStyle } from "./primitives/ascii";
 export { levenshtein, suggest } from "./suggest";

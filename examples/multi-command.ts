@@ -9,7 +9,7 @@ const installedPackages = [
 ] as const;
 
 const cli = createCLI((b) => ({
-  description: "Manage a project with multiple commands.",
+  title: "Manage a project with multiple commands.",
   theme: "basic",
   prompts: {
     project: b.text().label("Project").default("workspace-app"),

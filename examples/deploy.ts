@@ -3,7 +3,7 @@ import { createCLI } from "../packages/oscli/src/index";
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const cli = createCLI((b) => ({
-  description: "Deploy a service.",
+  title: "Deploy a service.",
   theme: "basic",
   flags: {
     env: b

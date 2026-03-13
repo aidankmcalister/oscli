@@ -33,6 +33,7 @@ import {
   type PromptSubmitResult,
   writePromptSummary,
 } from "./primitives/prompt";
+import { ascii as renderAscii, type AsciiStyle } from "./primitives/ascii";
 import { box as renderBox } from "./primitives/box";
 import { diff as renderDiff } from "./primitives/diff";
 import { renderDivider } from "./primitives/divider";
@@ -42,9 +43,11 @@ import { table as renderTable } from "./primitives/table";
 import { tree as renderTree, type TreeNode } from "./primitives/tree";
 import { createStorage } from "./storage";
 import { suggest as suggestValue } from "./suggest";
+import * as pc from "picocolors";
 import {
   activeTheme as theme,
   applyTheme,
+  colorFormatters,
   type ColorName,
   type ThemePreset,
   type ThemeOverride,
@@ -83,10 +86,20 @@ type PromptFns<TPrompts extends PromptDefinitions> = {
   [K in keyof TPrompts]: () => Promise<StorageShape<TPrompts>[K]>;
 };
 
+export type TitleStyle = {
+  color?: ColorName;
+  uppercase?: boolean;
+  bold?: boolean;
+};
+
+export type TitleConfig = string | { text: string; style?: TitleStyle };
+
 type CLIConfig<
   TPrompts extends PromptDefinitions,
   TFlags extends FlagDefinitions,
 > = {
+  title?: TitleConfig;
+  /** @deprecated Use `title` instead. */
   description?: string;
   prompts?: TPrompts;
   flags?: TFlags;
@@ -830,6 +843,39 @@ function resolveAnimateChoiceLabel(
   const needle = String(rawValue ?? "");
   const match = config.choices?.find((choice) => String(choice) === needle);
   return String(match ?? rawValue ?? "");
+}
+
+function resolveTitleText(config: { title?: TitleConfig; description?: string }): string {
+  if (config.title) {
+    return typeof config.title === "string" ? config.title : config.title.text;
+  }
+  return config.description ?? "";
+}
+
+function resolveTitleStyle(config: { title?: TitleConfig }): TitleStyle | undefined {
+  if (config.title && typeof config.title === "object") {
+    return config.title.style;
+  }
+  return undefined;
+}
+
+function renderStyledTitle(
+  text: string,
+  style: TitleStyle | undefined,
+  fallbackColor: (s: string) => string,
+): string {
+  let result = style?.uppercase ? text.toUpperCase() : text;
+  if (style?.color) {
+    result = colorFormatters[style.color](result);
+    if (style.bold) {
+      result = pc.bold(result);
+    }
+  } else if (style?.bold) {
+    result = pc.bold(fallbackColor(result));
+  } else {
+    result = fallbackColor(result);
+  }
+  return result;
 }
 
 function deriveAnimateIntroMessage(description?: string): string {
@@ -1616,7 +1662,7 @@ export function createCLI<
         testInputs.clear();
 
         const resolvedValues = new Map<string, unknown>();
-        const introMessage = deriveAnimateIntroMessage(config.description);
+        const introMessage = deriveAnimateIntroMessage(resolveTitleText(config));
         const ignoreDefaults = options.ignoreDefaults === true;
 
         if (introMessage.length > 0) {
@@ -1719,7 +1765,7 @@ export function createCLI<
 
           yield {
             type: "outro",
-            message: deriveAnimateOutroMessage(config.description, resolvedValues),
+            message: deriveAnimateOutroMessage(resolveTitleText(config), resolvedValues),
           };
         }
 
@@ -1765,9 +1811,10 @@ export function createCLI<
       cli._noColor = noColor;
       cli._jsonMode = jsonMode;
 
+      const titleText = resolveTitleText(config);
       program.name("oscli");
-      if (config.description) {
-        program.description(config.description);
+      if (titleText) {
+        program.description(titleText);
       }
 
       program.showSuggestionAfterError(false);
@@ -1930,7 +1977,7 @@ export function createCLI<
         exitCode,
       };
     },
-    intro: (message: string) => {
+    intro: (message: string, style?: TitleStyle) => {
       if (animateEventPush) {
         animateEventPush({ type: "intro", message });
         return;
@@ -1939,13 +1986,15 @@ export function createCLI<
         return;
       }
 
+      const titleStyle = style ?? resolveTitleStyle(config);
+
       clearPersistentCorner();
       setRailEnabled(false);
       if (resolvedTheme.layout.spacing > 0) {
         process.stdout.write("\n".repeat(resolvedTheme.layout.spacing));
       }
       writeLine(
-        `${theme.color.border(theme.symbols.intro)}  ${theme.color.title(message)}`,
+        `${theme.color.border(theme.symbols.intro)}  ${renderStyledTitle(message, titleStyle, theme.color.title)}`,
       );
       setRailEnabled(true);
       writeSectionGap();
@@ -1989,6 +2038,28 @@ export function createCLI<
     tree: (data: TreeNode) => renderTree(data),
     diff: (before: string, after: string) => {
       writeSectionLines(renderDiff(before, after));
+    },
+    ascii: (text: string, style?: AsciiStyle) => {
+      const lines = renderAscii(text);
+      if (lines.length === 0) {
+        return;
+      }
+      const colorize = style?.color
+        ? (s: string) => {
+            let result = colorFormatters[style.color!](s);
+            if (style.bold) result = pc.bold(result);
+            if (style.dim) result = pc.dim(result);
+            return result;
+          }
+        : style?.bold
+          ? (s: string) => pc.bold(s)
+          : style?.dim
+            ? (s: string) => pc.dim(s)
+            : (s: string) => s;
+      for (const line of lines) {
+        writeLine(colorize(line));
+      }
+      writeSectionGap();
     },
     box: (options: { title?: string; content: string }) => {
       if (animateEventPush) {

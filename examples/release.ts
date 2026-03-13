@@ -5,7 +5,7 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 type BumpType = "patch" | "minor" | "major";
 
 const cli = createCLI((b) => ({
-  description: "Publish a new release.",
+  title: "Publish a new release.",
   theme: "basic",
   prompts: {
     bumpType: b

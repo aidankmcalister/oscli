@@ -89,7 +89,7 @@ describe("theme overrides", () => {
 
   it("stores the resolved theme on the cli instance", () => {
     const cli = createCLI(() => ({
-      description: "Theme test",
+      title: "Theme test",
       theme: {
         active: "cyan",
         symbols: {
@@ -106,7 +106,7 @@ describe("theme overrides", () => {
 
   it("stores sidebar overrides on the cli instance", () => {
     const cli = createCLI(() => ({
-      description: "Sidebar test",
+      title: "Sidebar test",
       theme: {
         sidebar: false,
       },
@@ -119,7 +119,7 @@ describe("theme overrides", () => {
 
   it("accepts theme preset names on the cli config", () => {
     const cli = createCLI(() => ({
-      description: "Preset test",
+      title: "Preset test",
       theme: "rounded",
     }));
 

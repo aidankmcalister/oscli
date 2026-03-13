@@ -81,7 +81,7 @@ describe("phase 3", () => {
       .mockImplementation(() => true);
 
     const cli = createCLI(() => ({
-      description: "styles",
+      title: "styles",
       prompts: {},
     }));
 
@@ -107,7 +107,7 @@ describe("phase 3", () => {
       .mockImplementation(() => true);
 
     const cli = createCLI(() => ({
-      description: "links",
+      title: "links",
       prompts: {},
     }));
 
@@ -129,7 +129,7 @@ describe("phase 3", () => {
       .mockImplementation(() => true);
 
     const cli = createCLI(() => ({
-      description: "primitives",
+      title: "primitives",
       prompts: {},
     }));
 
@@ -161,7 +161,7 @@ describe("phase 3", () => {
 
   it("supports search list and date prompt bypasses via cli.test", async () => {
     const cli = createCLI((b) => ({
-      description: "new prompts",
+      title: "new prompts",
       prompts: {
         framework: b
           .search({ choices: ["react", "vue", "svelte"] as const })
@@ -194,7 +194,7 @@ describe("phase 3", () => {
   it("routes subcommands and clears storage between runs", async () => {
     const seen: Array<string | undefined> = [];
     const cli = createCLI((b) => ({
-      description: "commands",
+      title: "commands",
       prompts: {
         name: b.text().label("Name"),
       },
@@ -218,7 +218,7 @@ describe("phase 3", () => {
 
   it("captures output and exit codes in cli.test", async () => {
     const cli = createCLI(() => ({
-      description: "test harness",
+      title: "test harness",
       prompts: {},
     }));
 
@@ -234,7 +234,7 @@ describe("phase 3", () => {
 
   it("shows autocomplete hints for unknown commands", async () => {
     const cli = createCLI(() => ({
-      description: "autocomplete",
+      title: "autocomplete",
       autocompleteHint: "Run `oscli completion` to enable tab completion",
       prompts: {},
     }));
@@ -253,7 +253,7 @@ describe("phase 3", () => {
 
   it("suppresses decorative output and emits only json when --json is active", async () => {
     const cli = createCLI((b) => ({
-      description: "json mode",
+      title: "json mode",
       json: true,
       prompts: {
         name: b.text().label("Name").default("my-app"),

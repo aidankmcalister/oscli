@@ -15,7 +15,7 @@ async function withArgv(args: string[], fn: () => Promise<void>) {
 describe("createCLI", () => {
   it("runs single-command action through commander", async () => {
     const cli = createCLI(() => ({
-      description: "Test CLI",
+      title: "Test CLI",
     }));
 
     let called = false;
@@ -30,7 +30,7 @@ describe("createCLI", () => {
 
   it("runs a registered main handler when run() is called without an override", async () => {
     const cli = createCLI(() => ({
-      description: "Registered handler",
+      title: "Registered handler",
     }));
 
     let called = false;
@@ -47,7 +47,7 @@ describe("createCLI", () => {
 
   it("exposes helpers for table and box output", () => {
     const cli = createCLI(() => ({
-      description: "Helpers",
+      title: "Helpers",
       prompts: {},
     }));
 
@@ -74,7 +74,7 @@ describe("createCLI", () => {
 
   it("parses custom flags with inferred values", async () => {
     const cli = createCLI((b) => ({
-      description: "Flags",
+      title: "Flags",
       flags: {
         env: b
           .flag()
@@ -101,7 +101,7 @@ describe("createCLI", () => {
 
   it("bypasses matching prompts when a same-name flag is passed", async () => {
     const cli = createCLI((b) => ({
-      description: "Prompt bypass",
+      title: "Prompt bypass",
       prompts: {
         name: b.text().label("Database name").default("mydb"),
       },
@@ -124,7 +124,7 @@ describe("createCLI", () => {
 
     try {
       const cli = createCLI((b) => ({
-        description: "Auto yes",
+        title: "Auto yes",
         prompts: {
           approved: b.confirm().label("Approved"),
         },
@@ -148,7 +148,7 @@ describe("createCLI", () => {
   it("throws when user defines reserved yes flag", () => {
     expect(() =>
       createCLI((b) => ({
-        description: "Reserved",
+        title: "Reserved",
         flags: {
           yes: b.flag().boolean(),
         },
@@ -165,7 +165,7 @@ describe("createCLI", () => {
       .mockImplementation(() => true);
 
     const cli = createCLI(() => ({
-      description: "Plain log",
+      title: "Plain log",
       prompts: {},
     }));
 

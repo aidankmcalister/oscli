@@ -10,7 +10,7 @@ const teamRepos: Record<string, string[]> = {
 };
 
 const cli = createCLI((b) => ({
-  description: "Provision a teammate.",
+  title: "Provision a teammate.",
   theme: "basic",
   prompts: {
     developerName: b.text().label("Developer name").default("Avery Lee"),

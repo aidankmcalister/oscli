@@ -3,7 +3,7 @@ import { createCLI } from "../packages/oscli/src/index";
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const cli = createCLI((b) => ({
-  description: "Create an environment file.",
+  title: "Create an environment file.",
   theme: "basic",
   prompts: {
     environmentName: b.text().label("Environment name").default("local"),

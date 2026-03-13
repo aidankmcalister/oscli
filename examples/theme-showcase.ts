@@ -8,7 +8,7 @@ type ThemeName = (typeof themes)[number];
 
 function createShowcaseCLI(themeName: ThemeName) {
   return createCLI((b) => ({
-    description: `Theme showcase (${themeName}).`,
+    title: `Theme showcase (${themeName}).`,
     theme: themeName,
     prompts: {
       project: b.text().label("Project").default("showcase-app"),

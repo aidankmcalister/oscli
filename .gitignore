@@ -2,6 +2,9 @@
 node_modules
 .claude/
 
+# turbo
+.turbo
+
 # output
 out
 dist

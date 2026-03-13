@@ -65,7 +65,7 @@ describe("phase 2 runtime ux", () => {
       .mockImplementation(() => true);
 
     const cli = createCLI(() => ({
-      description: "streams",
+      title: "streams",
       prompts: {},
     }));
 
@@ -91,7 +91,7 @@ describe("phase 2 runtime ux", () => {
     const exit = mockExit();
 
     const cli = createCLI(() => ({
-      description: "exit",
+      title: "exit",
       prompts: {},
     }));
 
@@ -118,7 +118,7 @@ describe("phase 2 runtime ux", () => {
     mockExit();
 
     const cli = createCLI(() => ({
-      description: "exit rail",
+      title: "exit rail",
       prompts: {},
     }));
 
@@ -141,7 +141,7 @@ describe("phase 2 runtime ux", () => {
       .mockImplementation(() => true);
 
     const cli = createCLI((b) => ({
-      description: "defaults",
+      title: "defaults",
       prompts: {
         project: b.text().label("Project").default("my-app"),
       },
@@ -168,7 +168,7 @@ describe("phase 2 runtime ux", () => {
     const exit = mockExit();
 
     const cli = createCLI((b) => ({
-      description: "required prompt",
+      title: "required prompt",
       prompts: {
         project: b.text().label("Project"),
       },
@@ -197,7 +197,7 @@ describe("phase 2 runtime ux", () => {
     const exit = mockExit();
 
     const cli = createCLI((b) => ({
-      description: "validated prompt",
+      title: "validated prompt",
       prompts: {
         project: b
           .text()
@@ -230,7 +230,7 @@ describe("phase 2 runtime ux", () => {
       .mockImplementation(() => true);
 
     const cli = createCLI(() => ({
-      description: "no color",
+      title: "no color",
       prompts: {},
     }));
 
@@ -254,7 +254,7 @@ describe("phase 2 runtime ux", () => {
       .mockImplementation(() => true);
 
     const cli = createCLI(() => ({
-      description: "ascii spinner",
+      title: "ascii spinner",
       prompts: {},
     }));
 
@@ -277,7 +277,7 @@ describe("phase 2 runtime ux", () => {
       .mockImplementation(() => true);
 
     const cli = createCLI(() => ({
-      description: "spinner labels",
+      title: "spinner labels",
       prompts: {},
     }));
 
@@ -308,7 +308,7 @@ describe("phase 2 runtime ux", () => {
     const exit = mockExit();
 
     const cli = createCLI(() => ({
-      description: "unknown command",
+      title: "unknown command",
       prompts: {},
     }));
 
@@ -329,7 +329,7 @@ describe("phase 2 runtime ux", () => {
   it("rejects reserved no-color flags", () => {
     expect(() =>
       createCLI((b) => ({
-        description: "reserved no-color",
+        title: "reserved no-color",
         flags: {
           "no-color": b.flag().boolean(),
         },
@@ -340,7 +340,7 @@ describe("phase 2 runtime ux", () => {
 
   it("exposes the suggestion helper on the cli instance", () => {
     const cli = createCLI(() => ({
-      description: "suggest",
+      title: "suggest",
       prompts: {},
     }));
 

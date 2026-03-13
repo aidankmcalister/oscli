@@ -89,7 +89,7 @@ Use literal choices when you want a union type in `cli.flags`.
 import { createCLI } from "@oscli-dev/oscli";
 
 export const cli = createCLI((b) => ({
-  description: "create-db",
+  title: "create-db",
   flags: {
     ttl: b.flag().string().label("TTL").default("1h"),
     json: b
@@ -120,7 +120,7 @@ Every prompt can be bypassed with a matching flag. Validation still runs.
 
 ```ts title="src/cli.ts"
 export const cli = createCLI((b) => ({
-  description: "prompt bypass",
+  title: "prompt bypass",
   prompts: {
     project: b.text().label("Project").default("my-app"),
     teamSize: b.number().label("Team size").min(1).max(10),

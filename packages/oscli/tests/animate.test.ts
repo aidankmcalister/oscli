@@ -20,7 +20,7 @@ async function collectEvents(
 describe("cli.animate", () => {
   it("emits prompt events from registered definitions without mutating storage", async () => {
     const cli = createCLI((b) => ({
-      description: "create-app",
+      title: "create-app",
       prompts: {
         project: b.text().label("Project").default("my-app"),
         template: b
@@ -85,7 +85,7 @@ describe("cli.animate", () => {
 
   it("masks password prompts and types simple confirms as y or n", async () => {
     const cli = createCLI((b) => ({
-      description: "auth",
+      title: "auth",
       prompts: {
         token: b.password().label("API token").default("secret-key"),
         approved: b.confirm("simple").label("Continue?").default(false),
@@ -134,7 +134,7 @@ describe("cli.animate", () => {
 
   it("emits preview frames for select, multiselect, and toggle confirms", async () => {
     const cli = createCLI((b) => ({
-      description: "showcase",
+      title: "showcase",
       prompts: {
         framework: b
           .select({ choices: ["next", "remix", "astro"] as const })
@@ -198,7 +198,7 @@ describe("cli.animate", () => {
 
   it("animates cursor movement and toggle state changes for interactive prompts", async () => {
     const cli = createCLI((b) => ({
-      description: "dynamic-showcase",
+      title: "dynamic-showcase",
       prompts: {
         framework: b
           .select({ choices: ["next", "remix", "astro"] as const })
@@ -293,7 +293,7 @@ describe("cli.animate", () => {
 
   it("can ignore prompt defaults during demo playback", async () => {
     const cli = createCLI((b) => ({
-      description: "default-free-demo",
+      title: "default-free-demo",
       prompts: {
         framework: b
           .select({ choices: ["next", "remix", "astro"] as const })
@@ -343,7 +343,7 @@ describe("cli.animate", () => {
 
   it("emits loop_restart before starting the next cycle when looping is enabled", async () => {
     const cli = createCLI((b) => ({
-      description: "loop-demo",
+      title: "loop-demo",
       prompts: {
         name: b.text().label("Name").default("oscli"),
       },
@@ -369,7 +369,7 @@ describe("cli.animate", () => {
 
   it("replays output from a registered main handler after the prompt flow", async () => {
     const cli = createCLI((b) => ({
-      description: "create-app",
+      title: "create-app",
       prompts: {
         project: b.text().label("Project").default("my-app"),
         framework: b
@@ -463,7 +463,7 @@ describe("cli.animate", () => {
 
   it("replays progress output from a registered main handler", async () => {
     const cli = createCLI((b) => ({
-      description: "deploy",
+      title: "deploy",
       prompts: {
         service: b.text().label("Service").default("api"),
       },

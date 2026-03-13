@@ -131,7 +131,7 @@ Use `b.text()` for plain string input.
 
 ```ts title="src/cli.ts"
 export const cli = createCLI((b) => ({
-  description: "text prompt",
+  title: "text prompt",
   prompts: {
     project: b
       .text()
@@ -169,7 +169,7 @@ Use `b.password()` when the user types sensitive text.
 
 ```ts title="src/cli.ts"
 export const cli = createCLI((b) => ({
-  description: "password prompt",
+  title: "password prompt",
   prompts: {
     token: b.password().label("API token"),
   },
@@ -199,7 +199,7 @@ Use `b.number()` when the stored value must be a number.
 
 ```ts title="src/cli.ts"
 export const cli = createCLI((b) => ({
-  description: "number prompt",
+  title: "number prompt",
   prompts: {
     retries: b.number().label("Retries").min(0).max(5),
     budget: b.number().label("Budget").prefix("$").min(0),
@@ -230,7 +230,7 @@ Use `b.select()` for one choice from a fixed list.
 
 ```ts title="src/cli.ts"
 export const cli = createCLI((b) => ({
-  description: "select prompt",
+  title: "select prompt",
   prompts: {
     mode: b
       .select({ choices: ["personal", "team"] as const })
@@ -266,7 +266,7 @@ Use `b.multiselect()` when the user can choose multiple values.
 
 ```ts title="src/cli.ts"
 export const cli = createCLI((b) => ({
-  description: "multiselect prompt",
+  title: "multiselect prompt",
   prompts: {
     features: b
       .multiselect({ choices: ["api", "ui", "docs", "tests"] as const })
@@ -362,7 +362,7 @@ while typing.
 
 ```ts title="src/cli.ts"
 export const cli = createCLI((b) => ({
-  description: "search prompt",
+  title: "search prompt",
   prompts: {
     framework: b
       .search({ choices: ["react", "vue", "svelte", "solid"] as const })
@@ -399,7 +399,7 @@ Use `b.list()` for repeated free-form input. The prompt ends on an empty Enter.
 
 ```ts title="src/cli.ts"
 export const cli = createCLI((b) => ({
-  description: "list prompt",
+  title: "list prompt",
   prompts: {
     tags: b.list().label("Tags").min(1).max(5),
   },
@@ -439,7 +439,7 @@ Use `b.date()` for validated date input stored as `Date`.
 
 ```ts title="src/cli.ts"
 export const cli = createCLI((b) => ({
-  description: "date prompt",
+  title: "date prompt",
   prompts: {
     deadline: b.date().label("Deadline").format("YYYY-MM-DD"),
   },

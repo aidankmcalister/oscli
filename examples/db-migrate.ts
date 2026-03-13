@@ -9,7 +9,7 @@ const pendingMigrations = [
 ] as const;
 
 const cli = createCLI((b) => ({
-  description: "Apply database migrations.",
+  title: "Apply database migrations.",
   theme: "basic",
   flags: {
     connection: b

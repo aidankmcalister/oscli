@@ -3,7 +3,7 @@ import { createCLI } from "../packages/oscli/src/index";
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export const cli = createCLI((b) => ({
-  description: "create-app",
+  title: "create-app",
   theme: "basic",
   prompts: {
     project: b.text().label("Project").default("my-app"),

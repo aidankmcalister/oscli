@@ -24,7 +24,7 @@ Start with one flow, resolve prompts, and read typed values from
 import { createCLI } from "@oscli-dev/oscli";
 
 const cli = createCLI((b) => ({
-  description: "project setup",
+  title: "project setup",
   prompts: {
     project: b.text().label("Project").default("my-app"),
     approved: b.confirm().label("Continue?").default(true),
@@ -53,7 +53,7 @@ the CLI.
 
 ```ts title="src/cli.ts"
 const cli = createCLI((b) => ({
-  description: "project setup",
+  title: "project setup",
   json: true,
   flags: {
     env: b

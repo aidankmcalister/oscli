@@ -54,7 +54,7 @@ import { createCLI } from "@oscli-dev/oscli";
 describe("init flow", () => {
   it("stores the provided project name", async () => {
     const cli = createCLI((b) => ({
-      description: "test",
+      title: "test",
       prompts: {
         name: b.text().label("Name"),
       },

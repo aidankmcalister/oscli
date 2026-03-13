@@ -31,7 +31,7 @@ store one final value with `cli.setResult()`.
 import { createCLI } from "@oscli-dev/oscli";
 
 export const cli = createCLI((b) => ({
-  description: "json demo",
+  title: "json demo",
   json: true,
   prompts: {
     name: b.text().label("Name").default("my-app"),
@@ -72,7 +72,7 @@ This is the only code you need to add to support JSON mode.
 
 ```ts title="src/cli.ts"
 export const cli = createCLI((b) => ({
-  description: "json demo",
+  title: "json demo",
   prompts: {
     name: b.text().label("Name"),
   },
