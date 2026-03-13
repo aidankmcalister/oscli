@@ -5,14 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { OscliDemo } from "@oscli-dev/react";
 import { homeDemos } from "@/lib/home-demos";
 
-const installCommand = "bun add @oscli-dev/oscli";
-const DEMO_ADVANCE_DELAY = 2200;
-const DEMO_EXIT_DURATION = 320;
-const DEMO_ENTER_DURATION = 500;
-const DEMO_ENTER_ANIMATION =
-  "animate-in fade-in-0 slide-in-from-bottom-2 zoom-in-95 duration-500 ease-out";
-const DEMO_EXIT_ANIMATION =
-  "animate-out fade-out-0 zoom-out-95 duration-300 ease-in";
+const installCommand = "npm install @oscli-dev/oscli";
+const DEMO_HOLD_DELAY = 1800;
+const DEMO_TRANSITION_DURATION = 240;
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -32,7 +27,7 @@ function CopyButton({ text }: { text: string }) {
       type="button"
       onClick={copy}
       aria-label="Copy install command"
-      className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] font-medium text-fd-muted-foreground transition-colors duration-75 hover:text-fd-foreground"
+      className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] font-medium text-fd-muted-foreground transition-colors duration-100 hover:text-fd-foreground"
     >
       {copied ? (
         <>
@@ -86,11 +81,21 @@ function CopyButton({ text }: { text: string }) {
 }
 
 function TerminalDots() {
+  const dots = ["#FF5F57", "#FEBC2E", "#28C840"] as const;
+
   return (
-    <div className="flex items-center gap-[5px]">
-      <span className="block h-[9px] w-[9px] rounded-full border border-fd-border bg-fd-background" />
-      <span className="block h-[9px] w-[9px] rounded-full border border-fd-border bg-fd-background" />
-      <span className="block h-[9px] w-[9px] rounded-full border border-fd-border bg-fd-background" />
+    <div className="flex items-center gap-2">
+      {dots.map((color) => (
+        <span
+          key={color}
+          className="block h-[10px] w-[10px] rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]"
+          style={{
+            backgroundColor: color,
+            boxShadow:
+              "inset 0 1px 0 rgba(255,255,255,0.28), 0 0 0 1px rgba(0,0,0,0.18)",
+          }}
+        />
+      ))}
     </div>
   );
 }
@@ -111,7 +116,7 @@ function DemoPager({
           onClick={() => onSelect(index)}
           aria-label={`Show ${demo.title} demo`}
           className={[
-            "h-2.5 rounded-full transition-all duration-150",
+            "h-2.5 rounded-full transition-all duration-200",
             activeIndex === index
               ? "w-5 bg-fd-foreground"
               : "w-2.5 bg-fd-border hover:bg-fd-muted-foreground",
@@ -124,11 +129,11 @@ function DemoPager({
 
 export function HomeHeroClient() {
   const [activeDemoIndex, setActiveDemoIndex] = useState(0);
+  const [isPanelVisible, setIsPanelVisible] = useState(true);
+  const activeDemoIndexRef = useRef(0);
   const advanceTimeoutRef = useRef<number | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
-  const transitionResetRef = useRef<number | null>(null);
-  const activeDemoIndexRef = useRef(0);
-  const [panelAnimation, setPanelAnimation] = useState("");
+  const enterFrameRef = useRef<number | null>(null);
   const activeDemo = homeDemos[activeDemoIndex]!;
   activeDemoIndexRef.current = activeDemoIndex;
 
@@ -140,8 +145,8 @@ export function HomeHeroClient() {
       if (transitionTimeoutRef.current !== null) {
         window.clearTimeout(transitionTimeoutRef.current);
       }
-      if (transitionResetRef.current !== null) {
-        window.clearTimeout(transitionResetRef.current);
+      if (enterFrameRef.current !== null) {
+        window.cancelAnimationFrame(enterFrameRef.current);
       }
     };
   }, []);
@@ -153,14 +158,14 @@ export function HomeHeroClient() {
     }
   }
 
-  function clearTransitionTimeouts() {
+  function clearTransitionHandlers() {
     if (transitionTimeoutRef.current !== null) {
       window.clearTimeout(transitionTimeoutRef.current);
       transitionTimeoutRef.current = null;
     }
-    if (transitionResetRef.current !== null) {
-      window.clearTimeout(transitionResetRef.current);
-      transitionResetRef.current = null;
+    if (enterFrameRef.current !== null) {
+      window.cancelAnimationFrame(enterFrameRef.current);
+      enterFrameRef.current = null;
     }
   }
 
@@ -170,18 +175,17 @@ export function HomeHeroClient() {
     }
 
     clearAdvanceTimeout();
-    clearTransitionTimeouts();
-    setPanelAnimation(DEMO_EXIT_ANIMATION);
+    clearTransitionHandlers();
+    setIsPanelVisible(false);
 
     transitionTimeoutRef.current = window.setTimeout(() => {
       setActiveDemoIndex(index);
-      setPanelAnimation(DEMO_ENTER_ANIMATION);
-      transitionResetRef.current = window.setTimeout(() => {
-        setPanelAnimation("");
-        transitionResetRef.current = null;
-      }, DEMO_ENTER_DURATION);
       transitionTimeoutRef.current = null;
-    }, DEMO_EXIT_DURATION);
+      enterFrameRef.current = window.requestAnimationFrame(() => {
+        setIsPanelVisible(true);
+        enterFrameRef.current = null;
+      });
+    }, DEMO_TRANSITION_DURATION);
   }
 
   function queueNextDemo() {
@@ -189,7 +193,7 @@ export function HomeHeroClient() {
     advanceTimeoutRef.current = window.setTimeout(() => {
       transitionToDemo((activeDemoIndexRef.current + 1) % homeDemos.length);
       advanceTimeoutRef.current = null;
-    }, DEMO_ADVANCE_DELAY);
+    }, DEMO_HOLD_DELAY);
   }
 
   function selectDemo(index: number) {
@@ -202,18 +206,11 @@ export function HomeHeroClient() {
       style={{ height: "calc(100svh - var(--fd-nav-height, 3.5rem))" }}
     >
       <div className="mx-auto flex h-full w-full max-w-[1380px] items-center px-[clamp(1.25rem,3vw,2.5rem)]">
-        <div className="grid w-full grid-cols-1 items-center gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-12">
-          <div className="space-y-7">
-            <h1 className="text-[clamp(2.5rem,5.8vw,5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-balance text-fd-foreground">
-              Build polished CLIs
-              <br />
-              with TypeScript.
+        <div className="grid w-full grid-cols-1 items-center gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:gap-12">
+          <div className="space-y-6">
+            <h1 className="text-4xl leading-8 font-semibold leading-[0.92] tracking-[-0.04em] text-balance text-fd-foreground sm:text-5xl lg:text-6xl">
+              Build polished CLIs with TypeScript.
             </h1>
-
-            <p className="max-w-[30ch] text-[clamp(0.95rem,1.3vw,1.1rem)] leading-snug text-fd-muted-foreground">
-              Prompts, logs, tables, trees, diffs, spinners, and progress from
-              one builder API.
-            </p>
 
             <div className="flex items-center gap-4 rounded-lg border border-fd-border bg-fd-card px-4 py-3">
               <code className="flex-1 overflow-x-auto text-[13px] font-medium tracking-tight text-fd-foreground">
@@ -268,25 +265,31 @@ export function HomeHeroClient() {
 
           <div className="flex items-center">
             <div className="w-full overflow-hidden rounded-xl border border-fd-border bg-fd-card">
-              <div className="flex items-center justify-between border-b border-fd-border px-4 py-[10px]">
-                <div className="flex min-w-0 items-center gap-3">
-                  <TerminalDots />
-                  <span className="text-[11px] font-medium tracking-wide text-fd-muted-foreground">
-                    terminal
-                  </span>
-                </div>
+              <div className="flex items-center justify-between border-b border-fd-border px-4 py-3">
+                <TerminalDots />
                 <DemoPager
                   activeIndex={activeDemoIndex}
                   onSelect={selectDemo}
                 />
               </div>
 
-              <div className="h-[min(56svh,460px)] overflow-hidden p-5">
-                <div className={`h-full ${panelAnimation}`.trim()}>
+              <div className="h-[min(58svh,480px)] overflow-hidden p-5">
+                <div
+                  className="h-full"
+                  style={{
+                    opacity: isPanelVisible ? 1 : 0,
+                    transform: isPanelVisible
+                      ? "translate3d(0, 0, 0) scale(1)"
+                      : "translate3d(0, 10px, 0) scale(0.985)",
+                    transition: `opacity ${DEMO_TRANSITION_DURATION}ms cubic-bezier(0.22, 1, 0.36, 1), transform ${DEMO_TRANSITION_DURATION}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+                    willChange: "opacity, transform",
+                  }}
+                >
                   <OscliDemo
                     key={activeDemo.id}
                     cli={activeDemo.cli}
                     answers={activeDemo.answers}
+                    theme={activeDemo.terminalTheme ?? "auto"}
                     replay={false}
                     fade={false}
                     speed="fast"

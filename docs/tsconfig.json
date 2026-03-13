@@ -18,8 +18,9 @@
     "incremental": true,
     "paths": {
       "@/*": ["./*"],
-      "@oscli-dev/oscli": ["../packages/oscli/src/index.ts"],
-      "@oscli-dev/react": ["../packages/react/src/index.ts"],
+      "@oscli-dev/oscli": ["node_modules/@oscli-dev/oscli/src/index.ts"],
+      "@oscli-dev/react": ["node_modules/@oscli-dev/react/src/index.ts"],
+      "collections/*": [".source/*"],
       "fumadocs-mdx:collections/*": [".source/*"]
     },
     "plugins": [

@@ -6,8 +6,10 @@ icon: Tv
 
 `OscliDemo` replays an `oscli` CLI in React.
 
-> **Warning:** This feature is experimental. It can break, differ from terminal
-> behavior, or fail in some setups.
+<Callout type="warning">
+This feature is experimental. It can break, differ from terminal
+behavior, or fail in some setups.
+</Callout>
 
 It uses the same CLI instance you already ship. If you register `cli.main()`,
 the demo follows that handler in order.
@@ -16,7 +18,7 @@ the demo follows that handler in order.
 
 Install the React package with the core package.
 
-```bash
+```npm
 npm install @oscli-dev/react @oscli-dev/oscli
 ```
 
