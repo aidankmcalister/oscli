@@ -208,6 +208,8 @@ type ResolvedAnimateTiming = {
   loopDelay: number;
 };
 
+const MIN_ANIMATE_SPIN_DURATION = 1000;
+
 let spinnerModulePromise: Promise<typeof import("./primitives/spinner")> | null = null;
 let progressModulePromise: Promise<typeof import("./primitives/progress")> | null = null;
 let commanderModulePromise: Promise<typeof import("commander")> | null = null;
@@ -1979,10 +1981,29 @@ export function createCLI<
       options?: SpinnerOptions,
     ) => {
       if (animateEventPush) {
+        const startedAt = Date.now();
         animateEventPush({ type: "spin_start", label });
-        const result = await fn();
-        animateEventPush({ type: "spin_complete", label });
-        return result;
+        try {
+          const result = await fn();
+          const remaining = Math.max(
+            0,
+            MIN_ANIMATE_SPIN_DURATION - (Date.now() - startedAt),
+          );
+          if (remaining > 0) {
+            await wait(remaining);
+          }
+          animateEventPush({ type: "spin_complete", label });
+          return result;
+        } catch (error) {
+          const remaining = Math.max(
+            0,
+            MIN_ANIMATE_SPIN_DURATION - (Date.now() - startedAt),
+          );
+          if (remaining > 0) {
+            await wait(remaining);
+          }
+          throw error;
+        }
       }
       const { spin: runSpinner } = await loadSpinnerModule();
       return runSpinner(label, fn, {

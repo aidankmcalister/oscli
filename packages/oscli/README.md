@@ -74,9 +74,9 @@ await cli.run(async () => {
 
 ## Register once, run later
 
-If you want the same CLI instance to drive terminal execution and tools like
-`<OscliDemo />`, register the single-command handler once with `cli.main()`,
-then call `cli.run()` at the entrypoint.
+If you want the same CLI instance to drive terminal execution and experimental
+tools like `<OscliDemo />`, register the single-command handler once with
+`cli.main()`, then call `cli.run()` at the entrypoint.
 
 ```ts
 const cli = createCLI((b) => ({

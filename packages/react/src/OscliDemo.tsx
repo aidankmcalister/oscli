@@ -21,6 +21,9 @@ const SPEED_PRESETS: Record<DemoSpeed, SpeedConfig> = {
   fast:   { typeDelay: 85,  promptDelay: 420,  fadeDuration: 340, replayDelay: 3000 },
 };
 
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
+const SPINNER_FRAME_INTERVAL = 80;
+
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
 /**
@@ -535,6 +538,8 @@ export function OscliDemo<TCli extends AnimatableCLI = AnimatableCLI>({
   const onRunCompleteRef = useRef(onRunComplete);
   onRunCompleteRef.current = onRunComplete;
 
+  const [spinnerFrameIndex, setSpinnerFrameIndex] = useState(0);
+
   useEffect(() => {
     let cancelled = false;
     const hasPromptConfigs = Boolean(cli._promptConfigs);
@@ -788,6 +793,24 @@ export function OscliDemo<TCli extends AnimatableCLI = AnimatableCLI>({
     viewport.scrollTop = viewport.scrollHeight;
   }, [lines]);
 
+  useEffect(() => {
+    const hasActiveSpinner = lines.some(
+      (line) => line.kind === "spin" && !line.done,
+    );
+    if (!hasActiveSpinner) {
+      setSpinnerFrameIndex(0);
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setSpinnerFrameIndex((current) => (current + 1) % SPINNER_FRAMES.length);
+    }, SPINNER_FRAME_INTERVAL);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [lines]);
+
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   const hasOutro = lines.some((l) => l.kind === "outro");
@@ -898,13 +921,8 @@ export function OscliDemo<TCli extends AnimatableCLI = AnimatableCLI>({
                 {line.done ? (
                   <span style={{ color: t.success }}>✓</span>
                 ) : (
-                  <span
-                    style={{
-                      color: t.accent,
-                      animation: "oscli-blink 0.8s step-end infinite",
-                    }}
-                  >
-                    ⠋
+                  <span style={{ color: t.accent }}>
+                    {SPINNER_FRAMES[spinnerFrameIndex]}
                   </span>
                 )}
                 <span>{"  "}</span>

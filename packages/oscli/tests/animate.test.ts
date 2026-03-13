@@ -407,6 +407,7 @@ describe("cli.animate", () => {
       .mockImplementation(() => true);
 
     try {
+      const startedAt = Date.now();
       const events = await collectEvents(
         cli.animate({
           inputs: {
@@ -422,6 +423,7 @@ describe("cli.animate", () => {
           },
         }),
       );
+      const elapsed = Date.now() - startedAt;
 
       expect(events).toContainEqual({
         type: "spin_start",
@@ -453,6 +455,7 @@ describe("cli.animate", () => {
         expect.objectContaining({ key: "features" }),
       );
       expect(stdout).not.toHaveBeenCalled();
+      expect(elapsed).toBeGreaterThanOrEqual(950);
     } finally {
       stdout.mockRestore();
     }
