@@ -208,7 +208,7 @@ export function HomeHeroClient() {
       <div className="mx-auto flex h-full w-full max-w-[1380px] items-center px-[clamp(1.25rem,3vw,2.5rem)]">
         <div className="grid w-full grid-cols-1 items-center gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:gap-12">
           <div className="space-y-6">
-            <h1 className="text-4xl leading-8 font-semibold leading-[0.92] tracking-[-0.04em] text-balance text-fd-foreground sm:text-5xl lg:text-6xl">
+            <h1 className="text-4xl font-semibold leading-[1.02] tracking-[-0.035em] text-balance text-fd-foreground sm:text-5xl sm:leading-[0.99] lg:text-6xl lg:leading-[1.1]">
               Build polished CLIs with TypeScript.
             </h1>
 
