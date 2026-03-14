@@ -100,8 +100,6 @@ type CLIConfig<
   TFlags extends FlagDefinitions,
 > = {
   title?: TitleConfig;
-  /** @deprecated Use `title` instead. */
-  description?: string;
   prompts?: TPrompts;
   flags?: TFlags;
   theme?: ThemeOverride | ThemePreset;
@@ -794,11 +792,11 @@ function resolveAnimateChoiceLabel(
   return String(match ?? rawValue ?? "");
 }
 
-function resolveTitleText(config: { title?: TitleConfig; description?: string }): string {
+function resolveTitleText(config: { title?: TitleConfig }): string {
   if (config.title) {
     return typeof config.title === "string" ? config.title : config.title.text;
   }
-  return config.description ?? "";
+  return "";
 }
 
 function resolveTitleStyle(config: { title?: TitleConfig }): TitleStyle | undefined {
@@ -827,15 +825,15 @@ function renderStyledTitle(
   return result;
 }
 
-function deriveAnimateIntroMessage(description?: string): string {
-  return description?.trim() ?? "";
+function deriveAnimateIntroMessage(title?: string): string {
+  return title?.trim() ?? "";
 }
 
 function deriveAnimateOutroMessage(
-  description: string | undefined,
+  title: string | undefined,
   resolvedValues: Map<string, unknown>,
 ): string {
-  const normalized = description?.trim().toLowerCase() ?? "";
+  const normalized = title?.trim().toLowerCase() ?? "";
   const primaryValue =
     typeof resolvedValues.get("project") === "string"
       ? (resolvedValues.get("project") as string)
