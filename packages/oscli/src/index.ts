@@ -12,6 +12,6 @@ export {
   type TitleConfig,
   type TitleStyle,
 } from "./client";
-export { type AsciiStyle } from "./primitives/ascii";
+
 export { type ProgressStyle } from "./primitives/progress";
 export { levenshtein, suggest } from "./suggest";

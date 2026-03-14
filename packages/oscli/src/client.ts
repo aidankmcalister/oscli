@@ -25,7 +25,7 @@ import {
   resetPromptSummaryWidth,
   writePromptSummary,
 } from "./primitives/prompt";
-import type { AsciiStyle } from "./primitives/ascii";
+
 import { box as renderBox } from "./primitives/box";
 import { diff as renderDiff } from "./primitives/diff";
 import { renderDivider } from "./primitives/divider";
@@ -35,11 +35,9 @@ import { table as renderTable } from "./primitives/table";
 import { tree as renderTree, type TreeNode } from "./primitives/tree";
 import { createStorage } from "./storage";
 import { suggest as suggestValue } from "./suggest";
-import * as pc from "picocolors";
 import {
   activeTheme as theme,
   applyTheme,
-  colorFormatters,
   type ThemePreset,
   type ThemeOverride,
   themePresets,
@@ -118,15 +116,9 @@ type CLIConfig<
   emojis?: boolean;
 };
 
-let asciiModulePromise: Promise<typeof import("./primitives/ascii")> | null = null;
 let spinnerModulePromise: Promise<typeof import("./primitives/spinner")> | null = null;
 let progressModulePromise: Promise<typeof import("./primitives/progress")> | null = null;
 let commanderModulePromise: Promise<typeof import("commander")> | null = null;
-
-function loadAsciiModule() {
-  asciiModulePromise ??= import("./primitives/ascii");
-  return asciiModulePromise;
-}
 
 function loadSpinnerModule() {
   spinnerModulePromise ??= import("./primitives/spinner");
@@ -949,29 +941,6 @@ export function createCLI<
     tree: (data: TreeNode) => renderTree(data),
     diff: (before: string, after: string) => {
       writeSectionLines(renderDiff(before, after));
-    },
-    ascii: async (text: string, style?: AsciiStyle) => {
-      const { ascii: renderAscii } = await loadAsciiModule();
-      const lines = renderAscii(text);
-      if (lines.length === 0) {
-        return;
-      }
-      const colorize = style?.color
-        ? (s: string) => {
-            let result = colorFormatters[style.color!](s);
-            if (style.bold) result = pc.bold(result);
-            if (style.dim) result = pc.dim(result);
-            return result;
-          }
-        : style?.bold
-          ? (s: string) => pc.bold(s)
-          : style?.dim
-            ? (s: string) => pc.dim(s)
-            : (s: string) => s;
-      for (const line of lines) {
-        writeLine(colorize(line));
-      }
-      writeSectionGap();
     },
     box: (options: { title?: string; content: string }) => {
       if (animateEventPush) {

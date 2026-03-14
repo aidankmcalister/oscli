@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { diff } from "../src/primitives/diff";
-import { ascii } from "../src/primitives/ascii";
+
 import { renderDivider } from "../src/primitives/divider";
 import { tree } from "../src/primitives/tree";
 import { stripAnsi, visibleLength } from "../src/theme";
@@ -30,30 +30,6 @@ describe("diff rendering", () => {
     const stripped = stripAnsi(output);
 
     expect(stripped).toContain("+ new content");
-  });
-});
-
-describe("ascii rendering", () => {
-  it("produces consistent-width lines for a word", () => {
-    const lines = ascii("HI");
-    expect(lines.length).toBeGreaterThan(0);
-
-    const widths = lines.map((line) => line.length);
-    const firstWidth = widths[0];
-    for (const width of widths) {
-      expect(width).toBe(firstWidth);
-    }
-  });
-
-  it("renders uppercase regardless of input case", () => {
-    const lower = ascii("ab");
-    const upper = ascii("AB");
-    expect(lower).toEqual(upper);
-  });
-
-  it("returns empty array for empty string", () => {
-    const lines = ascii("");
-    expect(lines).toEqual([]);
   });
 });
 
