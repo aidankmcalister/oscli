@@ -259,11 +259,14 @@ export function applyTheme(
         ...(override.border ? { border: byColorName(override.border) } : {}),
       };
 
+  const hasSidebar = mergedSymbols.pipe.length > 0;
+
   const resolved: ResolvedTheme = {
     symbols: mergedSymbols,
     color,
     layout: {
       ...baseTheme.layout,
+      indent: hasSidebar ? baseTheme.layout.indent : "",
       spacing: override.spacing ?? baseTheme.layout.spacing,
     },
   };

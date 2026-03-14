@@ -898,8 +898,11 @@ export function createCLI<
       if (resolvedTheme.layout.spacing > 0) {
         process.stdout.write("\n".repeat(resolvedTheme.layout.spacing));
       }
+      const introPrefix = theme.symbols.intro.length > 0
+        ? `${theme.color.border(theme.symbols.intro)}  `
+        : "";
       writeLine(
-        `${theme.color.border(theme.symbols.intro)}  ${renderStyledTitle(message, titleStyle, theme.color.title)}`,
+        `${introPrefix}${renderStyledTitle(message, titleStyle, theme.color.title)}`,
       );
       setRailEnabled(true);
       writeSectionGap();
@@ -915,8 +918,11 @@ export function createCLI<
 
       clearPersistentCorner();
       setRailEnabled(false);
+      const outroPrefix = theme.symbols.outro.length > 0
+        ? `${theme.color.border(theme.symbols.outro)}  `
+        : "";
       writeLine(
-        `${theme.color.border(theme.symbols.outro)}  ${theme.color.title(message)}`,
+        `${outroPrefix}${theme.color.title(message)}`,
       );
       if (resolvedTheme.layout.spacing > 0) {
         process.stdout.write("\n".repeat(resolvedTheme.layout.spacing));
