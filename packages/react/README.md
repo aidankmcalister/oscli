@@ -39,19 +39,20 @@ export function Demo() {
 
 ## Run CLI code
 
-Register `cli.main()` once. `OscliDemo` replays the prompts and output from
-that handler.
+Use `cli.main()` to register the handler separately so `OscliDemo` can replay
+it via `cli.animate()`.
 
 ```tsx
 import { createCLI } from "@oscli-dev/oscli";
 
 export const cli = createCLI((b) => ({
-  description: "create-app",
+  title: "create-app",
   prompts: {
     project: b.text().label("Project").default("my-app"),
   },
 }));
 
+// Register handler for OscliDemo replay
 cli.main(async () => {
   await cli.prompt.project();
   await cli.spin("Scaffolding project", async () => {});

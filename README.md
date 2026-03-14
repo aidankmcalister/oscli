@@ -74,9 +74,8 @@ await cli.run(async () => {
 
 ## Register once, run later
 
-If you want the same CLI instance to drive terminal execution and experimental
-tools like `<OscliDemo />`, register the single-command handler once with
-`cli.main()`, then call `cli.run()` at the entrypoint.
+Use `cli.main()` only when you need the handler registered separately — for
+example, when sharing the CLI instance with `<OscliDemo />` for replay.
 
 ```ts
 const cli = createCLI((b) => ({
@@ -86,6 +85,7 @@ const cli = createCLI((b) => ({
   },
 }));
 
+// Register handler for OscliDemo replay
 cli.main(async () => {
   await cli.prompt.project();
   cli.success(`Created ${cli.storage.project}`);

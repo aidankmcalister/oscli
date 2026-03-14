@@ -11,8 +11,8 @@ This feature is experimental. It can break, differ from terminal
 behavior, or fail in some setups.
 </Callout>
 
-It uses the same CLI instance you already ship. If you register `cli.main()`,
-the demo follows that handler in order.
+It uses the same CLI instance you already ship. Register a handler with
+`cli.main()` so the demo can replay it via `cli.animate()`.
 
 ## Install
 
@@ -41,8 +41,8 @@ export function DemoSection() {
 
 ## Run CLI code
 
-Register `cli.main()` once. `OscliDemo` replays the prompts and output from
-that handler.
+Use `cli.main()` here so the handler is registered without executing — `OscliDemo`
+replays it via `cli.animate()`. For normal CLI usage, prefer `cli.run(fn)` instead.
 
 ```tsx
 import { createCLI } from "@oscli-dev/oscli";

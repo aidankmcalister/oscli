@@ -1,10 +1,11 @@
 import { createCLI } from "../packages/oscli/src/index";
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export const cli = createCLI((b) => ({
   title: "create-app",
-  theme: "basic",
+  theme: "minimal",
   prompts: {
     project: b.text().label("Project").default("my-app"),
     framework: b
@@ -25,7 +26,7 @@ export const cli = createCLI((b) => ({
   },
 }));
 
-cli.main(async () => {
+async function main() {
   cli.intro("create-app");
 
   await cli.prompt.project();
@@ -97,12 +98,8 @@ cli.main(async () => {
 
   cli.success(`Created ${project} with ${framework} and ${packageManager}.`);
   cli.outro(`Project ready in ./${project}`);
-});
-
-export async function runCreateApp() {
-  await cli.run();
 }
 
 if (import.meta.main) {
-  await runCreateApp();
+  await cli.run(main);
 }
