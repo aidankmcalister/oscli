@@ -68,6 +68,58 @@ describe("progress formatting", () => {
     expect(strippedLine.includes("%")).toBe(false);
   });
 
+  it("keeps steps-style progress lines at constant visible width across all step indices", () => {
+    const steps = ["fetch", "parse", "transform", "save"] as const;
+    const context = createProgressGroup(
+      [{ label: "pipeline", steps }],
+      { style: "steps" },
+    );
+
+    const widths = steps.map((_, index) => {
+      const line = renderProgressLine({
+        icon: "⠋",
+        label: "pipeline",
+        elapsedMs: 1000,
+        steps,
+        currentStepIndex: index,
+        context,
+      });
+
+      return visibleLength(line);
+    });
+
+    const firstWidth = widths[0];
+    for (let i = 1; i < widths.length; i++) {
+      expect(widths[i]).toBe(firstWidth);
+    }
+  });
+
+  it("keeps steps-style lines stable with varying-length step names", () => {
+    const steps = ["a", "downloading", "x"] as const;
+    const context = createProgressGroup(
+      [{ label: "job", steps }],
+      { style: "steps" },
+    );
+
+    const widths = steps.map((_, index) => {
+      const line = renderProgressLine({
+        icon: "⠋",
+        label: "job",
+        elapsedMs: 500,
+        steps,
+        currentStepIndex: index,
+        context,
+      });
+
+      return visibleLength(line);
+    });
+
+    const firstWidth = widths[0];
+    for (let i = 1; i < widths.length; i++) {
+      expect(widths[i]).toBe(firstWidth);
+    }
+  });
+
   it("keeps a rail-decorated progress line inside terminal width", () => {
     const originalColumns = process.stdout.columns;
 
