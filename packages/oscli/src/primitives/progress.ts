@@ -62,7 +62,7 @@ const DEFAULT_STYLE: ProgressStyle = "hash";
 const MIN_TRACK_WIDTH = 8;
 const TIMER_WIDTH = 7;
 const PERCENT_WIDTH = 4;
-const ASCII_SPINNER_FRAMES = ["-", "\\", "|", "/"] as const;
+export const ASCII_SPINNER_FRAMES = ["-", "\\", "|", "/"] as const;
 
 function getDefaultTrackWidth(): number {
   return theme.layout.progressWidth;

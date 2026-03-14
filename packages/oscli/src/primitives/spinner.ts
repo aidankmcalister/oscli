@@ -1,5 +1,5 @@
 import type { ProgressGroupContext, ProgressStyle } from "./progress";
-import { SPINNER_FRAMES } from "./progress";
+import { ASCII_SPINNER_FRAMES, SPINNER_FRAMES } from "./progress";
 import { finalizeLiveLine, writeLine, writeLiveLine } from "../output";
 import { activeTheme as theme } from "../theme";
 
@@ -12,8 +12,6 @@ export type SpinnerOptions = {
   isTTY?: boolean;
   noColor?: boolean;
 };
-
-const ASCII_SPINNER_FRAMES = ["-", "\\", "|", "/"] as const;
 
 function formatElapsed(elapsedMs: number): string {
   if (elapsedMs < 60_000) {
