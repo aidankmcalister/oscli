@@ -21,8 +21,8 @@ export const primitiveMethods = {
     description: "Wraps async work in a spinner with elapsed time.",
   },
   progress: {
-    type: "cli.progress(label, steps, fn)",
-    description: "Runs a multi-step progress flow.",
+    type: "cli.progress(label, steps, fn, options?)",
+    description: "Runs a multi-step progress flow with optional style.",
   },
   divider: {
     type: "cli.divider(label?)",
@@ -133,6 +133,13 @@ await cli.run(async () => {
 ```oscli title="Rendered output"
   ⠸ Running steps  [######--------------]  [00:01]   33%
   ✓ Running steps  [####################]  [00:03]  100%
+```
+
+Pass `{ style }` as the fourth argument to change the bar appearance.
+Available styles: `"hash"` (default), `"line"`, `"steps"`, `"braille"`, `"block"`, `"gradient"`.
+
+```ts
+await cli.progress("Building", steps, fn, { style: "block" });
 ```
 
 ## Divider and link

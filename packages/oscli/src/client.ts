@@ -29,7 +29,7 @@ import { ascii as renderAscii, type AsciiStyle } from "./primitives/ascii";
 import { box as renderBox } from "./primitives/box";
 import { diff as renderDiff } from "./primitives/diff";
 import { renderDivider } from "./primitives/divider";
-import type { ProgressRenderOptions } from "./primitives/progress";
+import type { ProgressRenderOptions, ProgressStyle } from "./primitives/progress";
 import type { SpinnerOptions } from "./primitives/spinner";
 import { table as renderTable } from "./primitives/table";
 import { tree as renderTree, type TreeNode } from "./primitives/tree";
@@ -1008,6 +1008,7 @@ export function createCLI<
       label: string,
       steps: readonly TStep[],
       fn: (step: TStep, index: number) => Promise<void>,
+      options?: { style?: ProgressStyle },
     ) => {
       if (animateEventPush) {
         const progressSteps = steps.map((step) => String(step));
@@ -1068,6 +1069,7 @@ export function createCLI<
 
       const { progress: runProgress } = await loadProgressModule();
       await runProgress(label, steps, fn, {
+        style: options?.style,
         isTTY: cli._isTTY,
         noColor: cli._noColor,
       });
