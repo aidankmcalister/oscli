@@ -163,17 +163,12 @@ function getSummaryWidth(label: string, summaryWidth?: number): number {
 export function writePromptSummary(
   label: string,
   value: string,
-  summaryWidth?: number,
+  _summaryWidth?: number,
 ): void {
   const summaryLabel = `${label}:`;
-  const width = getSummaryWidth(
-    summaryLabel,
-    summaryWidth === undefined ? undefined : summaryWidth + 1,
-  );
-  const paddedLabel = padVisibleEnd(theme.color.key(summaryLabel), width);
 
   writeSectionLine(
-    `${currentIndent()}${theme.color.success(theme.symbols.success)} ${paddedLabel} ${theme.color.value(value)}`,
+    `${currentIndent()}${theme.color.success(theme.symbols.success)} ${theme.color.key(summaryLabel)} ${theme.color.value(value)}`,
   );
 }
 
