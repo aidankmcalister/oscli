@@ -88,7 +88,7 @@ need to override a few colors or symbols.
 
 These are the built-in presets.
 
-<Tabs items={["default", "basic", "rounded"]}>
+<Tabs items={["default", "basic", "rounded", "minimal"]}>
   <Tab value="default">
 
 ```ts title="src/cli.ts"
@@ -116,11 +116,21 @@ export const cli = createCLI(() => ({
 }));
 ```
   </Tab>
+  <Tab value="minimal">
+
+```ts title="src/cli.ts"
+export const cli = createCLI(() => ({
+  title: "minimal theme",
+  theme: "minimal",
+}));
+```
+  </Tab>
 </Tabs>
 
 - `default`: square corners, `│` rail, spacing `1`
-- `basic`: no corners, no rail, spacing `0`, cyan cursor and active state
+- `basic`: square corners, `│` rail, spacing `0`, cyan cursor and active state
 - `rounded`: `╭` and `╰` corners, pipe rail, spacing `1`
+- `minimal`: no sidebar rail, spacing `1`, cyan cursor — icons stand alone without a connecting rail
 
 ## Preset previews
 

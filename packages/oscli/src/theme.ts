@@ -74,7 +74,7 @@ export interface ThemeOverride {
   spacing?: 0 | 1 | 2;
 }
 
-export type ThemePreset = "default" | "basic" | "rounded";
+export type ThemePreset = "default" | "basic" | "rounded" | "minimal";
 
 export const themePresets: Record<ThemePreset, ThemeOverride> = {
   default: {},
@@ -86,6 +86,14 @@ export const themePresets: Record<ThemePreset, ThemeOverride> = {
   rounded: {
     sidebar: "rounded",
     spacing: 1,
+  },
+  minimal: {
+    sidebar: false,
+    spacing: 1,
+    cursor: "cyan",
+    active: "cyan",
+    success: "green",
+    info: "cyan",
   },
 };
 
