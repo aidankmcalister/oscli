@@ -25,7 +25,7 @@ import {
   resetPromptSummaryWidth,
   writePromptSummary,
 } from "./primitives/prompt";
-import { ascii as renderAscii, type AsciiStyle } from "./primitives/ascii";
+import type { AsciiStyle } from "./primitives/ascii";
 import { box as renderBox } from "./primitives/box";
 import { diff as renderDiff } from "./primitives/diff";
 import { renderDivider } from "./primitives/divider";
@@ -118,9 +118,15 @@ type CLIConfig<
   emojis?: boolean;
 };
 
+let asciiModulePromise: Promise<typeof import("./primitives/ascii")> | null = null;
 let spinnerModulePromise: Promise<typeof import("./primitives/spinner")> | null = null;
 let progressModulePromise: Promise<typeof import("./primitives/progress")> | null = null;
 let commanderModulePromise: Promise<typeof import("commander")> | null = null;
+
+function loadAsciiModule() {
+  asciiModulePromise ??= import("./primitives/ascii");
+  return asciiModulePromise;
+}
 
 function loadSpinnerModule() {
   spinnerModulePromise ??= import("./primitives/spinner");
@@ -938,7 +944,8 @@ export function createCLI<
     diff: (before: string, after: string) => {
       writeSectionLines(renderDiff(before, after));
     },
-    ascii: (text: string, style?: AsciiStyle) => {
+    ascii: async (text: string, style?: AsciiStyle) => {
+      const { ascii: renderAscii } = await loadAsciiModule();
       const lines = renderAscii(text);
       if (lines.length === 0) {
         return;
