@@ -103,7 +103,7 @@ export function decorateLine(line: string): string {
   const content = normalizeLine(line);
 
   if (theme.symbols.pipe.length === 0) {
-    return `${theme.layout.indent}${content}`;
+    return content;
   }
 
   return `${theme.color.border(theme.symbols.pipe)}  ${content}`;

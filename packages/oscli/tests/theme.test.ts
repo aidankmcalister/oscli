@@ -64,7 +64,7 @@ describe("theme overrides", () => {
   it("exports named theme presets", () => {
     expect(themePresets.default).toEqual({});
     expect(themePresets.basic).toMatchObject({
-      spacing: 0,
+      spacing: 1,
       cursor: "cyan",
       active: "cyan",
     });
@@ -80,7 +80,7 @@ describe("theme overrides", () => {
     expect(resolved.symbols.intro).toBe("┌");
     expect(resolved.symbols.outro).toBe("└");
     expect(resolved.symbols.pipe).toBe("│");
-    expect(resolved.layout.spacing).toBe(0);
+    expect(resolved.layout.spacing).toBe(1);
   });
 
   it("stores the resolved theme on the cli instance", () => {

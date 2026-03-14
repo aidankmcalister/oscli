@@ -79,7 +79,7 @@ export type ThemePreset = "default" | "basic" | "rounded" | "minimal";
 export const themePresets: Record<ThemePreset, ThemeOverride> = {
   default: {},
   basic: {
-    spacing: 0,
+    spacing: 1,
     cursor: "cyan",
     active: "cyan",
   },
@@ -89,7 +89,7 @@ export const themePresets: Record<ThemePreset, ThemeOverride> = {
   },
   minimal: {
     sidebar: false,
-    spacing: 1,
+    spacing: 0,
     cursor: "cyan",
     active: "cyan",
     success: "green",
