@@ -173,7 +173,7 @@ export function writePromptSummary(
   const paddedLabel = padVisibleEnd(theme.color.key(summaryLabel), width);
 
   writeSectionLine(
-    `${currentIndent()}${theme.color.success(theme.symbols.success)} ${paddedLabel}  ${theme.color.value(value)}`,
+    `${currentIndent()}${theme.color.success(theme.symbols.success)} ${paddedLabel} ${theme.color.value(value)}`,
   );
 }
 
