@@ -5,7 +5,6 @@ const sleep = (ms: number) =>
 
 export const cli = createCLI((b) => ({
   title: "create-app",
-  theme: "minimal",
   prompts: {
     project: b.text().label("Project").default("my-app"),
     framework: b
