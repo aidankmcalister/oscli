@@ -94,7 +94,7 @@ describe("browser-safe output primitives", () => {
         title: "Summary",
         content: "project: oscli",
       }),
-      divider: renderDivider("Results", false, false),
+      divider: renderDivider("Results"),
     }));
 
     expect(output.table).toContain("project");
