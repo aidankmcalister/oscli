@@ -9,11 +9,7 @@ function railWidth(): number {
   return visibleLength(`${theme.symbols.pipe}  `);
 }
 
-export function renderDivider(
-  label: string | undefined,
-  _noColor: boolean,
-  _isTTY: boolean,
-): string {
+export function renderDivider(label?: string): string {
   const columns = stdoutColumns(80);
   const availableWidth = Math.max(8, columns - railWidth() - 1);
 

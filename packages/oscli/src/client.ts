@@ -1976,7 +1976,7 @@ export function createCLI<
       );
     },
     divider: (label?: string) => {
-      writeSectionLine(renderDivider(label, cli._noColor, cli._isTTY));
+      writeSectionLine(renderDivider(label));
     },
     table: (
       headers: string[],
