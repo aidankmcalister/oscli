@@ -14,7 +14,7 @@ export const primitiveMethods = {
   },
   table: {
     type: "cli.table(headers, rows)",
-    description: "Returns a table string for printing or boxing.",
+    description: "Returns a table string. Composable with cli.box().",
   },
   spin: {
     type: "cli.spin(label, fn, options?)",
@@ -34,7 +34,7 @@ export const primitiveMethods = {
   },
   tree: {
     type: "cli.tree(data)",
-    description: "Returns a file-tree string for composition.",
+    description: "Returns a tree string. Composable with cli.box().",
   },
   diff: {
     type: "cli.diff(before, after)",
@@ -218,8 +218,11 @@ await cli.run(async () => {
 The optional `AsciiStyle` object accepts `color`, `bold`, and `dim`.
 
 <Callout type="info">
-  `cli.table()`, `cli.tree()`, and `cli.ascii()` return strings or print directly.
-  `cli.box()`, `cli.diff()`, `cli.divider()`, and `cli.link()` print immediately.
+  **Composable** — `cli.table()` and `cli.tree()` return strings so you can pass
+  them into other primitives (e.g. `cli.box({ content: cli.table(...) })`).
+
+  **Display** — `cli.box()`, `cli.diff()`, `cli.divider()`, `cli.ascii()`, and
+  `cli.link()` print to stdout immediately.
 </Callout>
 
 <Accordions type="multiple">
