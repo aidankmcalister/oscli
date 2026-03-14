@@ -129,7 +129,9 @@ These are the available prompt factories.
 
 Use `b.text()` for plain string input.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 export const cli = createCLI((b) => ({
   title: "text prompt",
   prompts: {
@@ -145,21 +147,25 @@ export const cli = createCLI((b) => ({
   },
 }));
 ```
-
+  </Tab>
+  <Tab value="Output">
 ```oscli title="Prompting"
 Project
 › my-app_
 ```
-
 ```oscli title="Submitted"
 ✓ Project: my-app
 ```
+  </Tab>
+</Tabs>
 
 ## Password
 
 Use `b.password()` when the user types sensitive text.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 export const cli = createCLI((b) => ({
   title: "password prompt",
   prompts: {
@@ -167,21 +173,25 @@ export const cli = createCLI((b) => ({
   },
 }));
 ```
-
+  </Tab>
+  <Tab value="Output">
 ```oscli title="Prompting"
 API token
 › ********_
 ```
-
 ```oscli title="Submitted"
 ✓ API token: ********
 ```
+  </Tab>
+</Tabs>
 
 ## Number
 
 Use `b.number()` when the stored value must be a number.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 export const cli = createCLI((b) => ({
   title: "number prompt",
   prompts: {
@@ -190,21 +200,25 @@ export const cli = createCLI((b) => ({
   },
 }));
 ```
-
+  </Tab>
+  <Tab value="Output">
 ```oscli title="Prompting"
 Budget
 $ › 500_
 ```
-
 ```oscli title="Submitted"
 ✓ Budget: 500
 ```
+  </Tab>
+</Tabs>
 
 ## Select
 
 Use `b.select()` for one choice from a fixed list.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 export const cli = createCLI((b) => ({
   title: "select prompt",
   prompts: {
@@ -216,23 +230,27 @@ export const cli = createCLI((b) => ({
   },
 }));
 ```
-
+  </Tab>
+  <Tab value="Output">
 ```oscli title="Prompting"
 Mode
 › ● personal   single-user setup
   ○ team       shared project
 ↑↓ navigate   enter select
 ```
-
 ```oscli title="Submitted"
 ✓ Mode: personal
 ```
+  </Tab>
+</Tabs>
 
 ## Multiselect
 
 Use `b.multiselect()` when the user can choose multiple values.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 export const cli = createCLI((b) => ({
   title: "multiselect prompt",
   prompts: {
@@ -244,7 +262,8 @@ export const cli = createCLI((b) => ({
   },
 }));
 ```
-
+  </Tab>
+  <Tab value="Output">
 ```oscli title="Prompting"
 Features  (1–3)
 › ◉ api
@@ -253,27 +272,42 @@ Features  (1–3)
   ○ tests
 ↑↓ navigate   space toggle   enter confirm
 ```
-
 ```oscli title="Submitted"
 ✓ Features: api, docs
 ```
+  </Tab>
+</Tabs>
 
 ## Confirm
 
 Use `b.confirm()` for boolean input. Toggle is the default. Simple keeps the
 older typed `y/n` flow.
 
-<Tabs items={["Toggle", "Simple"]}>
-  <Tab value="Toggle">
-
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+**Toggle** (default):
+```ts
 approved: b.confirm().label("Continue?").default(true)
 ```
-  </Tab>
-  <Tab value="Simple">
-
-```ts title="src/cli.ts"
+**Simple:**
+```ts
 approved: b.confirm("simple").label("Continue?").default(false)
+```
+  </Tab>
+  <Tab value="Output">
+```oscli title="Toggle"
+Continue?
+● Yes  /  ○ No
+```
+```oscli title="Toggle submitted"
+✓ Continue?: yes
+```
+```oscli title="Simple"
+Continue?
+› (y/N) _
+```
+```oscli title="Simple submitted"
+✓ Continue?: no
 ```
   </Tab>
 </Tabs>
@@ -281,30 +315,14 @@ approved: b.confirm("simple").label("Continue?").default(false)
 - `Toggle`: inline `Yes / No` selector, arrow keys or `y`/`n`, then Enter
 - `Simple`: typed `y/n` input
 
-```oscli title="Toggle prompting"
-Continue?
-● Yes  /  ○ No
-```
-
-```oscli title="Toggle submitted"
-✓ Continue?: yes
-```
-
-```oscli title="Simple prompting"
-Continue?
-› (y/N) _
-```
-
-```oscli title="Simple submitted"
-✓ Continue?: no
-```
-
 ## Search
 
 Use `b.search()` when the choice list is fixed, but the user needs to filter it
 while typing.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 export const cli = createCLI((b) => ({
   title: "search prompt",
   prompts: {
@@ -316,7 +334,8 @@ export const cli = createCLI((b) => ({
   },
 }));
 ```
-
+  </Tab>
+  <Tab value="Output">
 ```oscli title="Prompting"
 Framework
 › sv_
@@ -324,16 +343,19 @@ Framework
   ○ solid
 ↑↓ navigate   enter select
 ```
-
 ```oscli title="Submitted"
 ✓ Framework: svelte
 ```
+  </Tab>
+</Tabs>
 
 ## List
 
 Use `b.list()` for repeated free-form input. The prompt ends on an empty Enter.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 export const cli = createCLI((b) => ({
   title: "list prompt",
   prompts: {
@@ -341,27 +363,30 @@ export const cli = createCLI((b) => ({
   },
 }));
 ```
-
+  </Tab>
+  <Tab value="Output">
 ```oscli title="Prompting"
 Tags  1 / 5
 › api_
 ```
-
 ```oscli title="Accepted items"
 ✓ Tags: api
 ✓ Tags: docs
 ✓ Tags: tests
 ```
-
 ```oscli title="Submitted"
 ✓ Tags: api, docs, tests
 ```
+  </Tab>
+</Tabs>
 
 ## Date
 
 Use `b.date()` for validated date input stored as `Date`.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 export const cli = createCLI((b) => ({
   title: "date prompt",
   prompts: {
@@ -369,21 +394,22 @@ export const cli = createCLI((b) => ({
   },
 }));
 ```
-
+  </Tab>
+  <Tab value="Output">
 ```oscli title="Prompting"
 Deadline
 › 2026-03-31_
 ```
-
 ```oscli title="Submitted"
 ✓ Deadline: 2026-03-31
 ```
-
 ```oscli title="Validation error"
 Deadline
 › tomorrow_
 ✗ Use a valid date in YYYY-MM-DD format.
 ```
+  </Tab>
+</Tabs>
 
 <Callout type="info">
   If you do not set a placeholder for `b.date()`, `oscli` uses the configured

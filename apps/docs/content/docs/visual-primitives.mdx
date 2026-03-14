@@ -5,6 +5,7 @@ icon: Shapes
 ---
 
 import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { TypeTable } from "fumadocs-ui/components/type-table";
 
 export const primitiveMethods = {
@@ -54,7 +55,9 @@ Others print directly through the shared output system.
 Use `cli.table()` when you want aligned text, then pass that string into
 `cli.box()` when you want framing.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 await cli.run(async () => {
   const summary = cli.table(
     ["Field", "Value"],
@@ -71,33 +74,41 @@ await cli.run(async () => {
   });
 });
 ```
-
-```oscli title="Rendered output"
-  ┌─ Summary ───────────────┐
-  │  Field     Value        │
-  │  ─────────────────      │
-  │  project   oscli        │
-  │  teamSize  3            │
-  │  approved  true         │
-  └─────────────────────────┘
+  </Tab>
+  <Tab value="Output">
+```oscli
+┌─ Summary ──────────────┐
+│  Field     Value       │
+│  ───────────────       │
+│  project   oscli       │
+│  teamSize  3           │
+│  approved  true        │
+└────────────────────────┘
 ```
+  </Tab>
+</Tabs>
 
 ## Spinner
 
 Use `cli.spin()` around one async operation.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 await cli.run(async () => {
   await cli.spin("Installing packages", async () => {
     await new Promise((resolve) => setTimeout(resolve, 300));
   });
 });
 ```
-
-```oscli title="Rendered output"
-  ⠸ Installing packages...   0.2s
-  ✓ Installed packages       0.3s
+  </Tab>
+  <Tab value="Output">
+```oscli
+⠸ Installing packages...   0.2s
+✓ Installed packages       0.3s
 ```
+  </Tab>
+</Tabs>
 
 If you do not pass `doneLabel`, `oscli` tries to convert common gerunds to a
 past-tense completion label.
@@ -106,7 +117,9 @@ past-tense completion label.
 
 Use `cli.progress()` when your work already has named steps.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 await cli.run(async () => {
   const steps = ["Validate", "Build", "Finalize"] as const;
 
@@ -125,11 +138,14 @@ await cli.run(async () => {
   });
 });
 ```
-
-```oscli title="Rendered output"
-  ⠸ Running steps  [######--------------]  [00:01]   33%
-  ✓ Running steps  [####################]  [00:03]  100%
+  </Tab>
+  <Tab value="Output">
+```oscli
+⠸ Running steps  [######--------------]  [00:01]   33%
+✓ Running steps  [####################]  [00:03]  100%
 ```
+  </Tab>
+</Tabs>
 
 Pass `{ style }` as the fourth argument to change the bar appearance.
 Available styles: `"hash"` (default), `"line"`, `"steps"`, `"braille"`, `"block"`, `"gradient"`.
@@ -142,25 +158,32 @@ await cli.progress("Building", steps, fn, { style: "block" });
 
 Use dividers for section boundaries and links for docs or support URLs.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 await cli.run(async () => {
   cli.divider("Results");
   cli.link("oscli docs", "https://github.com/aidankmcalister/oscli");
 });
 ```
-
-```oscli title="Rendered output"
-  ───────────────── Results ────────────────
-  oscli docs (https://github.com/aidankmcalister/oscli)
+  </Tab>
+  <Tab value="Output">
+```oscli
+───────────────── Results ────────────────
+oscli docs (https://github.com/aidankmcalister/oscli)
 ```
+  </Tab>
+</Tabs>
 
 ## Tree
 
 Use `cli.tree()` when you want to render directory-style output inside another
 primitive.
 
-```ts title="src/cli.ts"
-export const structure = cli.tree({
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
+const structure = cli.tree({
   src: {
     "index.ts": null,
     "client.ts": null,
@@ -173,32 +196,40 @@ cli.box({
   content: structure,
 });
 ```
-
-```oscli title="Rendered output"
-  ┌─ Project ───────────────┐
-  │  ├─ src                │
-  │  │  ├─ index.ts        │
-  │  │  └─ client.ts       │
-  │  └─ package.json       │
-  └────────────────────────┘
+  </Tab>
+  <Tab value="Output">
+```oscli
+┌─ Project ──────────────┐
+│  ├─ src                │
+│  │  ├─ index.ts        │
+│  │  └─ client.ts       │
+│  └─ package.json       │
+└────────────────────────┘
 ```
+  </Tab>
+</Tabs>
 
 ## Diff
 
 Use `cli.diff()` when you want to show a text change without pulling in an
 external diff library.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 await cli.run(async () => {
   cli.diff("hello\nworld", "hello\noscli");
 });
 ```
-
-```oscli title="Rendered output"
-    hello
-  - world
-  + oscli
+  </Tab>
+  <Tab value="Output">
+```oscli
+  hello
+- world
++ oscli
 ```
+  </Tab>
+</Tabs>
 
 <Callout type="info">
   **Composable** — `cli.table()` and `cli.tree()` return strings so you can pass

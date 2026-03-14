@@ -4,6 +4,7 @@ description: Register subcommands with Commander while reusing the same oscli ru
 icon: GitBranch
 ---
 
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { TypeTable } from "fumadocs-ui/components/type-table";
 
 export const commandBehavior = {
@@ -63,16 +64,19 @@ If no subcommand is provided, Commander prints generated help output. If the
 user enters an unknown subcommand, `oscli` formats the error and uses the
 suggestion helper when a close match exists.
 
-```bash title="Shell"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```bash
 oscli depoy
 ```
-
-That prints an error like this:
-
-```oscli title="Output"
+  </Tab>
+  <Tab value="Output">
+```oscli
 Unknown command: "depoy"
 → Did you mean: deploy?
 ```
+  </Tab>
+</Tabs>
 
 <Callout type="info">
   `cli.command()` does not create command-specific prompt definitions. The same

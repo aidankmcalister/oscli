@@ -5,6 +5,7 @@ icon: Terminal
 ---
 
 import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { TypeTable } from "fumadocs-ui/components/type-table";
 
 export const outputMethods = {
@@ -76,22 +77,27 @@ boxes, progress, and links all stay visually aligned.
 
 Use `cli.log()` when you want one line in the normal output flow.
 
-```ts title="src/cli.ts"
+If you call `cli.log(level, message)`, the returned chain lets you apply text
+modifiers before the message is written.
+
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 await cli.run(async () => {
   cli.log("ready");
   cli.log("warn", "review this before production").bold().underline().flush();
   cli.success("Done.");
 });
 ```
-
-If you call `cli.log(level, message)`, the returned chain lets you apply text
-modifiers before the message is written.
-
-```oscli title="Rendered output"
+  </Tab>
+  <Tab value="Output">
+```oscli
   ready
   ⚠ review this before production
   ✓ Done.
 ```
+  </Tab>
+</Tabs>
 
 <TypeTable type={outputMethods} />
 
@@ -100,7 +106,9 @@ modifiers before the message is written.
 Use `cli.style()` when you want to build a style once and reuse it across
 multiple writes.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 await cli.run(async () => {
   const callout = cli.style().color("cyan").bold();
 
@@ -108,11 +116,14 @@ await cli.run(async () => {
   cli.log(callout.render("plain line with shared styling"));
 });
 ```
-
-```oscli title="Rendered output"
+  </Tab>
+  <Tab value="Output">
+```oscli
   ℹ important
   plain line with shared styling
 ```
+  </Tab>
+</Tabs>
 
 <TypeTable type={styleMethods} />
 
@@ -121,24 +132,31 @@ await cli.run(async () => {
 Use `cli.exit()` when the command cannot continue and you want a concrete next
 step in the error output.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 cli.exit("package.json not found.", {
   hint: "Run this command from the project root.",
   code: "not_found",
 });
 ```
-
-```oscli title="Rendered output"
+  </Tab>
+  <Tab value="Output">
+```oscli
   ✗ package.json not found.
     → Run this command from the project root.
 ```
+  </Tab>
+</Tabs>
 
 ## Inline confirm
 
 Use `cli.confirm()` when you need one simple confirmation in the middle of a
 flow without defining a named prompt.
 
-```ts title="src/cli.ts"
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
 await cli.run(async () => {
   const approved = await cli.confirm("Deploy now?", false);
 
@@ -147,11 +165,14 @@ await cli.run(async () => {
   }
 });
 ```
-
-```oscli title="Rendered output"
+  </Tab>
+  <Tab value="Output">
+```oscli
   Deploy now?
   › (y/N) _
 ```
+  </Tab>
+</Tabs>
 
 <Callout type="info">
   `cli.exit()` writes to stderr. `cli.log("error", ...)` also writes to stderr.
