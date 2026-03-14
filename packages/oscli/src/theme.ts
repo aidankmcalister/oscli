@@ -79,13 +79,9 @@ export type ThemePreset = "default" | "basic" | "rounded";
 export const themePresets: Record<ThemePreset, ThemeOverride> = {
   default: {},
   basic: {
-    sidebar: false,
     spacing: 0,
     cursor: "cyan",
     active: "cyan",
-    symbols: {
-      pipe: "│",
-    },
   },
   rounded: {
     sidebar: "rounded",

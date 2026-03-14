@@ -13,7 +13,7 @@ function renderEntries(
   return entries.flatMap(([name, value], index) => {
     const last = index === entries.length - 1;
     const branch = last ? "└─" : "├─";
-    const nextPrefix = `${prefix}${last ? "   " : "│  "}`;
+    const nextPrefix = `${prefix}${last ? "   " : `${theme.color.border("│")}  `}`;
     const line = `${theme.color.border(branch)} ${
       value === null ? theme.color.value(name) : theme.color.label(name)
     }`;

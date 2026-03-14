@@ -64,13 +64,9 @@ describe("theme overrides", () => {
   it("exports named theme presets", () => {
     expect(themePresets.default).toEqual({});
     expect(themePresets.basic).toMatchObject({
-      sidebar: false,
       spacing: 0,
       cursor: "cyan",
       active: "cyan",
-      symbols: {
-        pipe: "│",
-      },
     });
     expect(themePresets.rounded).toMatchObject({
       sidebar: "rounded",
@@ -78,11 +74,11 @@ describe("theme overrides", () => {
     });
   });
 
-  it("keeps the pipe when the basic preset disables corners", () => {
+  it("applies the basic preset with square corners and zero spacing", () => {
     const resolved = applyTheme(themePresets.basic);
 
-    expect(resolved.symbols.intro).toBe("");
-    expect(resolved.symbols.outro).toBe("");
+    expect(resolved.symbols.intro).toBe("┌");
+    expect(resolved.symbols.outro).toBe("└");
     expect(resolved.symbols.pipe).toBe("│");
     expect(resolved.layout.spacing).toBe(0);
   });
