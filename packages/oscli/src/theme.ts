@@ -21,10 +21,6 @@ const defaultSymbols = {
   error: "✗",
   warning: "⚠",
   info: "ℹ",
-  intro_square: "┌",
-  intro_rounded: "╭",
-  outro_square: "└",
-  outro_rounded: "╰",
   pipe: "│",
   intro: "┌",
   outro: "└",
@@ -204,34 +200,16 @@ export let activeTheme: ResolvedTheme = theme;
 /** @internal */
 export let activeNoColor = false;
 
-function resolveSidebarSymbols(
-  symbols: ThemeSymbols,
+function resolveSidebarOverrides(
   sidebar: ThemeOverride["sidebar"],
-): ThemeSymbols {
+): Partial<ThemeSymbols> {
   if (sidebar === "rounded") {
-    return {
-      ...symbols,
-      intro: symbols.intro_rounded,
-      outro: symbols.outro_rounded,
-      pipe: symbols.pipe,
-    };
+    return { intro: "╭", outro: "╰" };
   }
-
   if (sidebar === false) {
-    return {
-      ...symbols,
-      intro: "",
-      outro: "",
-      pipe: "",
-    };
+    return { intro: "", outro: "", pipe: "" };
   }
-
-  return {
-    ...symbols,
-    intro: symbols.intro_square,
-    outro: symbols.outro_square,
-    pipe: symbols.pipe,
-  };
+  return {};
 }
 
 export function applyTheme(
@@ -239,9 +217,9 @@ export function applyTheme(
   noColor = false,
 ): ResolvedTheme {
   const baseTheme = getDefaultTheme();
-  const baseSymbols = resolveSidebarSymbols(baseTheme.symbols, override.sidebar);
   const mergedSymbols = {
-    ...baseSymbols,
+    ...baseTheme.symbols,
+    ...resolveSidebarOverrides(override.sidebar),
     ...(override.symbols ?? {}),
   };
 
