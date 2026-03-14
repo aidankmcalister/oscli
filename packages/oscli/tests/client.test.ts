@@ -164,22 +164,26 @@ describe("createCLI", () => {
       .spyOn(process.stdout, "write")
       .mockImplementation(() => true);
 
-    const cli = createCLI(() => ({
-      title: "Plain log",
-      prompts: {},
-    }));
+    try {
+      const cli = createCLI(() => ({
+        title: "Plain log",
+        prompts: {},
+      }));
 
-    await withArgv(["node", "oscli"], async () => {
-      await cli.run(async () => {
-        cli.log("Working directory ready");
+      await withArgv(["node", "oscli"], async () => {
+        await cli.run(async () => {
+          cli.log("Working directory ready");
+        });
       });
-    });
 
-    const rendered = stdout.mock.calls.map((call) => String(call[0])).join("");
-    expect(rendered).toContain("Working directory ready");
-    expect(rendered).not.toContain("ℹ");
-    expect(rendered).not.toContain("✓");
-    expect(rendered).not.toContain("✗");
-    expect(rendered).not.toContain("⚠");
+      const rendered = stdout.mock.calls.map((call) => String(call[0])).join("");
+      expect(rendered).toContain("Working directory ready");
+      expect(rendered).not.toContain("ℹ");
+      expect(rendered).not.toContain("✓");
+      expect(rendered).not.toContain("✗");
+      expect(rendered).not.toContain("⚠");
+    } finally {
+      stdout.mockRestore();
+    }
   });
 });
