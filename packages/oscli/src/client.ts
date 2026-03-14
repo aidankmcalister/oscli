@@ -22,6 +22,7 @@ import {
 } from "./output";
 import {
   renderConfirmPrompt,
+  resetPromptSummaryWidth,
   writePromptSummary,
 } from "./primitives/prompt";
 import { ascii as renderAscii, type AsciiStyle } from "./primitives/ascii";
@@ -700,6 +701,7 @@ export function createCLI<
       hasResult = false;
       resultValue = undefined;
       setOutputSuppressed(false);
+      resetPromptSummaryWidth();
       clearPersistentCorner();
       resolvedTheme = applyTheme(resolvedThemeOverride, noColor);
       cli._theme = resolvedTheme;
@@ -853,6 +855,7 @@ export function createCLI<
         testFlagOverrides = null;
         exitInterceptor = null;
         setOutputSuppressed(false);
+        resetPromptSummaryWidth();
         clearPersistentCorner();
         process.argv = originalArgv;
         process.stdout.write = stdoutWrite as typeof process.stdout.write;

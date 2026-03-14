@@ -99,6 +99,11 @@ function currentIndent(): string {
 }
 let completedPromptLabelWidth = 0;
 
+/** @internal Reset accumulated prompt label width between CLI runs. */
+export function resetPromptSummaryWidth(): void {
+  completedPromptLabelWidth = 0;
+}
+
 function enableRawMode(): void {
   if (process.stdin.isTTY) {
     process.stdin.setRawMode(true);
