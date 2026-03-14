@@ -13,7 +13,8 @@
     "typecheck": "turbo typecheck",
     "dev": "turbo dev",
     "docs": "cd apps/docs && bun run dev",
-    "benchmark": "cd packages/oscli && bun run benchmark"
+    "benchmark": "cd packages/oscli && bun run benchmark",
+    "cli": "cd packages/oscli && bun run cli"
   },
   "devDependencies": {
     "@types/bun": "latest",

@@ -128,9 +128,9 @@ export const cli = createCLI(() => ({
 </Tabs>
 
 - `default`: square corners, `│` rail, spacing `1`
-- `basic`: square corners, `│` rail, spacing `0`, cyan cursor and active state
+- `basic`: square corners, `│` rail, spacing `1`, cyan cursor and active state
 - `rounded`: `╭` and `╰` corners, pipe rail, spacing `1`
-- `minimal`: no sidebar rail, spacing `1`, cyan cursor — icons stand alone without a connecting rail
+- `minimal`: no sidebar rail, spacing `0`, cyan cursor — icons stand alone without a connecting rail
 
 ## Preset previews
 
@@ -139,23 +139,33 @@ These examples show the overall layout difference, not the full color treatment.
 ```oscli title="default"
 ┌  project setup
 │
-│  ✓ Project:   my-app
+│  ✓ Project: my-app
 │
 └  Done.
 ```
 
 ```oscli title="basic"
-  project setup
-  ✓ Project:   my-app
-  Done.
+┌  project setup
+│
+│  ✓ Project: my-app
+│
+└  Done.
 ```
 
 ```oscli title="rounded"
 ╭  project setup
 │
-│  ✓ Project:   my-app
+│  ✓ Project: my-app
 │
 ╰  Done.
+```
+
+```oscli title="minimal"
+project setup
+
+✓ Project: my-app
+
+Done.
 ```
 
 ## Theme overrides

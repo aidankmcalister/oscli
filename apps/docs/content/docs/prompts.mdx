@@ -146,21 +146,13 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
-While prompting:
-
-```oscli
-┌
-│  Project
-│  › my-app_
-└
+```oscli title="Prompting"
+Project
+› my-app_
 ```
 
-After submit:
-
-```oscli
-┌
-│  ✓ Project:   my-app
-└
+```oscli title="Submitted"
+✓ Project: my-app
 ```
 
 ## Password
@@ -176,21 +168,13 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
-While prompting:
-
-```oscli
-┌
-│  API token
-│  › ********_
-└
+```oscli title="Prompting"
+API token
+› ********_
 ```
 
-After submit:
-
-```oscli
-┌
-│  ✓ API token:   ********
-└
+```oscli title="Submitted"
+✓ API token: ********
 ```
 
 ## Number
@@ -207,21 +191,13 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
-While prompting:
-
-```oscli
-┌
-│  Budget
-│  $ › 500_
-└
+```oscli title="Prompting"
+Budget
+$ › 500_
 ```
 
-After submit:
-
-```oscli
-┌
-│  ✓ Budget:   500
-└
+```oscli title="Submitted"
+✓ Budget: 500
 ```
 
 ## Select
@@ -241,23 +217,15 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
-While prompting:
-
-```oscli
-┌
-│  Mode
-│  › ● personal   single-user setup
-│    ○ team       shared project
-│  ↑↓ navigate   enter select
-└
+```oscli title="Prompting"
+Mode
+› ● personal   single-user setup
+  ○ team       shared project
+↑↓ navigate   enter select
 ```
 
-After submit:
-
-```oscli
-┌
-│  ✓ Mode:   personal
-└
+```oscli title="Submitted"
+✓ Mode: personal
 ```
 
 ## Multiselect
@@ -277,25 +245,17 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
-While prompting:
-
-```oscli
-┌
-│  Features  (1–3)
-│  › ◉ api
-│    ○ ui
-│    ◉ docs
-│    ○ tests
-│  ↑↓ navigate   space toggle   enter confirm
-└
+```oscli title="Prompting"
+Features  (1–3)
+› ◉ api
+  ○ ui
+  ◉ docs
+  ○ tests
+↑↓ navigate   space toggle   enter confirm
 ```
 
-After submit:
-
-```oscli
-┌
-│  ✓ Features:   api, docs
-└
+```oscli title="Submitted"
+✓ Features: api, docs
 ```
 
 ## Confirm
@@ -321,38 +281,22 @@ approved: b.confirm("simple").label("Continue?").default(false)
 - `Toggle`: inline `Yes / No` selector, arrow keys or `y`/`n`, then Enter
 - `Simple`: typed `y/n` input
 
-Toggle while prompting:
-
-```oscli
-┌
-│  Continue?
-│  ● Yes  /  ○ No
-└
+```oscli title="Toggle prompting"
+Continue?
+● Yes  /  ○ No
 ```
 
-Toggle after submit:
-
-```oscli
-┌
-│  ✓ Continue?:   yes
-└
+```oscli title="Toggle submitted"
+✓ Continue?: yes
 ```
 
-Simple while prompting:
-
-```oscli
-┌
-│  Continue?
-│  › (y/N) _
-└
+```oscli title="Simple prompting"
+Continue?
+› (y/N) _
 ```
 
-Simple after submit:
-
-```oscli
-┌
-│  ✓ Continue?:   no
-└
+```oscli title="Simple submitted"
+✓ Continue?: no
 ```
 
 ## Search
@@ -373,24 +317,16 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
-While prompting:
-
-```oscli
-┌
-│  Framework
-│  › sv_
-│  › ● svelte   minimal runtime
-│    ○ solid
-│  ↑↓ navigate   enter select
-└
+```oscli title="Prompting"
+Framework
+› sv_
+› ● svelte   minimal runtime
+  ○ solid
+↑↓ navigate   enter select
 ```
 
-After submit:
-
-```oscli
-┌
-│  ✓ Framework:   svelte
-└
+```oscli title="Submitted"
+✓ Framework: svelte
 ```
 
 ## List
@@ -406,31 +342,19 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
-While prompting:
-
-```oscli
-┌
-│  Tags  1 / 5
-│  › api_
-└
+```oscli title="Prompting"
+Tags  1 / 5
+› api_
 ```
 
-Accepted items:
-
-```oscli
-┌
-│  ✓ Tags:   api
-│  ✓ Tags:   docs
-│  ✓ Tags:   tests
-└
+```oscli title="Accepted items"
+✓ Tags: api
+✓ Tags: docs
+✓ Tags: tests
 ```
 
-After submit:
-
-```oscli
-┌
-│  ✓ Tags:   api, docs, tests
-└
+```oscli title="Submitted"
+✓ Tags: api, docs, tests
 ```
 
 ## Date
@@ -446,29 +370,19 @@ export const cli = createCLI((b) => ({
 }));
 ```
 
-While prompting:
-
-```oscli
-┌
-│  Deadline
-│  › 2026-03-31_
-└
+```oscli title="Prompting"
+Deadline
+› 2026-03-31_
 ```
 
-After submit:
-
-```oscli
-┌
-│  ✓ Deadline:   2026-03-31
-└
+```oscli title="Submitted"
+✓ Deadline: 2026-03-31
 ```
 
 ```oscli title="Validation error"
-┌
-│  Deadline
-│  › tomorrow_
-│  ✗ Use a valid date in YYYY-MM-DD format.
-└
+Deadline
+› tomorrow_
+✗ Use a valid date in YYYY-MM-DD format.
 ```
 
 <Callout type="info">

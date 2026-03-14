@@ -1,6 +1,6 @@
 ---
 title: Visual primitives
-description: Compose boxes, tables, spinners, progress, links, trees, diffs, and ASCII art with the same output system.
+description: Compose boxes, tables, spinners, progress, links, trees, and diffs with the same output system.
 icon: Shapes
 ---
 
@@ -39,10 +39,6 @@ export const primitiveMethods = {
   diff: {
     type: "cli.diff(before, after)",
     description: "Prints a line diff with added, removed, and unchanged lines.",
-  },
-  ascii: {
-    type: "cli.ascii(text, style?)",
-    description: "Prints large ASCII block art with optional color, bold, and dim styling.",
   },
 };
 
@@ -204,32 +200,12 @@ await cli.run(async () => {
   + oscli
 ```
 
-## ASCII art
-
-Use `cli.ascii()` when you want a large block-text banner in the terminal.
-
-```ts title="src/cli.ts"
-await cli.run(async () => {
-  cli.ascii("ORBIT", { color: "cyan", bold: true });
-});
-```
-
-```oscli title="Rendered output"
-  ██  ███  ███  ███ █████
- █  █ █  █ █  █  █    █
- █  █ ███  ███   █    █
- █  █ █ █  █  █  █    █
-  ██  █  █ ███  ███   █
-```
-
-The optional `AsciiStyle` object accepts `color`, `bold`, and `dim`.
-
 <Callout type="info">
   **Composable** — `cli.table()` and `cli.tree()` return strings so you can pass
   them into other primitives (e.g. `cli.box({ content: cli.table(...) })`).
 
-  **Display** — `cli.box()`, `cli.diff()`, `cli.divider()`, `cli.ascii()`, and
-  `cli.link()` print to stdout immediately.
+  **Display** — `cli.box()`, `cli.diff()`, `cli.divider()`, and `cli.link()`
+  print to stdout immediately.
 </Callout>
 
 <Accordions type="multiple">
