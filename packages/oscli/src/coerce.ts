@@ -328,8 +328,8 @@ export async function renderByType(
       });
 
     case "select":
-      if (!config.choices) {
-        throw new Error(`Select prompt "${label}" missing choices.`);
+      if (!config.choices || config.choices.length === 0) {
+        throw new Error(`Select prompt "${label}" requires at least one choice.`);
       }
       return renderSelectPrompt({
         label,
