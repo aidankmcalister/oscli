@@ -27,272 +27,14 @@ function lines(...value: string[]): string {
   return value.join("\n");
 }
 
-function mask(value: string): string {
-  return "*".repeat(Math.min(String(value).length, 18));
-}
-
-// ─── FORGE ────────────────────────────────────────────────────────────────────
-// Project scaffolding — emerald green, rounded sidebar
-const forgeCli = createCLI((b) => ({
-  title: "forge",
+// ─── NOVA ─────────────────────────────────────────────────────────────────────
+// AI model fine-tuning runner — indigo/violet
+const novaCli = createCLI((b) => ({
+  title: "nova",
   theme: {
     sidebar: "rounded",
-    active: "green",
-    border: "green",
-    symbols: {
-      cursor: "→",
-      radio_on: "◉",
-      radio_off: "○",
-      check_on: "◆",
-      check_off: "◇",
-    },
-  },
-  prompts: {
-    project: b.text().label("Project name").default("helios"),
-    template: b
-      .select({ choices: ["ts-library", "react-app", "api-server", "cli-tool"] as const })
-      .label("Template"),
-    features: b
-      .multiselect({ choices: ["testing", "linting", "docker", "ci-cd"] as const })
-      .label("Include")
-      .min(1)
-      .max(4),
-    pkgManager: b
-      .select({ choices: ["bun", "pnpm", "npm"] as const })
-      .label("Package manager"),
-    git: b.confirm("simple").label("Init git repo?").default(true),
-  },
-}));
-
-forgeCli.main(async () => {
-  forgeCli.box({
-    title: "FORGE",
-    content: lines(
-      "  scaffold  ·  build  ·  ship  ",
-      "  ────────────────────────────  ",
-      "  typescript  ·  bun  ·  turbo  ",
-    ),
-  });
-
-  await forgeCli.prompt.project();
-  await forgeCli.prompt.template();
-  await forgeCli.prompt.features();
-  await forgeCli.prompt.pkgManager();
-  await forgeCli.prompt.git();
-
-  const project = forgeCli.storage.project ?? "helios";
-  const template = forgeCli.storage.template ?? "ts-library";
-
-  await forgeCli.spin("Installing dependencies", async () => {
-    await sleep(400);
-  });
-
-  await forgeCli.progress(
-    "Scaffolding",
-    ["Create directories", "Write configs", "Setup tooling", "Init git"] as const,
-    async () => {
-      await sleep(230);
-    },
-  );
-
-  forgeCli.box({
-    title: `${project}/`,
-    content: forgeCli.tree({
-      [project]: {
-        src: {
-          "index.ts": null,
-          "types.ts": null,
-        },
-        tests: {
-          [`${project}.test.ts`]: null,
-        },
-        ".github": {
-          workflows: { "ci.yml": null },
-        },
-        "eslint.config.ts": null,
-        "package.json": null,
-        "tsconfig.json": null,
-        "README.md": null,
-      },
-    }),
-  });
-
-  forgeCli.success(`${template} project scaffolded at ./${project}`);
-  forgeCli.outro("Run bun dev to get started.");
-});
-
-// ─── RELAY ────────────────────────────────────────────────────────────────────
-// Deployment pipeline — sky blue, rounded sidebar
-const relayCli = createCLI((b) => ({
-  title: "relay",
-  theme: {
-    sidebar: "rounded",
-    active: "cyan",
-    border: "cyan",
-    symbols: {
-      cursor: "▶",
-      radio_on: "●",
-      radio_off: "○",
-      check_on: "◉",
-      check_off: "○",
-    },
-  },
-  prompts: {
-    service: b
-      .search({
-        choices: [
-          "api-gateway",
-          "auth-service",
-          "billing-worker",
-          "data-pipeline",
-          "edge-proxy",
-        ] as const,
-      })
-      .label("Service"),
-    tag: b.text().label("Image tag").default("v2.4.1"),
-    environment: b
-      .select({ choices: ["staging", "canary", "production"] as const })
-      .label("Environment"),
-    regions: b
-      .multiselect({
-        choices: ["us-east-1", "eu-west-1", "ap-southeast-1"] as const,
-      })
-      .label("Deploy to")
-      .min(1),
-    approve: b.confirm("simple").label("Approve rollout?").default(true),
-  },
-}));
-
-relayCli.main(async () => {
-  relayCli.box({
-    title: "RELAY",
-    content: lines(
-      "  build → push → deploy → verify  ",
-      "  ─────────────────────────────── ",
-      "  zero-downtime  ·  multi-region  ",
-    ),
-  });
-
-  await relayCli.prompt.service();
-  await relayCli.prompt.tag();
-  await relayCli.prompt.environment();
-  await relayCli.prompt.regions();
-  await relayCli.prompt.approve();
-
-  const service = relayCli.storage.service ?? "api-gateway";
-  const tag = relayCli.storage.tag ?? "v2.4.1";
-  const environment = relayCli.storage.environment ?? "production";
-
-  await relayCli.spin("Building image", async () => {
-    await sleep(360);
-  });
-
-  await relayCli.spin("Pushing to registry", async () => {
-    await sleep(280);
-  });
-
-  await relayCli.progress(
-    "Rolling out",
-    ["us-east-1", "eu-west-1", "ap-southeast-1"] as const,
-    async () => {
-      await sleep(300);
-    },
-  );
-
-  relayCli.box({
-    title: "Deployment",
-    content: relayCli.table(
-      ["Region", "Status", "Version", "Health"],
-      [
-        ["us-east-1", "live", tag, "100%"],
-        ["eu-west-1", "live", tag, "100%"],
-        ["ap-southeast-1", "live", tag, "100%"],
-      ],
-    ),
-  });
-
-  relayCli.success(`${service}@${tag} deployed to ${environment}.`);
-  relayCli.outro("Rollout complete. All regions healthy.");
-});
-
-// ─── VAULTSMITH ───────────────────────────────────────────────────────────────
-// Secret manager — amber gold, no sidebar
-const vaultsmithCli = createCLI((b) => ({
-  title: "vaultsmith",
-  theme: {
-    sidebar: false,
-    active: "yellow",
-    cursor: "yellow",
-    border: "yellow",
-    symbols: {
-      cursor: "▸",
-      check_on: "■",
-      check_off: "□",
-    },
-  },
-  prompts: {
-    workspace: b.text().label("Workspace").default("ledger"),
-    keys: b.list().label("Keys").min(2).max(4),
-    rootSecret: b.password().label("Root secret").default("vault_live_seed"),
-    rotationDays: b.number().label("Rotation days").min(7).max(90),
-    auditTrail: b.confirm().label("Enable audit trail?").default(true),
-  },
-}));
-
-vaultsmithCli.main(async () => {
-  vaultsmithCli.box({
-    title: "VAULTSMITH",
-    content: lines(
-      "  ┌──────────────────┐  ",
-      "  │  key management  │  ",
-      "  └──────────────────┘  ",
-      "  AES-256-GCM  ·  PBKDF2  ",
-    ),
-  });
-
-  await vaultsmithCli.prompt.workspace();
-  await vaultsmithCli.prompt.keys();
-  await vaultsmithCli.prompt.rootSecret();
-  await vaultsmithCli.prompt.rotationDays();
-  await vaultsmithCli.prompt.auditTrail();
-
-  const workspace = vaultsmithCli.storage.workspace ?? "ledger";
-  const keys = (vaultsmithCli.storage.keys as string[]) ?? [];
-  const rootSecret = vaultsmithCli.storage.rootSecret ?? "vault_live_seed";
-  const rotationDays = vaultsmithCli.storage.rotationDays ?? 30;
-
-  vaultsmithCli.box({
-    title: `${workspace}.vault`,
-    content: lines(
-      ...keys.map((k) => `${k}=••••••••••`),
-      `ROOT_SECRET=${mask(String(rootSecret))}`,
-      `ROTATION=${rotationDays}d`,
-      `ALGORITHM=AES-256-GCM`,
-    ),
-  });
-
-  await vaultsmithCli.spin("Sealing vault", async () => {
-    await sleep(380);
-  });
-
-  if (vaultsmithCli.storage.auditTrail) {
-    vaultsmithCli
-      .log("info", "Audit trail enabled — all access events will be logged.")
-      .flush();
-  }
-
-  vaultsmithCli.success(`Sealed ${keys.length + 1} secrets for ${workspace}.`);
-  vaultsmithCli.outro("Vault snapshot written.");
-});
-
-// ─── AXIOM ────────────────────────────────────────────────────────────────────
-// Schema migrations — violet, rounded sidebar
-const axiomCli = createCLI((b) => ({
-  title: "axiom",
-  theme: {
-    sidebar: "rounded",
-    active: "magenta",
-    border: "magenta",
+    active: "blue",
+    border: "blue",
     symbols: {
       cursor: "◆",
       radio_on: "◈",
@@ -302,251 +44,499 @@ const axiomCli = createCLI((b) => ({
     },
   },
   prompts: {
-    schema: b.text().label("Schema file").default("schema.prisma"),
-    operations: b
-      .multiselect({
+    model: b
+      .select({
         choices: [
-          "add-index",
-          "rename-column",
-          "drop-constraint",
-          "add-fk",
+          "llama-3.1-8b",
+          "mistral-7b",
+          "phi-3-mini",
+          "gemma-2-9b",
         ] as const,
       })
-      .label("Operations")
-      .min(1),
-    target: b
-      .select({ choices: ["staging", "production"] as const })
-      .label("Target env"),
-    dryRun: b.confirm("simple").label("Dry run?").default(false),
+      .label("Base model"),
+    dataset: b.text().label("Dataset path").default("data/finetune.jsonl"),
+    epochs: b.number().label("Epochs").min(1).max(10).default(3),
+    learningRate: b
+      .select({ choices: ["1e-4", "5e-5", "2e-5", "1e-5"] as const })
+      .label("Learning rate"),
+    quantize: b.confirm("simple").label("4-bit quantization?").default(true),
   },
 }));
 
-axiomCli.main(async () => {
-  axiomCli.box({
-    title: "AXIOM",
+novaCli.main(async () => {
+  novaCli.box({
+    title: "NOVA",
     content: lines(
-      "  diff  ·  plan  ·  apply  ·  rollback  ",
-      "  ─────────────────────────────────────  ",
-      "  zero-downtime schema migrations        ",
+      "  train  ·  eval  ·  export  ·  serve  ",
+      "  ────────────────────────────────────  ",
+      "  LoRA fine-tuning  ·  GGUF export     ",
     ),
   });
 
-  await axiomCli.prompt.schema();
-  await axiomCli.prompt.operations();
-  await axiomCli.prompt.target();
-  await axiomCli.prompt.dryRun();
+  await novaCli.prompt.model();
+  await novaCli.prompt.dataset();
+  await novaCli.prompt.epochs();
+  await novaCli.prompt.learningRate();
+  await novaCli.prompt.quantize();
 
-  const target = axiomCli.storage.target ?? "production";
+  const model = novaCli.storage.model ?? "mistral-7b";
+  const epochs = novaCli.storage.epochs ?? 3;
 
-  await axiomCli.spin("Analyzing schema diff", async () => {
-    await sleep(340);
+  await novaCli.spin("Loading base weights", async () => {
+    await sleep(360);
   });
 
-  axiomCli.box({
-    title: "Migration plan",
-    content: lines(
-      "  + CREATE INDEX idx_users_email ON users(email)",
-      "  ~ RENAME COLUMN events.user_id → events.user_uuid",
-      "  + ADD CONSTRAINT sessions_user_fk",
-    ),
+  await novaCli.spin("Tokenizing dataset", async () => {
+    await sleep(300);
   });
 
-  await axiomCli.progress(
-    "Applying",
-    ["users", "events", "sessions"] as const,
+  await novaCli.progress(
+    `Training (${epochs} epochs)`,
+    ["epoch 1/3", "epoch 2/3", "epoch 3/3"] as const,
     async () => {
-      await sleep(280);
+      await sleep(320);
     },
   );
 
-  axiomCli.box({
-    title: "Migration result",
-    content: axiomCli.table(
-      ["Table", "Operation", "Duration", "Status"],
+  novaCli.box({
+    title: "Training summary",
+    content: novaCli.table(
+      ["Metric", "Value"],
       [
-        ["users", "add-index", "42ms", "applied"],
-        ["events", "rename-column", "18ms", "applied"],
-        ["sessions", "add-fk", "31ms", "applied"],
+        ["train loss", "0.3142"],
+        ["eval loss", "0.3389"],
+        ["perplexity", "4.21"],
+        ["tokens/sec", "2,840"],
       ],
     ),
   });
 
-  axiomCli.success(`3 migrations applied to ${target}.`);
-  axiomCli.outro("Schema is up to date.");
+  novaCli.success(`${model} fine-tuned. Adapter saved to ./adapters/`);
+  novaCli.outro("Export with nova export --format gguf");
 });
 
-// ─── SENTINEL ─────────────────────────────────────────────────────────────────
-// Incident monitor — red/coral, no sidebar, no prompts
-const sentinelCli = createCLI(() => ({
-  title: "sentinel",
+// ─── DRIFT ────────────────────────────────────────────────────────────────────
+// Git branch lifecycle manager — slate/cool grey
+const driftCli = createCLI((b) => ({
+  title: "drift",
+  theme: {
+    sidebar: "rounded",
+    active: "white",
+    border: "white",
+    symbols: {
+      cursor: "›",
+      radio_on: "●",
+      radio_off: "○",
+      check_on: "☑",
+      check_off: "☐",
+    },
+  },
+  prompts: {
+    remote: b
+      .select({ choices: ["origin", "upstream", "fork"] as const })
+      .label("Remote"),
+    filter: b
+      .select({ choices: ["stale", "merged", "ahead", "all"] as const })
+      .label("Show branches"),
+    branches: b
+      .multiselect({
+        choices: [
+          "feat/payment-v2",
+          "fix/session-leak",
+          "chore/upgrade-deps",
+          "feat/dark-mode",
+          "refactor/auth-layer",
+        ] as const,
+      })
+      .label("Delete branches")
+      .min(1),
+    confirm: b.confirm("simple").label("Confirm deletion?").default(false),
+  },
+}));
+
+driftCli.main(async () => {
+  driftCli.box({
+    title: "DRIFT",
+    content: lines(
+      "  scan  ·  prune  ·  sync  ·  archive  ",
+      "  ─────────────────────────────────────",
+      "  git branch lifecycle management      ",
+    ),
+  });
+
+  await driftCli.prompt.remote();
+  await driftCli.prompt.filter();
+  await driftCli.prompt.branches();
+  await driftCli.prompt.confirm();
+
+  await driftCli.spin("Fetching remote refs", async () => {
+    await sleep(340);
+  });
+
+  driftCli.box({
+    title: "Branch report",
+    content: driftCli.table(
+      ["Branch", "Last commit", "Status", "Behind"],
+      [
+        ["feat/payment-v2", "3 weeks ago", "merged", "0"],
+        ["fix/session-leak", "5 weeks ago", "merged", "0"],
+        ["chore/upgrade-deps", "2 weeks ago", "stale", "12"],
+        ["feat/dark-mode", "6 weeks ago", "merged", "0"],
+        ["refactor/auth-layer", "4 weeks ago", "stale", "8"],
+      ],
+    ),
+  });
+
+  await driftCli.progress(
+    "Pruning",
+    [
+      "feat/payment-v2",
+      "fix/session-leak",
+      "chore/upgrade-deps",
+      "feat/dark-mode",
+    ] as const,
+    async () => {
+      await sleep(200);
+    },
+  );
+
+  driftCli.success("4 branches deleted. Working tree is clean.");
+  driftCli.outro("Run drift sync to update local refs.");
+});
+
+// ─── PRISM ────────────────────────────────────────────────────────────────────
+// API key provisioner with scopes — teal/emerald
+const prismCli = createCLI((b) => ({
+  title: "prism",
   theme: {
     sidebar: false,
-    active: "red",
-    border: "red",
+    active: "green",
+    cursor: "green",
+    border: "green",
+    symbols: {
+      cursor: "▸",
+      check_on: "◉",
+      check_off: "○",
+    },
+  },
+  prompts: {
+    name: b.text().label("Key name").default("prod-api-key"),
+    environment: b
+      .select({ choices: ["production", "staging", "development"] as const })
+      .label("Environment"),
+    scopes: b
+      .multiselect({
+        choices: [
+          "read:users",
+          "write:users",
+          "read:billing",
+          "write:billing",
+          "admin:org",
+        ] as const,
+      })
+      .label("Scopes")
+      .min(1),
+    rateLimit: b.number().label("Rate limit (req/min)").min(10).default(1000),
+    expiry: b
+      .select({ choices: ["30d", "90d", "1y", "never"] as const })
+      .label("Expires"),
+  },
+}));
+
+prismCli.main(async () => {
+  prismCli.box({
+    title: "PRISM",
+    content: lines(
+      "  provision  ·  rotate  ·  revoke  ",
+      "  ────────────────────────────────  ",
+      "  API key management & audit trail  ",
+    ),
+  });
+
+  await prismCli.prompt.name();
+  await prismCli.prompt.environment();
+  await prismCli.prompt.scopes();
+  await prismCli.prompt.rateLimit();
+  await prismCli.prompt.expiry();
+
+  const name = prismCli.storage.name ?? "prod-api-key";
+  const environment = prismCli.storage.environment ?? "production";
+
+  await prismCli.spin("Generating key material", async () => {
+    await sleep(300);
+  });
+
+  await prismCli.spin("Writing to secrets store", async () => {
+    await sleep(260);
+  });
+
+  prismCli.box({
+    title: "Key provisioned",
+    content: lines(
+      `  Name        ${name}`,
+      `  Env         ${environment}`,
+      `  Key         prism_live_••••••••••••••••`,
+      `  Rate limit  1,000 req/min`,
+      `  Scopes      read:users, write:users`,
+      `  Expires     90 days`,
+    ),
+  });
+
+  prismCli.log("warn", "Store this key — it will not be shown again.").flush();
+  prismCli.success(`Key provisioned for ${environment}.`);
+  prismCli.outro("Manage keys at prism.dev/keys");
+});
+
+// ─── ORBIT ────────────────────────────────────────────────────────────────────
+// Cron job scheduler — rose/pink
+const orbitCli = createCLI((b) => ({
+  title: "orbit",
+  theme: {
+    sidebar: "rounded",
+    active: "magenta",
+    border: "magenta",
+    symbols: {
+      cursor: "→",
+      radio_on: "◉",
+      radio_off: "○",
+      check_on: "◆",
+      check_off: "◇",
+    },
+  },
+  prompts: {
+    jobName: b.text().label("Job name").default("nightly-report"),
+    schedule: b
+      .select({
+        choices: [
+          "every 5 minutes",
+          "hourly",
+          "daily at midnight",
+          "weekly on Monday",
+          "custom",
+        ] as const,
+      })
+      .label("Schedule"),
+    command: b.text().label("Command").default("bun run generate-report"),
+    timezone: b
+      .select({
+        choices: ["UTC", "America/New_York", "Europe/London", "Asia/Tokyo"] as const,
+      })
+      .label("Timezone"),
+    retries: b.number().label("Max retries").min(0).max(5).default(3),
+  },
+}));
+
+orbitCli.main(async () => {
+  orbitCli.box({
+    title: "ORBIT",
+    content: lines(
+      "  schedule  ·  monitor  ·  replay  ",
+      "  ──────────────────────────────── ",
+      "  distributed cron with history    ",
+    ),
+  });
+
+  await orbitCli.prompt.jobName();
+  await orbitCli.prompt.schedule();
+  await orbitCli.prompt.command();
+  await orbitCli.prompt.timezone();
+  await orbitCli.prompt.retries();
+
+  const jobName = orbitCli.storage.jobName ?? "nightly-report";
+
+  await orbitCli.spin("Registering job", async () => {
+    await sleep(280);
+  });
+
+  orbitCli.box({
+    title: "Schedule preview",
+    content: orbitCli.table(
+      ["Run", "UTC time", "Status"],
+      [
+        ["next", "2026-03-16 00:00", "scheduled"],
+        ["last", "2026-03-15 00:00", "success (3.2s)"],
+        ["-1", "2026-03-14 00:00", "success (2.9s)"],
+        ["-2", "2026-03-13 00:00", "failed → retried"],
+      ],
+    ),
+  });
+
+  orbitCli.log("info", "Webhook set to POST /hooks/orbit on completion.").flush();
+  orbitCli.success(`${jobName} scheduled. Next run in 13h 24m.`);
+  orbitCli.outro("View live runs at orbit.run/dashboard");
+});
+
+// ─── ECHO ─────────────────────────────────────────────────────────────────────
+// Structured logging & tracing inspector — amber/warm
+const echoCli = createCLI(() => ({
+  title: "echo",
+  theme: {
+    sidebar: false,
+    active: "yellow",
+    border: "yellow",
     symbols: {
       cursor: "▶",
     },
   },
 }));
 
-sentinelCli.main(async () => {
-  sentinelCli.box({
-    title: "SENTINEL",
+echoCli.main(async () => {
+  echoCli.box({
+    title: "ECHO",
     content: lines(
-      "  monitor  ·  triage  ·  escalate  ",
-      "  ─────────────────────────────── ",
-      "  real-time incident detection     ",
+      "  tail  ·  filter  ·  trace  ·  export  ",
+      "  ─────────────────────────────────────  ",
+      "  structured log inspector              ",
     ),
   });
 
-  await sentinelCli.spin("Scanning edge nodes", async () => {
-    await sleep(380);
+  await echoCli.spin("Connecting to log stream", async () => {
+    await sleep(320);
   });
 
-  await sentinelCli.spin("Replaying traces", async () => {
-    await sleep(340);
+  await echoCli.spin("Fetching last 500 events", async () => {
+    await sleep(260);
   });
 
-  await sentinelCli.progress(
-    "Correlating",
-    [
-      "api-gateway",
-      "billing-worker",
-      "edge-proxy",
-      "session-cache",
-      "auth-service",
-    ] as const,
+  await echoCli.progress(
+    "Indexing traces",
+    ["api", "worker", "scheduler", "gateway", "cache"] as const,
     async () => {
-      await sleep(190);
+      await sleep(200);
     },
   );
 
-  sentinelCli.box({
-    title: "Active findings",
-    content: sentinelCli.table(
-      ["Service", "Issue", "Region", "Sev"],
+  echoCli.box({
+    title: "Top error sources (last 1h)",
+    content: echoCli.table(
+      ["Service", "Level", "Count", "P95 latency"],
       [
-        ["api-gateway", "latency spike", "us-east-1", "high"],
-        ["billing-worker", "retry storm", "eu-west-1", "medium"],
-        ["edge-proxy", "cert expiring", "ap-se-1", "medium"],
-        ["session-cache", "mem pressure", "us-east-1", "low"],
+        ["api", "error", "12", "420ms"],
+        ["worker", "warn", "48", "85ms"],
+        ["gateway", "error", "3", "1,240ms"],
+        ["scheduler", "info", "0", "12ms"],
       ],
     ),
   });
 
-  sentinelCli.log("error", "api-gateway latency is outside the SLO window.").flush();
-  sentinelCli.log("warn", "billing-worker retry rate above safe threshold.").flush();
-  sentinelCli.log("info", "edge-proxy cert expires in 14 days — renew soon.").flush();
-  sentinelCli.success("Escalation bundle prepared for on-call.");
-  sentinelCli.outro("Incident room is live.");
+  echoCli.log("error", "gateway: upstream timeout on /api/v2/export (3×).").flush();
+  echoCli.log("warn", "worker: job queue depth above 80% threshold.").flush();
+  echoCli.log("info", "api: deploy event detected, resetting baselines.").flush();
+  echoCli.success("Trace bundle written to ./traces/2026-03-15.tar.gz");
+  echoCli.outro("Run echo replay --trace <id> to inspect a request.");
 });
 
 export const homeDemos: HomeDemo[] = [
   {
-    id: "forge",
-    title: "forge",
-    cli: forgeCli,
+    id: "nova",
+    title: "nova",
+    cli: novaCli,
     answers: {
-      project: "helios",
-      template: "ts-library",
-      features: ["testing", "linting", "ci-cd"],
-      pkgManager: "bun",
-      git: true,
+      model: "mistral-7b",
+      dataset: "data/finetune.jsonl",
+      epochs: 3,
+      learningRate: "5e-5",
+      quantize: true,
     },
     terminalTheme: {
-      foreground: "#e8f5e9",
-      muted: "#5a7a5e",
-      border: "#1a3320",
-      cursor: "#e8f5e9",
-      accent: "#69f0ae",
-      success: "#b9f6ca",
-      warn: "#ffd54f",
+      foreground: "#e8eaf6",
+      muted: "#5c6494",
+      border: "#1a1e3c",
+      cursor: "#e8eaf6",
+      accent: "#7986cb",
+      success: "#a5d6a7",
+      warn: "#fff176",
       info: "#80deea",
-      error: "#ff8a80",
+      error: "#ef9a9a",
     },
   },
   {
-    id: "relay",
-    title: "relay",
-    cli: relayCli,
+    id: "drift",
+    title: "drift",
+    cli: driftCli,
     answers: {
-      service: "api-gateway",
-      tag: "v2.4.1",
-      environment: "production",
-      regions: ["us-east-1", "eu-west-1", "ap-southeast-1"],
-      approve: true,
+      remote: "origin",
+      filter: "merged",
+      branches: [
+        "feat/payment-v2",
+        "fix/session-leak",
+        "chore/upgrade-deps",
+        "feat/dark-mode",
+      ],
+      confirm: true,
     },
     terminalTheme: {
-      foreground: "#e1f5fe",
-      muted: "#4d7a8f",
-      border: "#0d2d3d",
-      cursor: "#e1f5fe",
-      accent: "#4dd0e1",
-      success: "#80cbc4",
+      foreground: "#eceff1",
+      muted: "#607d8b",
+      border: "#1c2b33",
+      cursor: "#eceff1",
+      accent: "#b0bec5",
+      success: "#a5d6a7",
       warn: "#ffcc80",
       info: "#81d4fa",
       error: "#ef9a9a",
     },
   },
   {
-    id: "vaultsmith",
-    title: "vaultsmith",
-    cli: vaultsmithCli,
+    id: "prism",
+    title: "prism",
+    cli: prismCli,
     answers: {
-      workspace: "ledger",
-      keys: ["API_KEY", "DATABASE_URL", "SESSION_SECRET"],
-      rootSecret: "vault_live_f29ab1d2e9",
-      rotationDays: 30,
-      auditTrail: true,
+      name: "prod-api-key",
+      environment: "production",
+      scopes: ["read:users", "write:users", "read:billing"],
+      rateLimit: 1000,
+      expiry: "90d",
     },
     terminalTheme: {
-      foreground: "#f7f1e3",
-      muted: "#948b6f",
-      border: "#3d3428",
-      cursor: "#f7f1e3",
-      accent: "#ffcd70",
-      success: "#9fe870",
-      warn: "#ffcd70",
-      info: "#7db5ff",
-      error: "#ff8b6a",
-    },
-  },
-  {
-    id: "axiom",
-    title: "axiom",
-    cli: axiomCli,
-    answers: {
-      schema: "schema.prisma",
-      operations: ["add-index", "rename-column", "add-fk"],
-      target: "production",
-      dryRun: false,
-    },
-    terminalTheme: {
-      foreground: "#f3e8ff",
-      muted: "#8a6da8",
-      border: "#2d1a45",
-      cursor: "#f3e8ff",
-      accent: "#ce93d8",
-      success: "#a5d6a7",
-      warn: "#ffe082",
-      info: "#90caf9",
+      foreground: "#e0f2f1",
+      muted: "#4a7a6e",
+      border: "#0d2b27",
+      cursor: "#e0f2f1",
+      accent: "#4db6ac",
+      success: "#80cbc4",
+      warn: "#ffcc80",
+      info: "#80deea",
       error: "#ef9a9a",
     },
   },
   {
-    id: "sentinel",
-    title: "sentinel",
-    cli: sentinelCli,
+    id: "orbit",
+    title: "orbit",
+    cli: orbitCli,
+    answers: {
+      jobName: "nightly-report",
+      schedule: "daily at midnight",
+      command: "bun run generate-report",
+      timezone: "UTC",
+      retries: 3,
+    },
     terminalTheme: {
       foreground: "#fce4ec",
-      muted: "#9e6b75",
-      border: "#3d1a22",
+      muted: "#9e6b7a",
+      border: "#3d1a25",
       cursor: "#fce4ec",
-      accent: "#ff8a80",
-      success: "#a5d6a7",
-      warn: "#ffe082",
-      info: "#90caf9",
-      error: "#ff5252",
+      accent: "#f48fb1",
+      success: "#c5e1a5",
+      warn: "#fff176",
+      info: "#81d4fa",
+      error: "#ff8a80",
+    },
+  },
+  {
+    id: "echo",
+    title: "echo",
+    cli: echoCli,
+    terminalTheme: {
+      foreground: "#fff8e1",
+      muted: "#9e8a50",
+      border: "#3d3010",
+      cursor: "#fff8e1",
+      accent: "#ffd54f",
+      success: "#c5e1a5",
+      warn: "#ffd54f",
+      info: "#80deea",
+      error: "#ff8a80",
     },
   },
 ];
