@@ -7,6 +7,7 @@ export const oscliLanguage: LanguageRegistration = {
   displayName: "oscli",
   scopeName: "text.oscli",
   patterns: [
+    { include: "#section-header" },
     { include: "#summary-line" },
     { include: "#hint-bar" },
     { include: "#value-line" },
@@ -25,6 +26,10 @@ export const oscliLanguage: LanguageRegistration = {
     { include: "#cursor" },
   ],
   repository: {
+    "section-header": {
+      match: "^# .+$",
+      name: "comment.section-header.oscli",
+    },
     "summary-line": {
       begin: "^(\\s*)(│)?(\\s{2})?(✓)(\\s{1,2})",
       beginCaptures: {
@@ -134,6 +139,10 @@ export const oscliLanguage: LanguageRegistration = {
 
 const oscliTokenColorsLight: NonNullable<ThemeRegistration["tokenColors"]> = [
   {
+    scope: "comment.section-header.oscli",
+    settings: { foreground: "#999999" },
+  },
+  {
     scope: "punctuation.definition.rail.corner.oscli",
     settings: { foreground: "#555555" },
   },
@@ -204,6 +213,10 @@ const oscliTokenColorsLight: NonNullable<ThemeRegistration["tokenColors"]> = [
 ];
 
 const oscliTokenColorsDark: NonNullable<ThemeRegistration["tokenColors"]> = [
+  {
+    scope: "comment.section-header.oscli",
+    settings: { foreground: "#555555" },
+  },
   {
     scope: "punctuation.definition.rail.corner.oscli",
     settings: { foreground: "#3a3a3a" },
