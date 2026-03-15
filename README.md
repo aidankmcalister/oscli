@@ -153,5 +153,5 @@ From the repository root, use these commands during development.
 bun install
 bun run build
 bun run test
-cd docs && bun run dev
+cd apps/docs && bun run dev
 ```
