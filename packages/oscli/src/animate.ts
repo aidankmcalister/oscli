@@ -327,11 +327,13 @@ export async function* animatePromptSequence(
   },
 ): AsyncGenerator<AnimateEvent, unknown> {
   const value = coerceAnimateValue(config, rawValue);
-  let finalValue = value;
   const resolved = await resolvePromptValue(config, value);
-  if (resolved.ok) {
-    finalValue = resolved.value;
+  if (!resolved.ok) {
+    throw new Error(
+      `cli.animate(): invalid value for prompt "${key}": ${resolved.error}`,
+    );
   }
+  const finalValue = resolved.value;
 
   if (config.type === "list") {
     const items = Array.isArray(value) ? value : [value];
