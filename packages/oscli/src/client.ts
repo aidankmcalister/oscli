@@ -311,7 +311,9 @@ export function createCLI<
 
       const option =
         runtimeConfig.type === "boolean"
-          ? new OptionCtor(`--${String(key)}`, runtimeConfig.label ?? "")
+          ? new OptionCtor(`--${String(key)} [value]`, runtimeConfig.label ?? "")
+              .default(false)
+              .argParser((v: string) => v !== "false" && v !== "0" && v !== "no" && v !== "n")
           : new OptionCtor(
               `--${String(key)} <value>`,
               runtimeConfig.label ?? "",
