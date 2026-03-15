@@ -2,14 +2,14 @@
   <picture>
     <source
       media="(prefers-color-scheme: dark)"
-      srcset="https://raw.githubusercontent.com/aidankmcalister/oscli/main/docs/public/favicon-dark.svg"
+      srcset="https://raw.githubusercontent.com/aidankmcalister/oscli/main/apps/docs/public/favicon-dark.svg"
     >
     <source
       media="(prefers-color-scheme: light)"
-      srcset="https://raw.githubusercontent.com/aidankmcalister/oscli/main/docs/public/favicon-light.svg"
+      srcset="https://raw.githubusercontent.com/aidankmcalister/oscli/main/apps/docs/public/favicon-light.svg"
     >
     <img
-      src="https://raw.githubusercontent.com/aidankmcalister/oscli/main/docs/public/favicon-light.svg"
+      src="https://raw.githubusercontent.com/aidankmcalister/oscli/main/apps/docs/public/favicon-light.svg"
       alt="oscli logo"
       width="72"
     >
@@ -50,7 +50,7 @@ Start with one flow, resolve prompts, and read typed values from
 import { createCLI } from "@oscli-dev/oscli";
 
 const cli = createCLI((b) => ({
-  description: "project setup",
+  title: "project setup",
   prompts: {
     project: b.text().label("Project").default("my-app"),
     approved: b.confirm().label("Continue?").default(true),
