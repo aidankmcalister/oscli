@@ -97,6 +97,16 @@ samp,
     font-family: var(--font-jetbrains-mono), monospace;
 }
 
+/* oscli code blocks: use a system monospace font so box-drawing characters
+   (U+2500–U+257F) render at the same advance width as ASCII.
+   JetBrains Mono is loaded with latin subset only, causing the browser to
+   fall back to a different font for ─ │ ┌ ┐ └ ┘, which misaligns borders. */
+pre:has(code[data-language="oscli"]),
+code[data-language="oscli"] {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+}
+
 * {
     scrollbar-width: thin;
     scrollbar-color: color-mix(
