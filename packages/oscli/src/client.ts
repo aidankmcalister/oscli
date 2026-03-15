@@ -708,7 +708,10 @@ export function createCLI<
       cli._jsonMode = jsonMode;
 
       const titleText = resolveTitleText(config);
-      program.name("oscli");
+      const inferredName = process.argv[1]
+        ? (process.argv[1].replace(/\.[cm]?[jt]s$/, "").split("/").pop() ?? "oscli")
+        : "oscli";
+      program.name(inferredName);
       if (titleText) {
         program.description(titleText);
       }
