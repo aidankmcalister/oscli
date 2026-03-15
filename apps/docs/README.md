@@ -5,7 +5,7 @@ This directory contains the Fumadocs site for `oscli`.
 Use these commands to work on the docs site locally.
 
 ```bash
-cd docs
+cd apps/docs
 bun install
 bun run dev
 ```
