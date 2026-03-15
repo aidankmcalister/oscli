@@ -93,77 +93,70 @@ neonWorkspaceCli.main(async () => {
   neonWorkspaceCli.outro(`Run: cd ${name} && pnpm install`);
 });
 
-// ─── GENTLE-CLI ───────────────────────────────────────────────────────────────
-// Design-system component factory — rounded sidebar, soft pastel tones
-const gentleCli = createCLI((b) => ({
-  title: "gentle-cli",
+// ─── DB-PUSH ──────────────────────────────────────────────────────────────────
+// Push schema changes to the database — no prompts, no sidebar, magenta/violet
+const dbPushCli = createCLI(() => ({
+  title: "db-push",
   theme: {
-    sidebar: "rounded",
-    active: "blue",
+    sidebar: false,
+    active: "magenta",
     cursor: "magenta",
-    border: "blue",
+    border: "magenta",
     symbols: {
       cursor: "›",
-      radio_on: "◉",
-      radio_off: "○",
-      check_on: "◆",
-      check_off: "◇",
     },
-  },
-  prompts: {
-    name: b.text().label("Component name").default("Button"),
-    folder: b
-      .select({
-        choices: ["atoms", "molecules", "organisms"] as const,
-      })
-      .label("Category"),
-    props: b.list().label("Props").max(4),
-    styled: b.confirm().label("Use styled-components?").default(false),
   },
 }));
 
-gentleCli.main(async () => {
-  await gentleCli.prompt.name();
-  await gentleCli.prompt.folder();
-  await gentleCli.prompt.props();
-  await gentleCli.prompt.styled();
-
-  const name = gentleCli.storage.name ?? "Button";
-  const folder = gentleCli.storage.folder ?? "atoms";
-  const props = (gentleCli.storage.props as string[]) ?? ["variant", "size"];
-  const styled = gentleCli.storage.styled ?? false;
-
-  await gentleCli.spin("Generating component", async () => {
-    await sleep(340);
+dbPushCli.main(async () => {
+  await dbPushCli.spin("Connecting to database", async () => {
+    await sleep(300);
   });
 
-  const file = `${name}.${styled ? "tsx" : "jsx"}`;
-
-  gentleCli.box({
-    title: "Scaffolded",
-    content: gentleCli.table(
-      ["File", "Folder", "Props", "Styled"],
-      [[file, `src/${folder}`, props.join(", "), styled ? "yes" : "no"]],
-    ),
+  await dbPushCli.spin("Reading schema.prisma", async () => {
+    await sleep(240);
   });
 
-  gentleCli.box({
-    title: `src/${folder}/${file}`,
+  await dbPushCli.spin("Diffing against live schema", async () => {
+    await sleep(360);
+  });
+
+  dbPushCli.box({
+    title: "Pending changes",
     content: lines(
-      `  import React from 'react';`,
-      `  `,
-      `  export interface ${name}Props {`,
-      ...props.map((p) => `    ${p}?: unknown;`),
-      `  }`,
-      `  `,
-      `  export const ${name} = (props: ${name}Props) => (`,
-      `    <div {...props} />`,
-      `  );`,
+      "  + CREATE TABLE users (",
+      "      id          UUID PRIMARY KEY,",
+      "      email       TEXT NOT NULL UNIQUE,",
+      "      created_at  TIMESTAMPTZ DEFAULT now()",
+      "  )",
+      "  + CREATE INDEX idx_users_email ON users(email)",
+      "  ~ ALTER TABLE posts ADD COLUMN author_id UUID",
+      "        REFERENCES users(id) ON DELETE SET NULL",
     ),
   });
 
-  gentleCli.success(`${name} component created in src/${folder}/`);
-  gentleCli.outro("Happy coding");
+  await dbPushCli.progress(
+    "Applying",
+    ["users", "idx_users_email", "posts.author_id"] as const,
+    async () => {
+      await sleep(260);
+    },
+  );
+
+  dbPushCli.box({
+    title: "Applied",
+    content: dbPushCli.table(
+      ["Change", "Type", "Duration"],
+      [
+        ["users", "CREATE TABLE", "12ms"],
+        ["idx_users_email", "CREATE INDEX", "8ms"],
+        ["posts.author_id", "ALTER TABLE", "6ms"],
+      ],
+    ),
+  });
+
+  dbPushCli.success("Schema pushed. 3 changes applied.");
+  dbPushCli.outro("Run db-push --env production to deploy to prod.");
 });
 
 // ─── CARGO-LITE ───────────────────────────────────────────────────────────────
@@ -403,15 +396,9 @@ export const homeDemos: HomeDemo[] = [
     },
   },
   {
-    id: "gentle-cli",
-    title: "gentle-cli",
-    cli: gentleCli,
-    answers: {
-      name: "Button",
-      folder: "atoms",
-      props: ["variant", "size", "disabled"],
-      styled: false,
-    },
+    id: "db-push",
+    title: "db-push",
+    cli: dbPushCli,
     terminalTheme: {
       foreground: "#f3e5f5",
       muted: "#7e57c2",
