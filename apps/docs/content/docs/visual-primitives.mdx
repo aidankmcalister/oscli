@@ -58,31 +58,18 @@ Use `cli.box()` to frame content in a titled section.
   <Tab value="Code">
 ```ts
 await cli.run(async () => {
-  const summary = cli.table(
-    ["Field", "Value"],
-    [
-      ["project", "oscli"],
-      ["teamSize", 3],
-      ["approved", true],
-    ],
-  );
-
   cli.box({
-    title: "Summary",
-    content: summary,
+    title: "Deployment",
+    content: "Ready to deploy to production.",
   });
 });
 ```
   </Tab>
   <Tab value="Output">
 ```oscli
-┌─ Summary ──────────────┐
-│  Field     Value       │
-│  ───────────────       │
-│  project   oscli       │
-│  teamSize  3           │
-│  approved  true        │
-└────────────────────────┘
+┌─ Deployment ───────────────────┐
+│  Ready to deploy to production. │
+└─────────────────────────────────┘
 ```
   </Tab>
 </Tabs>
@@ -107,7 +94,7 @@ const summary = cli.table(
   <Tab value="Output">
 ```oscli
 Field     Value
-───────────────
+─────────
 project   oscli
 teamSize  3
 approved  true
