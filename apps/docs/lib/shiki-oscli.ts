@@ -215,7 +215,7 @@ const oscliTokenColorsLight: NonNullable<ThemeRegistration["tokenColors"]> = [
 const oscliTokenColorsDark: NonNullable<ThemeRegistration["tokenColors"]> = [
   {
     scope: "comment.section-header.oscli",
-    settings: { foreground: "#555555" },
+    settings: { foreground: "#4b5563" },
   },
   {
     scope: "punctuation.definition.rail.corner.oscli",
