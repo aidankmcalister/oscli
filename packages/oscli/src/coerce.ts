@@ -94,7 +94,9 @@ export function createPromptBypassOption(
 ): CommanderOption | null {
   switch (config.type) {
     case "confirm":
-      return new OptionCtor(`--${promptName}`, "");
+      return new OptionCtor(`--${promptName} [value]`, "")
+        .default(false)
+        .argParser((v: string) => v !== "false" && v !== "0" && v !== "no" && v !== "n");
     case "multiselect":
     case "list":
       return new OptionCtor(`--${promptName} <value...>`, "");
