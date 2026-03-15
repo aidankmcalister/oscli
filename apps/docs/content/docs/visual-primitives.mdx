@@ -50,10 +50,9 @@ Others print directly through the shared output system.
 
 <TypeTable type={primitiveMethods} />
 
-## Box and table
+## Box
 
-Use `cli.table()` when you want aligned text, then pass that string into
-`cli.box()` when you want framing.
+Use `cli.box()` to frame content in a titled section.
 
 <Tabs items={['Code', 'Output']}>
   <Tab value="Code">
@@ -84,6 +83,34 @@ await cli.run(async () => {
 │  teamSize  3           │
 │  approved  true        │
 └────────────────────────┘
+```
+  </Tab>
+</Tabs>
+
+## Table
+
+Use `cli.table()` to return aligned column text. It composes directly into `cli.box()`.
+
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
+const summary = cli.table(
+  ["Field", "Value"],
+  [
+    ["project", "oscli"],
+    ["teamSize", 3],
+    ["approved", true],
+  ],
+);
+```
+  </Tab>
+  <Tab value="Output">
+```oscli
+Field     Value
+───────────────
+project   oscli
+teamSize  3
+approved  true
 ```
   </Tab>
 </Tabs>
@@ -154,22 +181,39 @@ Available styles: `"hash"` (default), `"line"`, `"steps"`, `"braille"`, `"block"
 await cli.progress("Building", steps, fn, { style: "block" });
 ```
 
-## Divider and link
+## Divider
 
-Use dividers for section boundaries and links for docs or support URLs.
+Use `cli.divider()` for visual section boundaries.
 
 <Tabs items={['Code', 'Output']}>
   <Tab value="Code">
 ```ts
 await cli.run(async () => {
   cli.divider("Results");
-  cli.link("oscli docs", "https://github.com/aidankmcalister/oscli");
 });
 ```
   </Tab>
   <Tab value="Output">
 ```oscli
 ───────────────── Results ────────────────
+```
+  </Tab>
+</Tabs>
+
+## Link
+
+Use `cli.link()` for docs or support URLs. Renders as a clickable OSC 8 hyperlink in supported terminals, otherwise falls back to `label (url)`.
+
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
+await cli.run(async () => {
+  cli.link("oscli docs", "https://github.com/aidankmcalister/oscli");
+});
+```
+  </Tab>
+  <Tab value="Output">
+```oscli
 oscli docs (https://github.com/aidankmcalister/oscli)
 ```
   </Tab>
