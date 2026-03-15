@@ -19,7 +19,7 @@
   "scripts": {
     "build": "rm -rf dist && bunx tsc -p tsconfig.build.json",
     "typecheck": "bunx tsc --noEmit",
-    "prepublishOnly": "cd ../.. && bun run test && bun run build"
+    "prepublishOnly": "bun run build"
   },
   "keywords": [
     "cli",

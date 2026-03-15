@@ -23,7 +23,7 @@
     "benchmark": "bun build src/index.ts --outdir /tmp/oscli-bench --target node --format esm --splitting --analyze && echo 'Entry point size:' && ls -lh /tmp/oscli-bench/index.js",
     "cli": "bun ../../examples/create-app.ts",
     "typecheck": "bun tsc --noEmit",
-    "prepublishOnly": "cd ../.. && bun run test && bun run build"
+    "prepublishOnly": "bun run test && bun run build"
   },
   "keywords": [
     "cli",
