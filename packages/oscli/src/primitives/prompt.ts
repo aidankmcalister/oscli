@@ -239,12 +239,12 @@ async function renderTextLikePrompt<TValue>(
       display = theme.color.muted(emptyPreview);
     }
 
-    const prefixText = prefix ? `${theme.color.muted(prefix)} ` : "";
+    const prefixText = prefix ? theme.color.muted(prefix) : "";
     const cursor = theme.color.cursor(theme.symbols.cursor);
     const caret = theme.color.cursor("_");
 
     lines.push(
-      `${currentIndent()}${prefixText}${cursor} ${
+      `${currentIndent()}${cursor} ${prefixText}${
         display.length > 0 ? `${display}${caret}` : caret
       }`,
     );
@@ -372,11 +372,13 @@ export async function renderNumberPrompt<TValue = number>(
         };
       }
 
+      const displayValue = prefix ? `${prefix}${parsed}` : String(parsed);
+
       if (!resolve) {
         return {
           ok: true,
           value: parsed as TValue,
-          summaryValue: String(parsed),
+          summaryValue: displayValue,
         };
       }
 
@@ -388,7 +390,7 @@ export async function renderNumberPrompt<TValue = number>(
       return {
         ok: true,
         value: result.value,
-        summaryValue: result.summaryValue ?? String(parsed),
+        summaryValue: result.summaryValue ?? displayValue,
       };
     },
   });
