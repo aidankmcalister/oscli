@@ -1,6 +1,6 @@
 import type { ColorName } from "./theme";
 
-// Canonical chain order for all prompt builders:
+// Canonical chain order:
 // b.<type>().label().describe().placeholder().default().optional().validate().transform().color()
 
 export type Validator<T> = (value: T) => true | string | Promise<true | string>;
@@ -17,7 +17,6 @@ export class PromptBuilder<T> {
   private _optional = false;
   private _validate?: Validator<T>;
   private _transform?: (value: unknown) => unknown;
-  private _theme?: string;
   private _promptColor?: ColorName;
 
   label(value: string): this {
@@ -56,11 +55,6 @@ export class PromptBuilder<T> {
     return this as unknown as PromptBuilder<U>;
   }
 
-  theme(value: string): this {
-    this._theme = value;
-    return this;
-  }
-
   color(value: ColorName): this {
     this._promptColor = value;
     return this;
@@ -76,7 +70,6 @@ export class PromptBuilder<T> {
       optional: this._optional,
       validate: this._validate,
       transform: this._transform,
-      theme: this._theme,
       promptColor: this._promptColor,
     };
   }

@@ -10,7 +10,6 @@ export type RuntimePromptConfig = {
   optional?: boolean;
   validate?: (value: unknown) => true | string | Promise<true | string>;
   transform?: (value: unknown) => unknown;
-  theme?: string;
   promptColor?: ColorName;
   choices?: readonly string[];
   rules?: Partial<Record<string, string>>;

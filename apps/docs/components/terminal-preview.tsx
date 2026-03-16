@@ -231,6 +231,21 @@ function renderLine(line: string): ReactNode[] {
   return renderPlainText(line);
 }
 
+/** Renders terminal lines without a card wrapper. Use inside custom layouts. */
+export function TerminalBody({ code }: { code: string }) {
+  const lines = code.replace(/\n$/, "").split("\n");
+
+  return (
+    <div className="oscli-terminal-body h-full">
+      {lines.map((line, index) => (
+        <div key={`${index}-${line}`} className="oscli-terminal-line">
+          {line.length > 0 ? renderLine(line) : <span>&nbsp;</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function TerminalPreview({
   code,
   title,
@@ -238,19 +253,11 @@ export function TerminalPreview({
   code: string;
   title?: string;
 }) {
-  const lines = code.replace(/\n$/, "").split("\n");
-
   return (
     <div className="not-prose my-4">
       <div className="oscli-terminal-frame">
         {title ? <div className="oscli-terminal-header">{title}</div> : null}
-        <div className="oscli-terminal-body">
-          {lines.map((line, index) => (
-            <div key={`${index}-${line}`} className="oscli-terminal-line">
-              {line.length > 0 ? renderLine(line) : <span>&nbsp;</span>}
-            </div>
-          ))}
-        </div>
+        <TerminalBody code={code} />
       </div>
     </div>
   );

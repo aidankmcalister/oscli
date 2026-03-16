@@ -4,9 +4,6 @@ description: Run oscli flows in Vitest without touching stdin or process.exit.
 icon: FlaskConical
 ---
 
-import { Step, Steps } from "fumadocs-ui/components/steps";
-import { TypeTable } from "fumadocs-ui/components/type-table";
-
 export const testOptions = {
   inputs: {
     type: "Partial<Record<keyof TPrompts, unknown>>",

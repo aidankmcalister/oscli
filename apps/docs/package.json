@@ -15,7 +15,6 @@
     "@base-ui/react": "^1.2.0",
     "@shikijs/themes": "^4.0.2",
     "@oscli-dev/oscli": "workspace:*",
-    "@oscli-dev/react": "workspace:*",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-select": "^2.2.6",

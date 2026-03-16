@@ -528,10 +528,6 @@ export function createCLI<
     });
   }
 
-  // TODO: Step 2 — cli.animate() browser adapter
-  // A framework-agnostic event emitter variant that streams animation
-  // events (prompt_start, keypress, prompt_submit, run_complete) so
-  // React/Svelte/Vue components can render the animation without a TTY.
   const _promptConfigs: Record<string, RuntimePromptConfig> = {};
   for (const [key, value] of runtimePromptConfigs) {
     _promptConfigs[String(key)] = value;
@@ -542,6 +538,7 @@ export function createCLI<
     flags,
     prompt,
     _theme: resolvedTheme,
+    _themeConfig: resolvedThemeOverride,
     _isTTY: isTTY,
     _noColor: noColor,
     _jsonMode: jsonMode,

@@ -316,237 +316,181 @@ export function moveIndexToward(current: number, target: number): number[] {
   return frames;
 }
 
+// ─── Type-specific preview sub-generators ────────────────────────────────────
+
+async function* animateSelectPreview(
+  key: string,
+  label: string,
+  config: RuntimePromptConfig,
+  value: unknown,
+  timing: ResolvedAnimateTiming,
+): AsyncGenerator<AnimateEvent> {
+  const promptType = animatePromptType(config);
+  const startIndex = 0;
+  const targetIndex = resolveAnimateChoiceIndex(config, value, startIndex);
+  const selectDelay = Math.max(timing.promptDelay, timing.typeDelay * 1.8, 120);
+
+  yield { type: "prompt_preview", key, label, promptType, lines: buildSelectPreviewLines(config, startIndex) };
+  await wait(humanizePause(selectDelay));
+
+  for (const index of moveIndexToward(startIndex, targetIndex)) {
+    yield { type: "prompt_preview", key, label, promptType, lines: buildSelectPreviewLines(config, index) };
+    await wait(humanizePause(Math.max(timing.typeDelay * 1.8, 120)));
+  }
+}
+
+async function* animateMultiselectPreview(
+  key: string,
+  label: string,
+  config: RuntimePromptConfig,
+  value: unknown,
+  timing: ResolvedAnimateTiming,
+  ignoreDefaults: boolean,
+): AsyncGenerator<AnimateEvent> {
+  const promptType = animatePromptType(config);
+  const choices = config.choices ?? [];
+  const defaultValues = new Set(
+    ignoreDefaults || !Array.isArray(config.defaultValue)
+      ? []
+      : config.defaultValue.map((entry) => String(entry)),
+  );
+  const targetValues = new Set(
+    Array.isArray(value) ? value.map((entry) => String(entry)) : [],
+  );
+  let activeIndex = 0;
+  let currentSelections = new Set(defaultValues);
+
+  yield { type: "prompt_preview", key, label, promptType, lines: buildMultiselectPreviewLines(config, activeIndex, currentSelections) };
+  await wait(humanizePause(Math.max(timing.promptDelay, timing.typeDelay * 2.2, 200)));
+
+  const toggles = choices
+    .map((choice, index) => ({ label: String(choice), index }))
+    .filter(({ label: choiceLabel }) => currentSelections.has(choiceLabel) !== targetValues.has(choiceLabel));
+
+  for (const toggle of toggles) {
+    for (const index of moveIndexToward(activeIndex, toggle.index)) {
+      activeIndex = index;
+      yield { type: "prompt_preview", key, label, promptType, lines: buildMultiselectPreviewLines(config, activeIndex, currentSelections) };
+      await wait(humanizePause(Math.max(timing.typeDelay * 2.2, 200)));
+    }
+
+    if (currentSelections.has(toggle.label)) {
+      currentSelections.delete(toggle.label);
+    } else {
+      currentSelections.add(toggle.label);
+    }
+
+    yield { type: "prompt_preview", key, label, promptType, lines: buildMultiselectPreviewLines(config, activeIndex, currentSelections) };
+    await wait(humanizePause(Math.max(timing.typeDelay * 2.2, 240)));
+  }
+}
+
+async function* animateConfirmTogglePreview(
+  key: string,
+  label: string,
+  config: RuntimePromptConfig,
+  value: unknown,
+  timing: ResolvedAnimateTiming,
+): AsyncGenerator<AnimateEvent> {
+  const promptType = animatePromptType(config);
+  const startValue = true;
+  const targetValue = Boolean(value);
+
+  yield { type: "prompt_preview", key, label, promptType, lines: buildConfirmPreviewLines(startValue) };
+  await wait(humanizePause(Math.max(timing.promptDelay, timing.typeDelay * 3, 340)));
+
+  if (startValue !== targetValue) {
+    yield { type: "prompt_preview", key, label, promptType, lines: buildConfirmPreviewLines(targetValue) };
+  }
+  await wait(humanizePause(Math.max(timing.typeDelay * 3, 340)));
+}
+
+async function* animateTypeCharacters(
+  key: string,
+  sequence: string,
+  timing: ResolvedAnimateTiming,
+): AsyncGenerator<AnimateEvent> {
+  let typed = "";
+  for (const [index, char] of Array.from(sequence).entries()) {
+    typed += char;
+    yield { type: "char", key, value: char, full: typed };
+    await wait(humanizeTypeDelay(timing.typeDelay, sequence, index));
+  }
+}
+
+function resolveSubmitDisplayValue(
+  config: RuntimePromptConfig,
+  finalValue: unknown,
+): string {
+  if (config.type === "select" || config.type === "search") {
+    return resolveAnimateChoiceLabel(config, finalValue);
+  }
+  if (config.type === "multiselect") {
+    return Array.isArray(finalValue)
+      ? finalValue.map((item) => resolveAnimateChoiceLabel(config, item)).join(", ")
+      : String(finalValue ?? "");
+  }
+  return formatPromptSummaryValue(config, finalValue);
+}
+
+// ─── Orchestrator ─────────────────────────────────────────────────────────────
+
 export async function* animatePromptSequence(
   key: string,
   label: string,
   config: RuntimePromptConfig,
   rawValue: unknown,
   timing: ResolvedAnimateTiming,
-  options?: {
-    ignoreDefaults?: boolean;
-  },
+  options?: { ignoreDefaults?: boolean },
 ): AsyncGenerator<AnimateEvent, unknown> {
   const value = coerceAnimateValue(config, rawValue);
   const resolved = await resolvePromptValue(config, value);
   if (!resolved.ok) {
-    throw new Error(
-      `cli.animate(): invalid value for prompt "${key}": ${resolved.error}`,
-    );
+    throw new Error(`cli.animate(): invalid value for prompt "${key}": ${resolved.error}`);
   }
   const finalValue = resolved.value;
+  const promptType = animatePromptType(config);
 
+  // List prompts emit one prompt_start → char → prompt_submit per item.
   if (config.type === "list") {
     const items = Array.isArray(value) ? value : [value];
     for (const item of items) {
-      yield {
-        type: "prompt_start",
-        key,
-        label,
-        promptType: animatePromptType(config),
-      };
-
+      yield { type: "prompt_start", key, label, promptType };
       await wait(humanizePause(timing.promptDelay));
 
       const sequence = String(item ?? "");
-      let typed = "";
-      for (const [index, char] of Array.from(sequence).entries()) {
-        typed += char;
-        yield {
-          type: "char",
-          key,
-          value: char,
-          full: typed,
-        };
-        await wait(humanizeTypeDelay(timing.typeDelay, sequence, index));
-      }
+      yield* animateTypeCharacters(key, sequence, timing);
 
-      yield {
-        type: "prompt_submit",
-        key,
-        label,
-        displayValue: typed,
-      };
-
+      yield { type: "prompt_submit", key, label, displayValue: sequence };
       await wait(humanizePause(timing.completionDelay));
     }
-
     return finalValue;
   }
 
-  yield {
-    type: "prompt_start",
-    key,
-    label,
-    promptType: animatePromptType(config),
-  };
+  yield { type: "prompt_start", key, label, promptType };
 
   if (config.type === "select" || config.type === "search") {
-    const startIndex = 0;
-    const targetIndex = resolveAnimateChoiceIndex(config, value, startIndex);
-
-    yield {
-      type: "prompt_preview",
-      key,
-      label,
-      promptType: animatePromptType(config),
-      lines: buildSelectPreviewLines(config, startIndex),
-    };
-
-    await wait(
-      humanizePause(Math.max(timing.promptDelay, timing.typeDelay * 1.8, 120)),
-    );
-
-    for (const index of moveIndexToward(startIndex, targetIndex)) {
-      yield {
-        type: "prompt_preview",
-        key,
-        label,
-        promptType: animatePromptType(config),
-        lines: buildSelectPreviewLines(config, index),
-      };
-      await wait(humanizePause(Math.max(timing.typeDelay * 1.8, 120)));
-    }
+    yield* animateSelectPreview(key, label, config, value, timing);
   } else if (config.type === "multiselect") {
-    const choices = config.choices ?? [];
-    const defaultValues = new Set(
-      options?.ignoreDefaults
-        ? []
-        : Array.isArray(config.defaultValue)
-          ? config.defaultValue.map((entry) => String(entry))
-          : [],
-    );
-    const targetValues = new Set(
-      Array.isArray(value) ? value.map((entry) => String(entry)) : [],
-    );
-    let activeIndex = 0;
-    let currentSelections = new Set(defaultValues);
-
-    yield {
-      type: "prompt_preview",
-      key,
-      label,
-      promptType: animatePromptType(config),
-      lines: buildMultiselectPreviewLines(
-        config,
-        activeIndex,
-        currentSelections,
-      ),
-    };
-
-    await wait(
-      humanizePause(Math.max(timing.promptDelay, timing.typeDelay * 2.2, 200)),
-    );
-
-    const choiceOrder = choices.map((choice, index) => ({
-      label: String(choice),
-      index,
-    }));
-    const toggles = choiceOrder.filter(({ label: choiceLabel }) =>
-      currentSelections.has(choiceLabel) !== targetValues.has(choiceLabel),
-    );
-
-    for (const toggle of toggles) {
-      for (const index of moveIndexToward(activeIndex, toggle.index)) {
-        activeIndex = index;
-        yield {
-          type: "prompt_preview",
-          key,
-          label,
-          promptType: animatePromptType(config),
-          lines: buildMultiselectPreviewLines(
-            config,
-            activeIndex,
-            currentSelections,
-          ),
-        };
-        await wait(humanizePause(Math.max(timing.typeDelay * 2.2, 200)));
-      }
-
-      const keyLabel = toggle.label;
-      if (currentSelections.has(keyLabel)) {
-        currentSelections.delete(keyLabel);
-      } else {
-        currentSelections.add(keyLabel);
-      }
-
-      yield {
-        type: "prompt_preview",
-        key,
-        label,
-        promptType: animatePromptType(config),
-        lines: buildMultiselectPreviewLines(
-          config,
-          activeIndex,
-          currentSelections,
-        ),
-      };
-      await wait(humanizePause(Math.max(timing.typeDelay * 2.2, 240)));
-    }
+    yield* animateMultiselectPreview(key, label, config, value, timing, options?.ignoreDefaults ?? false);
   } else if (config.type === "confirm" && config.confirmMode === "toggle") {
-    const startValue = true;
-    const targetValue = Boolean(value);
-
-    yield {
-      type: "prompt_preview",
-      key,
-      label,
-      promptType: animatePromptType(config),
-      lines: buildConfirmPreviewLines(startValue),
-    };
-
-    await wait(
-      humanizePause(Math.max(timing.promptDelay, timing.typeDelay * 3, 340)),
-    );
-
-    if (startValue !== targetValue) {
-      yield {
-        type: "prompt_preview",
-        key,
-        label,
-        promptType: animatePromptType(config),
-        lines: buildConfirmPreviewLines(targetValue),
-      };
-    }
-
-    await wait(humanizePause(Math.max(timing.typeDelay * 3, 340)));
+    yield* animateConfirmTogglePreview(key, label, config, value, timing);
   } else {
     await wait(humanizePause(timing.promptDelay));
   }
 
   const sequence = animateCharSequence(config, value);
   if (sequence !== null) {
-    let typed = "";
-    for (const [index, char] of Array.from(sequence).entries()) {
-      typed += char;
-      yield {
-        type: "char",
-        key,
-        value: char,
-        full: typed,
-      };
-      await wait(humanizeTypeDelay(timing.typeDelay, sequence, index));
-    }
-  }
-
-  let displayValue = formatPromptSummaryValue(config, finalValue);
-  if (config.type === "select" || config.type === "search") {
-    displayValue = resolveAnimateChoiceLabel(config, finalValue);
-  } else if (config.type === "multiselect") {
-    displayValue = Array.isArray(finalValue)
-      ? finalValue
-          .map((item) => resolveAnimateChoiceLabel(config, item))
-          .join(", ")
-      : String(finalValue ?? "");
+    yield* animateTypeCharacters(key, sequence, timing);
   }
 
   yield {
     type: "prompt_submit",
     key,
     label,
-    displayValue,
+    displayValue: resolveSubmitDisplayValue(config, finalValue),
   };
 
   await wait(humanizePause(timing.completionDelay));
-
   return finalValue;
 }

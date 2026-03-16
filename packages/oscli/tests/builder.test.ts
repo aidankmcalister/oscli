@@ -11,7 +11,6 @@ describe("createBuilder", () => {
       .describe("Project name")
       .placeholder("my-app")
       .default("my-app")
-      .theme("block")
       .config();
 
     expect(config).toMatchObject({
@@ -21,7 +20,6 @@ describe("createBuilder", () => {
       placeholder: "my-app",
       defaultValue: "my-app",
       optional: false,
-      theme: "block",
     });
   });
 
