@@ -1,8 +1,9 @@
-import { createCLI } from "../packages/oscli/src/index";
+import { createCLI } from "../../packages/oscli/src/index";
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-const themes = ["default", "basic", "rounded"] as const;
+const themes = ["default", "basic", "rounded", "minimal"] as const;
 
 type ThemeName = (typeof themes)[number];
 
@@ -78,7 +79,7 @@ for (let index = 0; index < themes.length; index += 1) {
     );
 
     cli.diff(
-      "theme: \"default\"\nruntime: \"npm\"",
+      'theme: "default"\nruntime: "npm"',
       `theme: \"${themeName}\"\nruntime: \"${cli.storage.runtime}\"`,
     );
 

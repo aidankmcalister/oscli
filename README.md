@@ -116,23 +116,25 @@ This repository publishes two packages.
 
 ## Examples
 
-The repository includes runnable examples for common workflows.
+The repository includes a smaller example suite with two layers.
 
-- [`create-app`](https://github.com/aidankmcalister/oscli/blob/main/examples/create-app.ts):
-  project scaffolding
-- [`deploy`](https://github.com/aidankmcalister/oscli/blob/main/examples/deploy.ts):
-  flags, progress, and confirmations
-- [`release`](https://github.com/aidankmcalister/oscli/blob/main/examples/release.ts):
-  versioning and final summaries
-- [`multi-command`](https://github.com/aidankmcalister/oscli/blob/main/examples/multi-command.ts):
-  subcommand routing
+- Concepts in
+  [`examples/concepts/`](https://github.com/aidankmcalister/oscli/tree/main/examples/concepts):
+  [`output-patterns`](https://github.com/aidankmcalister/oscli/blob/main/examples/concepts/output-patterns.ts),
+  [`prompt-patterns`](https://github.com/aidankmcalister/oscli/blob/main/examples/concepts/prompt-patterns.ts),
+  and
+  [`theme-showcase`](https://github.com/aidankmcalister/oscli/blob/main/examples/concepts/theme-showcase.ts)
+- Things you can build in
+  [`examples/real-world-clis/`](https://github.com/aidankmcalister/oscli/tree/main/examples/real-world-clis):
+  `create-app`, `db-migrate`, `deploy`, `github`, and `release`
 
 Run any example directly from the repository root.
 
 ```bash
-bun run examples/create-app.ts
-bun run examples/deploy.ts
-bun run examples/multi-command.ts list
+bun run examples/concepts/output-patterns.ts
+bun run examples/concepts/prompt-patterns.ts
+bun run examples/real-world-clis/create-app.ts
+bun run examples/real-world-clis/github.ts pr-list --state open
 ```
 
 ## Docs

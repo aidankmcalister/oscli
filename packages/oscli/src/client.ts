@@ -1097,6 +1097,192 @@ export function createCLI<
     exit: (message: string, options?: ExitOptions): never => {
       return exitWithMessage(message, options);
     },
+    raw: (line: string) => {
+      _writeInlineLine(`${theme.layout.indent}${theme.color.value(line)}`);
+    },
+    lines: (lines: string[]) => {
+      for (const line of lines) {
+        _writeInlineLine(`${theme.layout.indent}${theme.color.value(line)}`);
+      }
+    },
+    write: (content: string) => {
+      for (const line of content.split("\n")) {
+        _writeInlineLine(line);
+      }
+    },
+    step: (label: string, status: "active" | "done" | "error" | "warning" | "pending" = "active") => {
+      const icons: Record<string, () => string> = {
+        active: () => theme.color.active(theme.symbols.step_active),
+        done: () => theme.color.muted(theme.symbols.step_done),
+        error: () => theme.color.error(theme.symbols.error),
+        warning: () => theme.color.warning(theme.symbols.warning),
+        pending: () => theme.color.muted(theme.symbols.step_pending),
+      };
+      const colorize: Record<string, (s: string) => string> = {
+        active: theme.color.value,
+        done: theme.color.muted,
+        error: theme.color.error,
+        warning: theme.color.warning,
+        pending: theme.color.muted,
+      };
+      const icon = (icons[status] ?? icons.active)();
+      const colorFn = colorize[status] ?? theme.color.value;
+      _writeInlineLine(`${theme.layout.indent}${icon} ${colorFn(label)}`);
+    },
+    note: (message: string, title?: string) => {
+      const lines = message.split("\n");
+      const contentWidth = Math.max(
+        title ? title.length + 4 : 0,
+        ...lines.map((line) => line.length),
+        26,
+      );
+      const railWidth = contentWidth + 4;
+
+      let topCore = "";
+      if (title) {
+        topCore = `${theme.color.border("─ ")}${theme.color.title(title)}${theme.color.border(" ")}`;
+        const topFill = Math.max(0, railWidth - title.length - 3);
+        writeSectionLines(
+          [
+            `${theme.layout.indent}${theme.color.border("┌")}${topCore}${theme.color.border("─".repeat(topFill))}${theme.color.border("┐")}`,
+            ...lines.map(
+              (line) =>
+                `${theme.layout.indent}${theme.color.border("│")}  ${theme.color.value(line)}${" ".repeat(Math.max(0, contentWidth - line.length))}  ${theme.color.border("│")}`,
+            ),
+            `${theme.layout.indent}${theme.color.border("└")}${theme.color.border("─".repeat(railWidth))}${theme.color.border("┘")}`,
+          ].join("\n"),
+        );
+      } else {
+        writeSectionLines(
+          [
+            `${theme.layout.indent}${theme.color.border("┌")}${theme.color.border("─".repeat(railWidth))}${theme.color.border("┐")}`,
+            ...lines.map(
+              (line) =>
+                `${theme.layout.indent}${theme.color.border("│")}  ${theme.color.value(line)}${" ".repeat(Math.max(0, contentWidth - line.length))}  ${theme.color.border("│")}`,
+            ),
+            `${theme.layout.indent}${theme.color.border("└")}${theme.color.border("─".repeat(railWidth))}${theme.color.border("┘")}`,
+          ].join("\n"),
+        );
+      }
+    },
+    badge: (level: "info" | "warn" | "error" | "ok", message: string) => {
+      const badges: Record<string, { tag: string; color: (s: string) => string }> = {
+        info: { tag: "INFO", color: theme.color.info },
+        warn: { tag: "WARN", color: theme.color.warning },
+        error: { tag: "ERROR", color: theme.color.error },
+        ok: { tag: "OK", color: theme.color.success },
+      };
+      const { tag, color } = badges[level] ?? badges.info;
+      _writeInlineLine(
+        `${theme.layout.indent}${color(`[${tag}]`)}${" ".repeat(Math.max(1, 8 - tag.length - 2))}${theme.color.value(message)}`,
+      );
+    },
+    keyValue: (
+      entries: Array<{ key: string; value: string }> | Record<string, string>,
+    ) => {
+      const items = Array.isArray(entries)
+        ? entries
+        : Object.entries(entries).map(([key, value]) => ({ key, value }));
+      const maxKeyWidth = Math.max(0, ...items.map((item) => item.key.length));
+      for (const item of items) {
+        _writeInlineLine(
+          `${theme.layout.indent}${theme.color.key(item.key.padEnd(maxKeyWidth))}  ${theme.color.value(item.value)}`,
+        );
+      }
+    },
+    timestamp: (level: "info" | "warn" | "error", message: string) => {
+      const now = new Date();
+      const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+      const labels: Record<string, { tag: string; color: (s: string) => string }> = {
+        info: { tag: "INFO", color: theme.color.info },
+        warn: { tag: "WARN", color: theme.color.warning },
+        error: { tag: "ERROR", color: theme.color.error },
+      };
+      const { tag, color } = labels[level] ?? labels.info;
+      _writeInlineLine(
+        `${theme.layout.indent}${theme.color.muted(time)}  ${color(tag.padEnd(6))} ${theme.color.value(message)}`,
+      );
+    },
+    leaders: (label: string, value: string, width = 40) => {
+      const dotsNeeded = Math.max(3, width - label.length - value.length - 2);
+      const dots = theme.symbols.dot_leader.repeat(dotsNeeded);
+      _writeInlineLine(
+        `${theme.layout.indent}${theme.color.value(label)} ${theme.color.muted(dots)} ${theme.color.value(value)}`,
+      );
+    },
+    codeFrame: (options: {
+      file: string;
+      line: number;
+      column?: number;
+      message: string;
+      source?: string[];
+      hint?: string;
+    }) => {
+      const loc = options.column
+        ? `${options.file}:${options.line}:${options.column}`
+        : `${options.file}:${options.line}`;
+      _writeInlineLine(
+        `${theme.layout.indent}${theme.color.muted(loc)}`,
+      );
+      _writeInlineLine(
+        `${theme.layout.indent}${theme.color.error(theme.symbols.error)} ${theme.color.error(options.message)}`,
+      );
+      if (options.source) {
+        for (let i = 0; i < options.source.length; i++) {
+          const lineNum = options.line - Math.floor(options.source.length / 2) + i;
+          _writeInlineLine(
+            `${theme.layout.indent}  ${theme.color.muted(String(lineNum).padStart(4))} ${theme.color.border("│")} ${theme.color.value(options.source[i])}`,
+          );
+        }
+        if (options.column) {
+          const pointer = " ".repeat(options.column - 1) + "^".repeat(Math.min(16, 80 - options.column));
+          _writeInlineLine(
+            `${theme.layout.indent}  ${" ".repeat(4)} ${theme.color.border("│")} ${theme.color.error(pointer)}`,
+          );
+        }
+      }
+      if (options.hint) {
+        _writeInlineLine(
+          `${theme.layout.indent}  ${theme.color.hint(`Hint: ${options.hint}`)}`,
+        );
+      }
+    },
+    banner: (options: { message: string; title?: string }) => {
+      const lines = options.message.split("\n");
+      const contentWidth = Math.max(
+        options.title ? options.title.length + 4 : 0,
+        ...lines.map((line) => line.length),
+        26,
+      );
+      const railWidth = contentWidth + 4;
+
+      let topCore = "";
+      if (options.title) {
+        topCore = `${theme.color.border("──")} ${theme.color.title(options.title)} `;
+        const topFill = Math.max(0, railWidth - options.title.length - 4);
+        writeSectionLines(
+          [
+            `${theme.layout.indent}${theme.color.border("╭")}${topCore}${theme.color.border("─".repeat(topFill))}${theme.color.border("╮")}`,
+            ...lines.map(
+              (line) =>
+                `${theme.layout.indent}${theme.color.border("│")}  ${theme.color.value(line)}${" ".repeat(Math.max(0, contentWidth - line.length))}  ${theme.color.border("│")}`,
+            ),
+            `${theme.layout.indent}${theme.color.border("╰")}${theme.color.border("─".repeat(railWidth))}${theme.color.border("╯")}`,
+          ].join("\n"),
+        );
+      } else {
+        writeSectionLines(
+          [
+            `${theme.layout.indent}${theme.color.border("╭")}${theme.color.border("─".repeat(railWidth))}${theme.color.border("╮")}`,
+            ...lines.map(
+              (line) =>
+                `${theme.layout.indent}${theme.color.border("│")}  ${theme.color.value(line)}${" ".repeat(Math.max(0, contentWidth - line.length))}  ${theme.color.border("│")}`,
+            ),
+            `${theme.layout.indent}${theme.color.border("╰")}${theme.color.border("─".repeat(railWidth))}${theme.color.border("╯")}`,
+          ].join("\n"),
+        );
+      }
+    },
   };
 
   for (const key of Object.keys(promptDefs) as Array<keyof TPrompts>) {

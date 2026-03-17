@@ -13,6 +13,30 @@ export const outputMethods = {
     type: 'cli.log("info" | "warn" | "error" | "success", message)',
     description: "Prints a leveled line with the matching symbol and color.",
   },
+  step: {
+    type: 'cli.step(label, status?)',
+    description: 'Prints a step with a status icon: "active" (◆), "done" (◇), "error", "warning", or "pending".',
+  },
+  badge: {
+    type: 'cli.badge("info" | "warn" | "error" | "ok", message)',
+    description: "Prints a [TAG] prefixed log line in badge style.",
+  },
+  timestamp: {
+    type: 'cli.timestamp("info" | "warn" | "error", message)',
+    description: "Prints a timestamped log line for tailing and log streams.",
+  },
+  raw: {
+    type: "cli.raw(line)",
+    description: "Prints a single line without section spacing.",
+  },
+  lines: {
+    type: "cli.lines(lines)",
+    description: "Prints multiple lines tightly without section spacing between them.",
+  },
+  write: {
+    type: "cli.write(content)",
+    description: "Writes pre-formatted content (e.g. from cli.table()) line by line without extra styling.",
+  },
   style: {
     type: "cli.style()",
     description: "Creates a reusable style builder that returns strings.",
@@ -96,6 +120,116 @@ await cli.run(async () => {
 </Tabs>
 
 <TypeTable type={outputMethods} />
+
+## Steps
+
+Use `cli.step()` to render a step with a status icon. Compose multiple steps
+for step lists and rail patterns.
+
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
+await cli.run(async () => {
+  cli.step("Creating project...", "active");
+  cli.step("Installing dependencies...", "active");
+  cli.step("Build complete", "done");
+});
+```
+  </Tab>
+  <Tab value="Output">
+```oscli
+◆ Creating project...
+◆ Installing dependencies...
+◇ Build complete
+```
+  </Tab>
+</Tabs>
+
+Status options: `"active"` (◆), `"done"` (◇), `"error"` (✗), `"warning"` (⚠), `"pending"` (○).
+
+## Badge logging
+
+Use `cli.badge()` for `[TAG]` prefixed log lines — common in build tools and CI output.
+
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
+await cli.run(async () => {
+  cli.badge("info", "Pulling image node:20-alpine");
+  cli.badge("warn", "Layer cache expired");
+  cli.badge("ok", "Build finished in 4.2s");
+});
+```
+  </Tab>
+  <Tab value="Output">
+```oscli
+[INFO]  Pulling image node:20-alpine
+[WARN]  Layer cache expired
+[OK]    Build finished in 4.2s
+```
+  </Tab>
+</Tabs>
+
+## Timestamped logging
+
+Use `cli.timestamp()` for log stream / tail style output with real-time timestamps.
+
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
+await cli.run(async () => {
+  cli.timestamp("info", "Server started on port 3000");
+  cli.timestamp("warn", "Rate limit approaching: 90/100");
+  cli.timestamp("error", "Database connection dropped");
+});
+```
+  </Tab>
+  <Tab value="Output">
+```oscli
+12:04:01  INFO   Server started on port 3000
+12:04:05  WARN   Rate limit approaching: 90/100
+12:04:07  ERROR  Database connection dropped
+```
+  </Tab>
+</Tabs>
+
+## Inline output
+
+Use `cli.raw()`, `cli.lines()`, and `cli.write()` for tight output without
+the section spacing that `cli.log()` adds.
+
+- `cli.raw(line)` — one line, no gap
+- `cli.lines(lines)` — multiple lines, no gaps between them
+- `cli.write(content)` — writes pre-formatted content (e.g. from `cli.table()`) without extra indent/color
+
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
+await cli.run(async () => {
+  cli.lines([
+    "┌ Connecting",
+    "│",
+    "├─┬ Auth",
+    "│ ├── Checking token...    ok",
+    "│ └── Resolved as user@app",
+    "│",
+    "└ Ready",
+  ]);
+});
+```
+  </Tab>
+  <Tab value="Output">
+```oscli
+┌ Connecting
+│
+├─┬ Auth
+│ ├── Checking token...    ok
+│ └── Resolved as user@app
+│
+└ Ready
+```
+  </Tab>
+</Tabs>
 
 ## Reusable styles
 

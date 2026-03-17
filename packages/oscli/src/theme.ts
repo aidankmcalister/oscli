@@ -26,6 +26,11 @@ const defaultSymbols = {
   outro: "└",
   bar_fill: "#",
   bar_empty: "-",
+  step_active: "◆",
+  step_done: "◇",
+  step_pending: "○",
+  arrow: "→",
+  dot_leader: "·",
 } as const;
 
 export type ThemeSymbols = {

@@ -1,6 +1,7 @@
-import { createCLI } from "../packages/oscli/src/index";
+import { createCLI } from "../../packages/oscli/src/index";
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 type BumpType = "patch" | "minor" | "major";
 
@@ -15,7 +16,7 @@ const cli = createCLI((b) => ({
     changelogEntry: b
       .text()
       .label("Changelog entry")
-      .default("Improve CLI output and packaging."),
+      .default("Refresh the example suite and docs."),
     confirmPublish: b.confirm().label("Publish this release?").default(true),
   },
 }));
@@ -37,9 +38,9 @@ function bumpVersion(version: string, bumpType: BumpType): string {
 await cli.run(async () => {
   cli.intro("release");
 
-  const packageJson = (await Bun.file(new URL("../package.json", import.meta.url)).json()) as {
-    version: string;
-  };
+  const packageJson = (await Bun.file(
+    new URL("../../package.json", import.meta.url),
+  ).json()) as { version: string };
 
   await cli.prompt.bumpType();
   await cli.prompt.changelogEntry();
@@ -52,27 +53,28 @@ await cli.run(async () => {
   );
 
   cli.box({
-    title: "Version plan",
+    title: "Release plan",
     content: `Current: ${currentVersion}\nNext:    ${nextVersion}`,
   });
 
   cli.log("info", `Changelog: ${cli.storage.changelogEntry}`).flush();
 
   if (!cli.storage.confirmPublish) {
-    cli.outro("Release cancelled.");
-    cli.exit("Publish cancelled by user.", { code: "error" });
+    cli.log("warn", "Release cancelled before publish.").flush();
+    cli.outro("No package was published.");
+    return;
   }
 
   await cli.spin("Running tests", async () => {
+    await sleep(500);
+  });
+
+  await cli.spin("Building packages", async () => {
     await sleep(650);
   });
 
-  await cli.spin("Building", async () => {
-    await sleep(700);
-  });
-
   await cli.spin("Publishing to npm", async () => {
-    await sleep(800);
+    await sleep(700);
   });
 
   cli.success(`Published v${nextVersion}.`);

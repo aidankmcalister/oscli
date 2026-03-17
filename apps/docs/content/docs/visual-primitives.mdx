@@ -1,6 +1,6 @@
 ---
 title: Visual primitives
-description: Compose boxes, tables, spinners, progress, links, trees, and diffs with the same output system.
+description: Compose boxes, tables, spinners, progress, links, trees, diffs, and more with the same output system.
 icon: Shapes
 ---
 
@@ -8,6 +8,14 @@ export const primitiveMethods = {
   box: {
     type: "cli.box({ title?, content })",
     description: "Prints boxed content as a section.",
+  },
+  note: {
+    type: "cli.note(message, title?)",
+    description: "Prints a bordered callout block. Use for info panels and notices.",
+  },
+  banner: {
+    type: "cli.banner({ message, title? })",
+    description: "Prints a rounded bordered box. Use for version nags and announcements.",
   },
   table: {
     type: "cli.table(headers, rows)",
@@ -36,6 +44,18 @@ export const primitiveMethods = {
   diff: {
     type: "cli.diff(before, after)",
     description: "Prints a line diff with added, removed, and unchanged lines.",
+  },
+  keyValue: {
+    type: "cli.keyValue(entries)",
+    description: "Prints aligned key-value pairs. Accepts an object or array of { key, value }.",
+  },
+  leaders: {
+    type: "cli.leaders(label, value, width?)",
+    description: "Prints a dot-leader line connecting label to value.",
+  },
+  codeFrame: {
+    type: "cli.codeFrame({ file, line, column?, message, source?, hint? })",
+    description: "Prints an error with inline source annotation and optional hint.",
   },
 };
 
@@ -258,12 +278,147 @@ await cli.run(async () => {
   </Tab>
 </Tabs>
 
+## Note
+
+Use `cli.note()` for bordered callout blocks — info panels, warning notices, or structured metadata.
+
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
+await cli.run(async () => {
+  cli.note(
+    "Environment   production\nRegion        us-east-1\nRuntime       Node.js 20",
+    "Deploying",
+  );
+});
+```
+  </Tab>
+  <Tab value="Output">
+```oscli
+┌─ Deploying ──────────────────┐
+│  Environment   production    │
+│  Region        us-east-1     │
+│  Runtime       Node.js 20    │
+└──────────────────────────────┘
+```
+  </Tab>
+</Tabs>
+
+## Banner
+
+Use `cli.banner()` for rounded bordered boxes — version upgrade nags, announcements, or notices.
+
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
+await cli.run(async () => {
+  cli.banner({
+    message: "Update available: 1.2.0 → 1.4.1\nRun npm i -g oscli to upgrade",
+  });
+});
+```
+  </Tab>
+  <Tab value="Output">
+```oscli
+╭───────────────────────────────────╮
+│  Update available: 1.2.0 → 1.4.1  │
+│  Run npm i -g oscli to upgrade    │
+╰───────────────────────────────────╯
+```
+  </Tab>
+</Tabs>
+
+## Key-Value
+
+Use `cli.keyValue()` for aligned key-value pairs — summaries, compact diffs, or config output.
+
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
+await cli.run(async () => {
+  cli.keyValue({
+    name: "my-app → my-app-v2",
+    region: "us-west-2 → us-east-1",
+    replicas: "1 → 3",
+  });
+});
+```
+  </Tab>
+  <Tab value="Output">
+```oscli
+name      my-app → my-app-v2
+region    us-west-2 → us-east-1
+replicas  1 → 3
+```
+  </Tab>
+</Tabs>
+
+## Leaders
+
+Use `cli.leaders()` for dot-leader lines connecting a label to a right-aligned value.
+
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
+await cli.run(async () => {
+  cli.leaders("Build", "✔  1.2s");
+  cli.leaders("Typecheck", "✔  0.8s");
+  cli.leaders("Lint", "▲  0.3s");
+  cli.leaders("Test", "✗  2.1s");
+});
+```
+  </Tab>
+  <Tab value="Output">
+```oscli
+Build ·························· ✔  1.2s
+Typecheck ······················ ✔  0.8s
+Lint ··························· ▲  0.3s
+Test ··························· ✗  2.1s
+```
+  </Tab>
+</Tabs>
+
+## Code Frame
+
+Use `cli.codeFrame()` to show errors with inline source annotation and an optional hint.
+
+<Tabs items={['Code', 'Output']}>
+  <Tab value="Code">
+```ts
+await cli.run(async () => {
+  cli.codeFrame({
+    file: "src/index.ts",
+    line: 12,
+    column: 5,
+    message: "Type 'string' is not assignable to type 'number'",
+    source: [
+      "const port: number = process.env.PORT",
+      "                     ^^^^^^^^^^^^^^^^",
+    ],
+    hint: "wrap with Number() or use parseInt()",
+  });
+});
+```
+  </Tab>
+  <Tab value="Output">
+```oscli
+src/index.ts:12:5
+✗ Type 'string' is not assignable to type 'number'
+    11 │ const port: number = process.env.PORT
+    12 │                      ^^^^^^^^^^^^^^^^
+       │     ^^^^^^^^^^^^^^^^
+  Hint: wrap with Number() or use parseInt()
+```
+  </Tab>
+</Tabs>
+
 <Callout type="info">
   **Composable** — `cli.table()` and `cli.tree()` return strings so you can pass
   them into other primitives (e.g. `cli.box({ content: cli.table(...) })`).
 
-  **Display** — `cli.box()`, `cli.diff()`, `cli.divider()`, and `cli.link()`
-  print to stdout immediately.
+  **Display** — `cli.box()`, `cli.note()`, `cli.banner()`, `cli.diff()`,
+  `cli.keyValue()`, `cli.leaders()`, `cli.codeFrame()`, `cli.divider()`, and
+  `cli.link()` print to stdout immediately.
 </Callout>
 
 <Accordions type="multiple">

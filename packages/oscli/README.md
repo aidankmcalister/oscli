@@ -114,16 +114,17 @@ app or docs site.
 
 ## Examples
 
-The repository includes runnable examples for common workflows.
+The repository includes a smaller example suite with two layers.
 
-- [`create-app`](https://github.com/aidankmcalister/oscli/blob/main/examples/create-app.ts):
-  project scaffolding
-- [`deploy`](https://github.com/aidankmcalister/oscli/blob/main/examples/deploy.ts):
-  flags, progress, and confirmations
-- [`release`](https://github.com/aidankmcalister/oscli/blob/main/examples/release.ts):
-  versioning and final summaries
-- [`multi-command`](https://github.com/aidankmcalister/oscli/blob/main/examples/multi-command.ts):
-  subcommand routing
+- Concepts in
+  [`examples/concepts/`](https://github.com/aidankmcalister/oscli/tree/main/examples/concepts):
+  [`output-patterns`](https://github.com/aidankmcalister/oscli/blob/main/examples/concepts/output-patterns.ts),
+  [`prompt-patterns`](https://github.com/aidankmcalister/oscli/blob/main/examples/concepts/prompt-patterns.ts),
+  and
+  [`theme-showcase`](https://github.com/aidankmcalister/oscli/blob/main/examples/concepts/theme-showcase.ts)
+- Things you can build in
+  [`examples/real-world-clis/`](https://github.com/aidankmcalister/oscli/tree/main/examples/real-world-clis):
+  `create-app`, `db-migrate`, `deploy`, `github`, and `release`
 
 ## Docs
 

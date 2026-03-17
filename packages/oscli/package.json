@@ -21,7 +21,7 @@
     "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node --format esm --splitting && bun tsc -p tsconfig.build.json",
     "test": "cd ../.. && bunx vitest run",
     "benchmark": "bun build src/index.ts --outdir /tmp/oscli-bench --target node --format esm --splitting --analyze && echo 'Entry point size:' && ls -lh /tmp/oscli-bench/index.js",
-    "cli": "bun ../../examples/create-app.ts",
+    "cli": "bun ../../examples/real-world-clis/create-app.ts",
     "typecheck": "bun tsc --noEmit",
     "prepublishOnly": "bun run test && bun run build"
   },
