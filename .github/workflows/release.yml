@@ -60,21 +60,6 @@ jobs:
             echo "should_publish=true" >> "$GITHUB_OUTPUT"
           fi
       
-      - name: Read react package metadata
-        id: react_meta
-        run: |
-          echo "name=$(jq -r '.name' packages/react/package.json)" >> "$GITHUB_OUTPUT"
-          echo "version=$(jq -r '.version' packages/react/package.json)" >> "$GITHUB_OUTPUT"
-
-      - name: Check if react version is already published
-        id: react_npm
-        run: |
-          if npm view "${{ steps.react_meta.outputs.name }}@${{ steps.react_meta.outputs.version }}" version >/dev/null 2>&1; then
-            echo "should_publish=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "should_publish=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Read latest tag
         id: latest_tag
         run: |
@@ -96,13 +81,6 @@ jobs:
       - name: Publish @oscli-dev/oscli to NPM
         if: ${{ steps.oscli_npm.outputs.should_publish == 'true' }}
         working-directory: packages/oscli
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish @oscli-dev/react to NPM
-        if: ${{ steps.react_npm.outputs.should_publish == 'true' }}
-        working-directory: packages/react
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
