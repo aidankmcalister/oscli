@@ -428,6 +428,10 @@ export function renderSelectPrompt<T extends string, TValue = T>(
     ) => PromptSubmitResult<TValue> | Promise<PromptSubmitResult<TValue>>,
   } = options;
 
+  if (choices.length === 0) {
+    throw new Error(`Select prompt "${label}" requires at least one choice.`);
+  }
+
   const choiceWidth = Math.max(0, ...choices.map((choice) => choice.length));
   let selectedIndex = defaultValue === undefined
     ? 0

@@ -62,4 +62,13 @@ describe("renderSelectPrompt", () => {
 
     await expect(pending).resolves.toBe("remix");
   });
+
+  it("rejects empty choice lists instead of resolving undefined", () => {
+    expect(() =>
+      renderSelectPrompt({
+        label: "Framework",
+        choices: [] as string[],
+      }),
+    ).toThrowError('Select prompt "Framework" requires at least one choice.');
+  });
 });
