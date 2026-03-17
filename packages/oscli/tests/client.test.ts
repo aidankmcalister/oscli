@@ -99,6 +99,25 @@ describe("createCLI", () => {
     );
   });
 
+  it("parses explicit false values for boolean flags", async () => {
+    const cli = createCLI((b) => ({
+      title: "Flags",
+      flags: {
+        json: b.flag().boolean().default(true),
+      },
+      prompts: {},
+    }));
+
+    cli.main(async () => {});
+
+    const result = await cli.test({
+      argv: ["--json=false"],
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.flags.json).toBe(false);
+  });
+
   it("bypasses matching prompts when a same-name flag is passed", async () => {
     const cli = createCLI((b) => ({
       title: "Prompt bypass",
@@ -143,6 +162,26 @@ describe("createCLI", () => {
     } finally {
       stdout.mockRestore();
     }
+  });
+
+  it("parses explicit false values for confirm prompt bypass flags", async () => {
+    const cli = createCLI((b) => ({
+      title: "Confirm",
+      prompts: {
+        approved: b.confirm().label("Approved").default(true),
+      },
+    }));
+
+    cli.main(async () => {
+      expect(await cli.prompt.approved()).toBe(false);
+    });
+
+    const result = await cli.test({
+      argv: ["--approved=false"],
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.storage.approved).toBe(false);
   });
 
   it("throws when user defines reserved yes flag", () => {
