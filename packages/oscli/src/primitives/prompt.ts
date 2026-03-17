@@ -52,6 +52,7 @@ export type SelectPromptOptions<T extends string, TValue = T> =
   SharedPromptOptions<T, TValue> & {
     choices: readonly T[];
     rules?: Partial<Record<T, string>>;
+    defaultValue?: T;
   };
 
 export type SearchPromptOptions<T extends string, TValue = T> =
@@ -420,6 +421,7 @@ export function renderSelectPrompt<T extends string, TValue = T>(
     promptColor,
     choices,
     rules,
+    defaultValue,
     summaryWidth,
     resolve = defaultResolve<T | TValue> as (
       value: T,
@@ -427,7 +429,9 @@ export function renderSelectPrompt<T extends string, TValue = T>(
   } = options;
 
   const choiceWidth = Math.max(0, ...choices.map((choice) => choice.length));
-  let selectedIndex = 0;
+  let selectedIndex = defaultValue === undefined
+    ? 0
+    : Math.max(0, choices.indexOf(defaultValue));
   let errorMessage = "";
   let renderedLines = 0;
 

@@ -338,6 +338,8 @@ export async function renderByType(
         summaryWidth,
         choices: config.choices,
         rules: config.rules,
+        defaultValue:
+          typeof config.defaultValue === "string" ? config.defaultValue : undefined,
         resolve,
       });
 
