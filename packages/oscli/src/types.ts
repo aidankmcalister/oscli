@@ -152,6 +152,7 @@ export interface TestOptions<
   inputs?: Partial<Record<keyof TPrompts, unknown>>;
   flags?: Partial<FlagsShape<TFlags>>;
   argv?: string[];
+  binName?: string;
 }
 
 export interface TestResult<

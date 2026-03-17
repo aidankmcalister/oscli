@@ -186,4 +186,20 @@ describe("createCLI", () => {
       stdout.mockRestore();
     }
   });
+
+  it("uses the provided test bin name in help output", async () => {
+    const cli = createCLI(() => ({
+      title: "Help",
+      prompts: {},
+    }));
+
+    const result = await cli.test({
+      argv: ["--help"],
+      binName: "create-app",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("Usage: create-app [options]");
+    expect(result.output).not.toContain("Usage: oscli [options]");
+  });
 });

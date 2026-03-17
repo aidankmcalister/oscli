@@ -17,6 +17,10 @@ export const testOptions = {
     type: "string[]",
     description: "Passes raw argv segments for command and flag parsing.",
   },
+  binName: {
+    type: "string",
+    description: "Overrides the binary name used in help and usage output.",
+  },
 };
 
 export const testResult = {
@@ -41,6 +45,9 @@ export const testResult = {
 `cli.test()` gives you a programmatic harness for the real CLI. It runs the
 same code paths, but replaces stdin, stdout, stderr, and process exit behavior
 so your tests stay deterministic.
+
+Set `binName` when you want usage text in snapshots or assertions to match the
+real executable name instead of the default test harness name.
 
 ## Vitest example
 

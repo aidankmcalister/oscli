@@ -811,7 +811,7 @@ export function createCLI<
       let exitCode = 0;
       const EXIT_SENTINEL = "__OSCLI_TEST_EXIT__";
 
-      process.argv = ["node", "oscli", ...(options.argv ?? [])];
+      process.argv = ["node", options.binName ?? "oscli", ...(options.argv ?? [])];
       Object.defineProperty(process.stdout, "isTTY", {
         configurable: true,
         value: false,
