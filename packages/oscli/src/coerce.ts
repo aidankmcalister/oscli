@@ -31,9 +31,116 @@ export async function resolvePromptValue(
   const maybeOptional =
     config.optional && rawValue === "" ? undefined : rawValue;
 
+  const normalized = (() => {
+    if (maybeOptional === undefined) {
+      return { ok: true, value: undefined } as PromptResolution;
+    }
+
+    switch (config.type) {
+      case "text":
+      case "password":
+        return {
+          ok: true,
+          value:
+            typeof maybeOptional === "string"
+              ? maybeOptional
+              : String(maybeOptional ?? ""),
+        } as PromptResolution;
+
+      case "number": {
+        const parsed =
+          typeof maybeOptional === "number"
+            ? maybeOptional
+            : Number(String(maybeOptional).trim());
+
+        if (Number.isNaN(parsed)) {
+          return { ok: false, error: "Expected a number." } as PromptResolution;
+        }
+
+        return { ok: true, value: parsed } as PromptResolution;
+      }
+
+      case "confirm":
+        if (typeof maybeOptional === "boolean") {
+          return { ok: true, value: maybeOptional } as PromptResolution;
+        }
+
+        if (typeof maybeOptional === "string") {
+          const normalizedValue = maybeOptional.trim().toLowerCase();
+          if (["1", "true", "t", "y", "yes"].includes(normalizedValue)) {
+            return { ok: true, value: true } as PromptResolution;
+          }
+          if (["0", "false", "f", "n", "no"].includes(normalizedValue)) {
+            return { ok: true, value: false } as PromptResolution;
+          }
+        }
+
+        return { ok: false, error: "Expected yes or no." } as PromptResolution;
+
+      case "multiselect":
+      case "list": {
+        const values = Array.isArray(maybeOptional)
+          ? maybeOptional.map((value) => String(value).trim()).filter(Boolean)
+          : String(maybeOptional ?? "")
+              .split(",")
+              .map((value) => value.trim())
+              .filter(Boolean);
+
+        if (
+          config.type === "multiselect" &&
+          config.choices &&
+          values.some((value) => !config.choices?.includes(value))
+        ) {
+          return {
+            ok: false,
+            error: `Expected values from: ${config.choices.join(", ")}.`,
+          } as PromptResolution;
+        }
+
+        return { ok: true, value: values } as PromptResolution;
+      }
+
+      case "select":
+      case "search":
+        if (typeof maybeOptional !== "string") {
+          return { ok: false, error: "Expected a string." } as PromptResolution;
+        }
+
+        if (config.choices && !config.choices.includes(maybeOptional)) {
+          return {
+            ok: false,
+            error: `Expected one of: ${config.choices.join(", ")}.`,
+          } as PromptResolution;
+        }
+
+        return { ok: true, value: maybeOptional } as PromptResolution;
+
+      case "date": {
+        if (maybeOptional instanceof Date) {
+          return { ok: true, value: maybeOptional } as PromptResolution;
+        }
+
+        const format = config.format ?? "YYYY-MM-DD";
+        const parsed = parseDateByFormat(String(maybeOptional ?? "").trim(), format);
+        if (!parsed) {
+          return { ok: false, error: `Expected ${format}.` } as PromptResolution;
+        }
+
+        return { ok: true, value: parsed } as PromptResolution;
+      }
+
+      default:
+        return { ok: true, value: maybeOptional } as PromptResolution;
+    }
+  })();
+
+  if (!normalized.ok) {
+    return normalized;
+  }
+
   const transformed = config.transform
-    ? config.transform(maybeOptional)
-    : maybeOptional;
+    ? config.transform(normalized.value)
+    : normalized.value;
 
   if (config.validate) {
     const validation = await config.validate(transformed);

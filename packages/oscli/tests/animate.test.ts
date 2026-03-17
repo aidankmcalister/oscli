@@ -529,4 +529,32 @@ describe("cli.animate", () => {
     });
     expect(elapsed).toBeGreaterThanOrEqual(2000);
   });
+
+  it("throws when animate inputs fail prompt validation", async () => {
+    const cli = createCLI((b) => ({
+      title: "create-app",
+      prompts: {
+        template: b
+          .select({ choices: ["next", "remix", "astro"] as const })
+          .label("Template"),
+      },
+    }));
+
+    await expect(
+      collectEvents(
+        cli.animate({
+          inputs: {
+            template: "invalid",
+          },
+          timing: {
+            typeDelay: 0,
+            promptDelay: 0,
+            completionDelay: 0,
+          },
+        }),
+      ),
+    ).rejects.toThrow(
+      'cli.animate(): invalid value for prompt "template": Expected one of: next, remix, astro.',
+    );
+  });
 });
