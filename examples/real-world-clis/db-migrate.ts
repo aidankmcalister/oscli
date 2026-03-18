@@ -38,10 +38,9 @@ await cli.run(async () => {
   await cli.prompt.backup();
 
   if (cli.flags.env === "production") {
-    cli.log(
-      "warn",
-      "Production migrations require a maintenance window review.",
-    ).flush();
+    cli
+      .log("warn", "Production migrations require a maintenance window review.")
+      .flush();
   }
 
   cli.box({
@@ -76,7 +75,7 @@ await cli.run(async () => {
     "Applying migrations",
     pendingMigrations.map(([name]) => name),
     async () => {
-      await sleep(260);
+      await sleep(1000);
     },
   );
 
