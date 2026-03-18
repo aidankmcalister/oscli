@@ -292,10 +292,6 @@ export function HomeHeroClient() {
             </svg>
           </Link>
           <span className="text-fd-border" aria-hidden>·</span>
-          <Link href="/builder" className="text-[0.9rem] font-medium text-fd-muted-foreground transition-colors hover:text-fd-foreground">
-            Builder
-          </Link>
-          <span className="text-fd-border" aria-hidden>·</span>
           <Link href="https://github.com/aidankmcalister/oscli" target="_blank" rel="noreferrer" className="text-[0.9rem] font-medium text-fd-muted-foreground transition-colors hover:text-fd-foreground">
             GitHub
           </Link>
