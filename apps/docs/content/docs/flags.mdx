@@ -6,17 +6,17 @@ icon: Flag
 
 export const flagBuilders = {
   string: {
-    type: "b.flag().string()",
+    type: ".flag().string()",
     description: "Stores a string flag value.",
     typeDescription: ".label(), .choices(), .default(), .optional()",
   },
   boolean: {
-    type: "b.flag().boolean()",
+    type: ".flag().boolean()",
     description: "Stores a boolean flag value from presence or absence.",
     typeDescription: ".label(), .default(), .optional()",
   },
   number: {
-    type: "b.flag().number()",
+    type: ".flag().number()",
     description: "Stores a parsed number flag value.",
     typeDescription: ".label(), .default(), .optional()",
   },
@@ -64,7 +64,7 @@ Flags are resolved before your handler runs. Define them once in
 Set the type first, then add metadata and defaults.
 
 ```ts title="Flag chain order"
-b.flag()
+.flag()
   .string() // or .boolean() or .number()
   .label()
   .choices()
