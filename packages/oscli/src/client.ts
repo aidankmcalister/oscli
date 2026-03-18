@@ -29,7 +29,7 @@ import {
 import { box as renderBox } from "./primitives/box";
 import { diff as renderDiff } from "./primitives/diff";
 import { renderDivider } from "./primitives/divider";
-import type { ProgressRenderOptions, ProgressStyle } from "./primitives/progress";
+import type { ProgressStyle } from "./primitives/progress";
 import type { SpinnerOptions } from "./primitives/spinner";
 import { table as renderTable } from "./primitives/table";
 import { tree as renderTree, type TreeNode } from "./primitives/tree";
@@ -38,6 +38,7 @@ import { suggest as suggestValue } from "./suggest";
 import {
   activeTheme as theme,
   applyTheme,
+  colorFormatters,
   type ThemePreset,
   type ThemeOverride,
   themePresets,
@@ -54,8 +55,6 @@ import type {
   RuntimeFlagConfig,
 } from "./types";
 export type {
-  AnimateEvent,
-  AnimateOptions,
   ExitCode,
   ExitOptions,
   TestOptions,
@@ -64,8 +63,6 @@ export type {
   TitleStyle,
 } from "./types";
 import type {
-  AnimateEvent,
-  AnimateOptions,
   ExitCode,
   ExitOptions,
   TestOptions,
@@ -73,21 +70,7 @@ import type {
   TitleConfig,
   TitleStyle,
 } from "./types";
-import {
-  animatePromptSequence,
-  deriveAnimateIntroMessage,
-  deriveAnimateOutroMessage,
-  hasOwnKey,
-  humanizePause,
-  MIN_ANIMATE_PROGRESS_STEP_DURATION,
-  MIN_ANIMATE_SPIN_DURATION,
-  resolveAnimateTiming,
-  resolveTitleStyle,
-  resolveTitleText,
-  renderStyledTitle,
-  wait,
-  type ResolvedAnimateTiming,
-} from "./animate";
+import * as pc from "picocolors";
 import {
   clearStorage,
   coercePromptBypassValue,
@@ -131,7 +114,7 @@ function loadProgressModule() {
 }
 
 function loadCommanderModule() {
-  // Keep commander out of browser bundles that only use createCLI().animate().
+  // Load commander lazily so helper-only consumers do not pay for it eagerly.
   commanderModulePromise ??= import(
     /* webpackIgnore: true */
     "commander"
@@ -147,6 +130,45 @@ function resolveTheme(
   }
 
   return value ?? {};
+}
+
+function resolveTitleText(config: { title?: TitleConfig }): string {
+  if (config.title) {
+    return typeof config.title === "string" ? config.title : config.title.text;
+  }
+
+  return "";
+}
+
+function resolveTitleStyle(
+  config: { title?: TitleConfig },
+): TitleStyle | undefined {
+  if (config.title && typeof config.title === "object") {
+    return config.title.style;
+  }
+
+  return undefined;
+}
+
+function renderStyledTitle(
+  text: string,
+  style: TitleStyle | undefined,
+  fallbackColor: (s: string) => string,
+): string {
+  let result = style?.uppercase ? text.toUpperCase() : text;
+
+  if (style?.color) {
+    result = colorFormatters[style.color](result);
+    if (style.bold) {
+      result = pc.bold(result);
+    }
+  } else if (style?.bold) {
+    result = pc.bold(fallbackColor(result));
+  } else {
+    result = fallbackColor(result);
+  }
+
+  return result;
 }
 
 export function createCLI<
@@ -198,9 +220,6 @@ export function createCLI<
   const testInputs = new Map<keyof TPrompts, unknown>();
   let testFlagOverrides: Partial<FlagsShape<TFlags>> | null = null;
   let mainHandler: CommandHandler | undefined;
-  let animateEventPush: ((event: AnimateEvent) => void) | null = null;
-  let activeAnimateTiming: ResolvedAnimateTiming | null = null;
-  let animateIgnoreDefaults = false;
   let autoYes = false;
   let isTTY = false;
   let noColor = false;
@@ -488,21 +507,12 @@ export function createCLI<
   ): LogChain {
     if (maybeMessage === undefined) {
       return createLogChain("plain", levelOrMessage, (renderedMessage) => {
-        if (animateEventPush) {
-          animateEventPush({ type: "log_line", level: "plain", message: renderedMessage });
-          return;
-        }
         _writeLine(`${theme.layout.indent}${theme.color.value(renderedMessage)}`);
       });
     }
 
     const level = levelOrMessage as Exclude<LogLevel, "plain">;
     return createLogChain(level, maybeMessage, (renderedMessage) => {
-      if (animateEventPush) {
-        animateEventPush({ type: "log_line", level, message: renderedMessage });
-        return;
-      }
-
       const symbol =
         level === "info"
           ? theme.color.info(theme.symbols.info)
@@ -545,134 +555,6 @@ export function createCLI<
     _writeLine,
     _promptConfigs,
     suggest: suggestValue,
-    animate: async function* (
-      options: AnimateOptions<Record<Extract<keyof TPrompts, string>, unknown>>,
-    ): AsyncGenerator<AnimateEvent> {
-      const timing = resolveAnimateTiming(options.timing);
-
-      while (true) {
-        clearStorage(storage.data as Partial<StorageShape<TPrompts>>);
-        promptBypassValues.clear();
-        testInputs.clear();
-
-        const resolvedValues = new Map<string, unknown>();
-        const introMessage = deriveAnimateIntroMessage(resolveTitleText(config));
-        const ignoreDefaults = options.ignoreDefaults === true;
-
-        if (introMessage.length > 0) {
-          yield {
-            type: "intro",
-            message: introMessage,
-          };
-        }
-
-        if (mainHandler) {
-          for (const [key, value] of Object.entries(options.inputs)) {
-            testInputs.set(key as keyof TPrompts, value);
-          }
-
-          activeAnimateTiming = timing;
-          animateIgnoreDefaults = ignoreDefaults;
-
-          const pendingEvents: AnimateEvent[] = [];
-          let handlerDone = false;
-          let notifyDrain: (() => void) | null = null;
-
-          animateEventPush = (event: AnimateEvent) => {
-            pendingEvents.push(event);
-            notifyDrain?.();
-            notifyDrain = null;
-          };
-
-          const waitForActivity = () =>
-            new Promise<void>((resolve) => {
-              if (pendingEvents.length > 0 || handlerDone) {
-                resolve();
-              } else {
-                notifyDrain = resolve;
-              }
-            });
-
-          try {
-            const handlerPromise = Promise.resolve()
-              .then(() => mainHandler!())
-              .finally(() => {
-                handlerDone = true;
-                notifyDrain?.();
-                notifyDrain = null;
-              });
-
-            while (!handlerDone || pendingEvents.length > 0) {
-              await waitForActivity();
-              while (pendingEvents.length > 0) {
-                yield pendingEvents.shift()!;
-              }
-            }
-
-            await handlerPromise;
-          } finally {
-            animateEventPush = null;
-            activeAnimateTiming = null;
-            animateIgnoreDefaults = false;
-            testInputs.clear();
-          }
-        } else {
-          for (const key of Object.keys(promptDefs) as Array<keyof TPrompts>) {
-            const runtimeConfig = runtimePromptConfigs.get(key);
-            if (!runtimeConfig || !runtimeConfig.type) {
-              continue;
-            }
-
-            const name = String(key);
-            const label = runtimeConfig.label ?? name;
-            const hasInput = hasOwnKey(options.inputs, name);
-            const rawValue = hasInput
-              ? options.inputs[name]
-              : ignoreDefaults
-                ? undefined
-                : hasPromptDefault(runtimeConfig)
-                  ? runtimeConfig.defaultValue
-                  : undefined;
-
-            if (rawValue === undefined) {
-              continue;
-            }
-
-            const animation = animatePromptSequence(
-              name,
-              label,
-              runtimeConfig,
-              rawValue,
-              timing,
-              { ignoreDefaults },
-            );
-
-            while (true) {
-              const step = await animation.next();
-              if (step.done) {
-                resolvedValues.set(name, step.value);
-                break;
-              }
-              yield step.value;
-            }
-          }
-
-          yield {
-            type: "outro",
-            message: deriveAnimateOutroMessage(resolveTitleText(config), resolvedValues),
-          };
-        }
-
-        yield { type: "run_complete" };
-
-        if (!timing.loop) {
-          return;
-        }
-
-        await wait(humanizePause(timing.loopDelay, 0.08));
-        yield { type: "loop_restart" };
-      }
-    },
     main: (fn: CommandHandler) => {
       mainHandler = fn;
     },
@@ -877,10 +759,6 @@ export function createCLI<
       };
     },
     intro: (message: string, style?: TitleStyle) => {
-      if (animateEventPush) {
-        animateEventPush({ type: "intro", message });
-        return;
-      }
       if (isOutputSuppressed()) {
         return;
       }
@@ -902,10 +780,6 @@ export function createCLI<
       writeSectionGap();
     },
     outro: (message: string) => {
-      if (animateEventPush) {
-        animateEventPush({ type: "outro", message });
-        return;
-      }
       if (isOutputSuppressed()) {
         return;
       }
@@ -945,10 +819,6 @@ export function createCLI<
       writeSectionLines(renderDiff(before, after));
     },
     box: (options: { title?: string; content: string }) => {
-      if (animateEventPush) {
-        animateEventPush({ type: "box_render", title: options.title, content: options.content });
-        return;
-      }
       writeSectionLines(renderBox(options));
     },
     spin: async <T>(
@@ -956,31 +826,6 @@ export function createCLI<
       fn: () => Promise<T>,
       options?: SpinnerOptions,
     ) => {
-      if (animateEventPush) {
-        const startedAt = Date.now();
-        animateEventPush({ type: "spin_start", label });
-        try {
-          const result = await fn();
-          const remaining = Math.max(
-            0,
-            MIN_ANIMATE_SPIN_DURATION - (Date.now() - startedAt),
-          );
-          if (remaining > 0) {
-            await wait(remaining);
-          }
-          animateEventPush({ type: "spin_complete", label });
-          return result;
-        } catch (error) {
-          const remaining = Math.max(
-            0,
-            MIN_ANIMATE_SPIN_DURATION - (Date.now() - startedAt),
-          );
-          if (remaining > 0) {
-            await wait(remaining);
-          }
-          throw error;
-        }
-      }
       const { spin: runSpinner } = await loadSpinnerModule();
       return runSpinner(label, fn, {
         ...options,
@@ -994,63 +839,6 @@ export function createCLI<
       fn: (step: TStep, index: number) => Promise<void>,
       options?: { style?: ProgressStyle },
     ) => {
-      if (animateEventPush) {
-        const progressSteps = steps.map((step) => String(step));
-        const total = progressSteps.length;
-
-        if (total === 0) {
-          animateEventPush({
-            type: "progress_complete",
-            label,
-            steps: progressSteps,
-            currentStepIndex: 0,
-            percent: 100,
-          });
-          return;
-        }
-
-        animateEventPush({
-          type: "progress_start",
-          label,
-          steps: progressSteps,
-          currentStepIndex: 0,
-          percent: 0,
-        });
-
-        for (let index = 0; index < steps.length; index += 1) {
-          const step = steps[index] as TStep;
-          const startedAt = Date.now();
-          await fn(step, index);
-
-          const remaining = Math.max(
-            0,
-            MIN_ANIMATE_PROGRESS_STEP_DURATION - (Date.now() - startedAt),
-          );
-          if (remaining > 0) {
-            await wait(remaining);
-          }
-
-          if (index < steps.length - 1) {
-            animateEventPush({
-              type: "progress_update",
-              label,
-              steps: progressSteps,
-              currentStepIndex: index + 1,
-              percent: Math.round(((index + 1) / total) * 100),
-            });
-          }
-        }
-
-        animateEventPush({
-          type: "progress_complete",
-          label,
-          steps: progressSteps,
-          currentStepIndex: progressSteps.length - 1,
-          percent: 100,
-        });
-        return;
-      }
-
       const { progress: runProgress } = await loadProgressModule();
       await runProgress(label, steps, fn, {
         style: options?.style,
@@ -1086,10 +874,6 @@ export function createCLI<
       });
     },
     success: (message: string) => {
-      if (animateEventPush) {
-        animateEventPush({ type: "success_line", message });
-        return;
-      }
       _writeLine(
         `${theme.layout.indent}${theme.color.success(theme.symbols.success)} ${theme.color.success(message)}`,
       );
@@ -1293,46 +1077,9 @@ export function createCLI<
       }
 
       const label = runtimeConfig.label ?? String(key);
-      const animatePromptValue = async (
-        rawValue: unknown,
-      ): Promise<
-        | { animated: false }
-        | { animated: true; value: StorageShape<TPrompts>[typeof key] }
-      > => {
-        if (!animateEventPush || !activeAnimateTiming) {
-          return { animated: false };
-        }
-
-        const animation = animatePromptSequence(
-          String(key),
-          label,
-          runtimeConfig,
-          rawValue,
-          activeAnimateTiming,
-          { ignoreDefaults: animateIgnoreDefaults },
-        );
-
-        while (true) {
-          const step = await animation.next();
-          if (step.done) {
-            return {
-              animated: true,
-              value: step.value as StorageShape<TPrompts>[typeof key],
-            };
-          }
-
-          animateEventPush(step.value);
-        }
-      };
 
       if (testInputs.has(key)) {
         const inputValue = testInputs.get(key);
-        const animated = await animatePromptValue(inputValue);
-        if (animated.animated) {
-          storage.set(key, animated.value);
-          return animated.value;
-        }
-
         const resolved = await resolvePromptValue(runtimeConfig, inputValue);
         if (resolved.ok === false) {
           return exitWithMessage(resolved.error, { code: "usage" });
@@ -1340,50 +1087,34 @@ export function createCLI<
 
         const finalValue = (resolved as { ok: true; value: unknown }).value as StorageShape<TPrompts>[typeof key];
         storage.set(key, finalValue);
-        if (!animateEventPush) {
-          writePromptSummary(
-            label,
-            formatPromptSummaryValue(runtimeConfig, finalValue),
-            summaryWidth,
-          );
-        }
+        writePromptSummary(
+          label,
+          formatPromptSummaryValue(runtimeConfig, finalValue),
+          summaryWidth,
+        );
         return finalValue;
       }
 
       if (promptBypassValues.has(key)) {
         const bypassValue = promptBypassValues.get(key) as StorageShape<TPrompts>[typeof key];
         promptBypassValues.delete(key);
-        const animated = await animatePromptValue(bypassValue);
-        if (animated.animated) {
-          storage.set(key, animated.value);
-          return animated.value;
-        }
-
         storage.set(key, bypassValue);
-        if (!animateEventPush) {
-          writePromptSummary(
-            label,
-            formatPromptSummaryValue(runtimeConfig, bypassValue),
-            summaryWidth,
-          );
-        }
+        writePromptSummary(
+          label,
+          formatPromptSummaryValue(runtimeConfig, bypassValue),
+          summaryWidth,
+        );
         return bypassValue;
       }
 
       if (runtimeConfig.type === "confirm" && autoYes) {
         const value = true as StorageShape<TPrompts>[typeof key];
         storage.set(key, value);
-        if (!animateEventPush) {
-          writePromptSummary(label, "(--yes)", summaryWidth);
-        }
+        writePromptSummary(label, "(--yes)", summaryWidth);
         return value;
       }
 
       if (!cli._isTTY) {
-        if (animateEventPush && activeAnimateTiming && animateIgnoreDefaults) {
-          return failNonInteractivePrompt(String(key), runtimeConfig);
-        }
-
         if (hasPromptDefault(runtimeConfig)) {
           const resolved = await resolvePromptValue(
             runtimeConfig,

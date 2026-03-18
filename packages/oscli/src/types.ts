@@ -80,67 +80,6 @@ export interface ExitOptions {
   code?: number | ExitCode;
 }
 
-export type AnimateEvent =
-  | { type: "intro"; message: string }
-  | { type: "prompt_start"; key: string; label: string; promptType: string }
-  | {
-      type: "prompt_preview";
-      key: string;
-      label: string;
-      promptType: string;
-      lines: string[];
-    }
-  | { type: "char"; key: string; value: string; full: string }
-  | {
-      type: "prompt_submit";
-      key: string;
-      label: string;
-      displayValue: string;
-    }
-  | { type: "outro"; message: string }
-  | { type: "run_complete" }
-  | { type: "loop_restart" }
-  | { type: "spin_start"; label: string }
-  | { type: "spin_complete"; label: string }
-  | {
-      type: "progress_start";
-      label: string;
-      steps: string[];
-      currentStepIndex: number;
-      percent: number;
-    }
-  | {
-      type: "progress_update";
-      label: string;
-      steps: string[];
-      currentStepIndex: number;
-      percent: number;
-    }
-  | {
-      type: "progress_complete";
-      label: string;
-      steps: string[];
-      currentStepIndex: number;
-      percent: number;
-    }
-  | { type: "log_line"; level: string; message: string }
-  | { type: "box_render"; title?: string; content: string }
-  | { type: "success_line"; message: string };
-
-export interface AnimateOptions<
-  TInputs extends Record<string, unknown> = Record<string, unknown>,
-> {
-  inputs: Partial<TInputs>;
-  ignoreDefaults?: boolean;
-  timing?: {
-    typeDelay?: number;
-    promptDelay?: number;
-    completionDelay?: number;
-    loop?: boolean;
-    loopDelay?: number;
-  };
-}
-
 export type CommandHandler = () => Promise<void> | void;
 
 export type StreamName = "stdout" | "stderr";

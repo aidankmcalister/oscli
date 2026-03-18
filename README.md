@@ -74,8 +74,8 @@ await cli.run(async () => {
 
 ## Register once, run later
 
-Use `cli.main()` only when you need the handler registered separately — for
-example, when sharing the CLI instance with `<OscliDemo />` for replay.
+Use `cli.main()` when you want to register the default handler once and call
+`cli.run()` later.
 
 ```ts
 const cli = createCLI((b) => ({
@@ -85,7 +85,6 @@ const cli = createCLI((b) => ({
   },
 }));
 
-// Register handler for OscliDemo replay
 cli.main(async () => {
   await cli.prompt.project();
   cli.success(`Created ${cli.storage.project}`);
@@ -107,12 +106,9 @@ if (import.meta.main) {
 - Theme presets, JSON mode, and multi-command routing.
 - `cli.test()` for deterministic tests without touching stdin.
 
-## Packages
+## Package
 
-This repository publishes two packages.
-
-- `@oscli-dev/oscli`: the core CLI framework.
-- `@oscli-dev/react`: a React component for embedding animated CLI demos.
+This repository publishes `@oscli-dev/oscli`, the core CLI framework.
 
 ## Examples
 
@@ -145,7 +141,7 @@ Start with these pages if you want the full API surface.
 - [Prompts](https://oscli.dev/docs/prompts)
 - [Flags](https://oscli.dev/docs/flags)
 - [Testing](https://oscli.dev/docs/testing)
-- [OscliDemo](https://oscli.dev/docs/oscli-demo)
+- [Theme](https://oscli.dev/docs/theme)
 
 ## Develop locally
 

@@ -14,7 +14,6 @@
     "json-mode",
     "non-interactive-and-ci",
     "---Tooling---",
-    "testing",
-    "oscli-demo"
+    "testing"
   ]
 }

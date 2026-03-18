@@ -74,8 +74,8 @@ await cli.run(async () => {
 
 ## Register once, run later
 
-Use `cli.main()` only when you need the handler registered separately — for
-example, when sharing the CLI instance with `<OscliDemo />` for replay.
+Use `cli.main()` when you want to register the default handler once and call
+`cli.run()` later.
 
 ```ts
 const cli = createCLI((b) => ({
@@ -85,7 +85,6 @@ const cli = createCLI((b) => ({
   },
 }));
 
-// Register handler for OscliDemo replay
 cli.main(async () => {
   await cli.prompt.project();
   cli.success(`Created ${cli.storage.project}`);
@@ -106,11 +105,6 @@ The core package covers the runtime pieces most CLIs need.
   progress.
 - Theme presets, JSON mode, and multi-command routing.
 - `cli.test()` for deterministic tests without touching stdin.
-
-## Companion package
-
-Use `@oscli-dev/react` when you want to embed an animated CLI demo in a React
-app or docs site.
 
 ## Examples
 
