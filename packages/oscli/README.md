@@ -72,29 +72,6 @@ await cli.run(async () => {
 });
 ```
 
-## Register once, run later
-
-Use `cli.main()` when you want to register the default handler once and call
-`cli.run()` later.
-
-```ts
-const cli = createCLI((b) => ({
-  title: "project setup",
-  prompts: {
-    project: b.text().label("Project").default("my-app"),
-  },
-}));
-
-cli.main(async () => {
-  await cli.prompt.project();
-  cli.success(`Created ${cli.storage.project}`);
-});
-
-if (import.meta.main) {
-  await cli.run();
-}
-```
-
 ## What you get
 
 The core package covers the runtime pieces most CLIs need.
