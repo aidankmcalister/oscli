@@ -132,6 +132,10 @@ function resolveTheme(
   return value ?? {};
 }
 
+function commanderOptionName(name: string): string {
+  return name.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase());
+}
+
 function resolveTitleText(config: { title?: TitleConfig }): string {
   if (config.title) {
     return typeof config.title === "string" ? config.title : config.title.text;
@@ -400,7 +404,11 @@ export function createCLI<
     parser: CommanderCommand,
     name: string,
   ) => {
-    return parser.getOptionValueSource(name) ?? program.getOptionValueSource(name);
+    const optionName = commanderOptionName(name);
+    return (
+      parser.getOptionValueSource(optionName) ??
+      program.getOptionValueSource(optionName)
+    );
   };
 
   const getOptions = (parser: CommanderCommand): Record<string, unknown> => {
@@ -409,6 +417,14 @@ export function createCLI<
     }
 
     return parser.opts() as Record<string, unknown>;
+  };
+
+  const getOptionValue = (
+    opts: Record<string, unknown>,
+    name: string,
+  ): unknown => {
+    const optionName = commanderOptionName(name);
+    return opts[optionName];
   };
 
   const hydrateRuntime = async (
@@ -437,7 +453,7 @@ export function createCLI<
         : false;
       const rawValue = hasTestOverride
         ? (testFlagOverrides as Record<string, unknown>)[name]
-        : opts[name];
+        : getOptionValue(opts, name);
       const source = hasTestOverride
         ? "test"
         : getOptionSource(program, parser, name);
@@ -477,7 +493,11 @@ export function createCLI<
       try {
         bypassRaw = Object.prototype.hasOwnProperty.call(flagDefs, name)
           ? (flags as Record<string, unknown>)[name]
-          : coercePromptBypassValue(name, runtimeConfig, opts[name]);
+          : coercePromptBypassValue(
+              name,
+              runtimeConfig,
+              getOptionValue(opts, name),
+            );
       } catch (error) {
         if (error instanceof Error) {
           exitWithMessage(error.message, { code: "usage" });

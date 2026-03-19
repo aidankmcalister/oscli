@@ -61,6 +61,14 @@ describe("theme overrides", () => {
     expect(resolved.symbols.pipe).toBe("");
   });
 
+  it("supports placing leading icons inside the sidebar rail", () => {
+    const resolved = applyTheme({
+      sidebarIcons: "inside",
+    });
+
+    expect(resolved.layout.sidebarIcons).toBe("inside");
+  });
+
   it("exports named theme presets", () => {
     expect(themePresets.default).toEqual({});
     expect(themePresets.basic).toMatchObject({
@@ -88,6 +96,7 @@ describe("theme overrides", () => {
       title: "Theme test",
       theme: {
         active: "cyan",
+        sidebarIcons: "inside",
         symbols: {
           success: "✔",
         },
@@ -97,6 +106,7 @@ describe("theme overrides", () => {
 
     expect(cli._theme.symbols.success).toBe("✔");
     expect(cli._theme.layout.spacing).toBe(0);
+    expect(cli._theme.layout.sidebarIcons).toBe("inside");
     expect(cli._theme.color.active).not.toBe(theme.color.active);
   });
 

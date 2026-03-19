@@ -7,7 +7,7 @@ type BumpType = "patch" | "minor" | "major";
 
 const cli = createCLI((b) => ({
   title: "Publish a new release.",
-  theme: "basic",
+  theme: "rounded",
   prompts: {
     bumpType: b
       .select({ choices: ["patch", "minor", "major"] as const })
@@ -39,7 +39,7 @@ await cli.run(async () => {
   cli.intro("release");
 
   const packageJson = (await Bun.file(
-    new URL("../../package.json", import.meta.url),
+    new URL("../../packages/oscli/package.json", import.meta.url),
   ).json()) as { version: string };
 
   await cli.prompt.bumpType();

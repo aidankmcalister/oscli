@@ -5,13 +5,15 @@ import {
   colorFormatters,
   type ColorName,
   stripAnsi,
-  visibleLength,
 } from "./theme";
 
 let railEnabled = false;
-let lastLiveLineWidth = 0;
 let hasPersistentCorner = false;
 let outputSuppressed = false;
+let liveBlockHeight = 0;
+
+const ANSI_SEQUENCE = /^\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/;
+const LIVE_SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 type OutputStreamLike = {
   isTTY?: boolean;
@@ -95,6 +97,69 @@ export function isOutputSuppressed(): boolean {
   return outputSuppressed;
 }
 
+function splitVisiblePrefix(value: string, visibleChars: number): [string, string] {
+  let index = 0;
+  let remaining = visibleChars;
+
+  while (index < value.length && remaining > 0) {
+    const ansi = value.slice(index).match(ANSI_SEQUENCE);
+    if (ansi) {
+      index += ansi[0].length;
+      continue;
+    }
+
+    index += 1;
+    remaining -= 1;
+  }
+
+  while (index < value.length) {
+    const ansi = value.slice(index).match(ANSI_SEQUENCE);
+    if (!ansi) {
+      break;
+    }
+
+    index += ansi[0].length;
+  }
+
+  return [value.slice(0, index), value.slice(index)];
+}
+
+function railIconCandidates(): string[] {
+  return [
+    theme.symbols.cursor,
+    theme.symbols.radio_on,
+    theme.symbols.radio_off,
+    theme.symbols.check_on,
+    theme.symbols.check_off,
+    theme.symbols.success,
+    theme.symbols.error,
+    theme.symbols.warning,
+    theme.symbols.info,
+    theme.symbols.step_active,
+    theme.symbols.step_done,
+    theme.symbols.step_pending,
+    ...LIVE_SPINNER_FRAMES,
+  ].filter((value, index, values) => value.length > 0 && values.indexOf(value) === index);
+}
+
+function decorateRailIcon(content: string): string | null {
+  if (theme.layout.sidebarIcons !== "inside") {
+    return null;
+  }
+
+  const plain = stripAnsi(content);
+  const match = railIconCandidates()
+    .sort((left, right) => right.length - left.length)
+    .find((candidate) => plain.startsWith(`${candidate} `));
+
+  if (!match) {
+    return null;
+  }
+
+  const [renderedIcon, rest] = splitVisiblePrefix(content, match.length);
+  return `${renderedIcon}  ${rest.startsWith(" ") ? rest.slice(1) : rest}`;
+}
+
 export function decorateLine(line: string): string {
   if (!railEnabled) {
     return line;
@@ -104,6 +169,11 @@ export function decorateLine(line: string): string {
 
   if (theme.symbols.pipe.length === 0) {
     return content;
+  }
+
+  const insideRail = decorateRailIcon(content);
+  if (insideRail) {
+    return insideRail;
   }
 
   return `${theme.color.border(theme.symbols.pipe)}  ${content}`;
@@ -120,6 +190,13 @@ function canRenderPersistentCorner(stream: "stdout" | "stderr"): boolean {
 }
 
 export function clearPersistentCorner(): void {
+  if (liveBlockHeight > 0) {
+    writeStdoutAnsi(`\u001b[${liveBlockHeight}A\r\u001b[J`);
+    liveBlockHeight = 0;
+    hasPersistentCorner = false;
+    return;
+  }
+
   if (!hasPersistentCorner || !stdoutIsTTY()) {
     return;
   }
@@ -140,6 +217,10 @@ function writePersistentCorner(stream: "stdout" | "stderr"): void {
 export function writeLine(line: string, stream: "stdout" | "stderr" = "stdout"): void {
   if (outputSuppressed) {
     return;
+  }
+
+  if (stream === "stdout" && liveBlockHeight > 0) {
+    clearPersistentCorner();
   }
 
   if (stream === "stdout" && hasPersistentCorner) {
@@ -317,10 +398,15 @@ export function writeLiveLine(line: string): void {
     return;
   }
 
-  const width = visibleLength(formatted);
-  const padding = " ".repeat(Math.max(0, lastLiveLineWidth - width));
-  getStdout().write(`\r${formatted}${padding}`);
-  lastLiveLineWidth = Math.max(lastLiveLineWidth, width);
+  if (canRenderPersistentCorner("stdout")) {
+    getStdout().write(`${formatted}\n${theme.color.border(theme.symbols.outro)}\n`);
+    liveBlockHeight = 2;
+    hasPersistentCorner = false;
+    return;
+  }
+
+  getStdout().write(`${formatted}\n`);
+  liveBlockHeight = 1;
 }
 
 export function finalizeLiveLine(line: string): void {
@@ -328,10 +414,6 @@ export function finalizeLiveLine(line: string): void {
     return;
   }
 
-  writeLiveLine(line);
-  if (getStdout().isTTY === true) {
-    getStdout().write("\n");
-    lastLiveLineWidth = 0;
-  }
-  writeSectionGap();
+  clearPersistentCorner();
+  writeSectionLine(line);
 }

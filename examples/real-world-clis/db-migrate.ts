@@ -11,7 +11,7 @@ const pendingMigrations = [
 
 const cli = createCLI((b) => ({
   title: "Apply database migrations.",
-  theme: "basic",
+  theme: "minimal",
   flags: {
     env: b
       .flag()

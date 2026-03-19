@@ -5,7 +5,12 @@ const sleep = (ms: number) =>
 
 const cli = createCLI((b) => ({
   title: "Create an application.",
-  theme: "basic",
+  theme: {
+    sidebar: "rounded",
+    sidebarIcons: "inside",
+    active: "cyan",
+    cursor: "cyan",
+  },
   prompts: {
     project: b.text().label("Project").default("my-app"),
     framework: b

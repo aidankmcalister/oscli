@@ -1,5 +1,17 @@
-import { describe, expect, it, vi } from "vitest";
-import { createLogChain } from "../src/output";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  clearPersistentCorner,
+  createLogChain,
+  decorateLine,
+  setRailEnabled,
+} from "../src/output";
+import { applyTheme, stripAnsi } from "../src/theme";
+
+afterEach(() => {
+  clearPersistentCorner();
+  setRailEnabled(false);
+  applyTheme({});
+});
 
 describe("createLogChain", () => {
   it("does not require process.stdout in browser-like environments", async () => {
@@ -27,5 +39,23 @@ describe("createLogChain", () => {
         value: originalProcess,
       });
     }
+  });
+});
+
+describe("decorateLine", () => {
+  it("keeps icons outside the rail by default", () => {
+    applyTheme({});
+    setRailEnabled(true);
+
+    expect(stripAnsi(decorateLine("  ✓ Ready"))).toBe("│  ✓ Ready");
+  });
+
+  it("can move leading icons into the rail column", () => {
+    applyTheme({
+      sidebarIcons: "inside",
+    });
+    setRailEnabled(true);
+
+    expect(stripAnsi(decorateLine("  ✓ Ready"))).toBe("✓  Ready");
   });
 });

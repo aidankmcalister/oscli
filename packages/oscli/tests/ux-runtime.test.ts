@@ -301,6 +301,34 @@ describe("phase 2 runtime ux", () => {
     expect(rendered).toContain("Files ready");
   });
 
+  it("keeps the closing rail corner visible while live spinner output is running", async () => {
+    const stdout = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
+    const cli = createCLI(() => ({
+      title: "live spinner",
+      prompts: {},
+    }));
+
+    await withTTY(true, true, async () => {
+      await withArgv(["node", "oscli"], async () => {
+        await cli.run(async () => {
+          cli.intro("live spinner");
+          await cli.spin("Installing packages", async () => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+          });
+        });
+      });
+    });
+
+    const rendered = stripAnsi(
+      stdout.mock.calls.map((call) => String(call[0])).join(""),
+    ).replace(/\r/g, "");
+
+    expect(rendered).toMatch(/Installing packages\.\.\.[^\n]*\n└\n/);
+  });
+
   it("formats unknown commands as usage errors", async () => {
     const stderr = vi
       .spyOn(process.stderr, "write")

@@ -99,7 +99,7 @@ The repository includes a smaller example suite with two layers.
   [`theme-showcase`](https://github.com/aidankmcalister/oscli/blob/main/examples/concepts/theme-showcase.ts)
 - Things you can build in
   [`examples/real-world-clis/`](https://github.com/aidankmcalister/oscli/tree/main/examples/real-world-clis):
-  `create-app`, `db-migrate`, `deploy`, `github`, and `release`
+  `create-app`, `db-migrate`, `deploy`, `release`, and `workspace`
 
 Run any example directly from the repository root.
 
@@ -107,7 +107,7 @@ Run any example directly from the repository root.
 bun run examples/concepts/output-patterns.ts
 bun run examples/concepts/prompt-patterns.ts
 bun run examples/real-world-clis/create-app.ts
-bun run examples/real-world-clis/github.ts pr-list --state open
+bun run examples/real-world-clis/workspace.ts --dry-run --json
 ```
 
 ## Docs

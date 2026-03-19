@@ -63,6 +63,7 @@ export type ResolvedTheme = {
     boxMinWidth: number;
     progressWidth: number;
     spacing: 0 | 1 | 2;
+    sidebarIcons: "outside" | "inside";
   };
 };
 
@@ -75,6 +76,7 @@ export interface ThemeOverride {
   info?: ColorName;
   border?: ColorName;
   sidebar?: false | "square" | "rounded";
+  sidebarIcons?: "outside" | "inside";
   symbols?: Partial<ThemeSymbols>;
   spacing?: 0 | 1 | 2;
 }
@@ -175,6 +177,7 @@ function createDefaultTheme(): ResolvedTheme {
       boxMinWidth: 40,
       progressWidth: 20,
       spacing: 1,
+      sidebarIcons: "outside",
     },
   };
 }
@@ -273,6 +276,7 @@ export function applyTheme(
       ...baseTheme.layout,
       indent: hasSidebar ? baseTheme.layout.indent : "",
       spacing: override.spacing ?? baseTheme.layout.spacing,
+      sidebarIcons: override.sidebarIcons ?? baseTheme.layout.sidebarIcons,
     },
   };
 

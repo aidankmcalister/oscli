@@ -95,7 +95,7 @@ The repository includes a smaller example suite with two layers.
   [`theme-showcase`](https://github.com/aidankmcalister/oscli/blob/main/examples/concepts/theme-showcase.ts)
 - Things you can build in
   [`examples/real-world-clis/`](https://github.com/aidankmcalister/oscli/tree/main/examples/real-world-clis):
-  `create-app`, `db-migrate`, `deploy`, `github`, and `release`
+  `create-app`, `db-migrate`, `deploy`, `release`, and `workspace`
 
 ## Docs
 

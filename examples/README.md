@@ -13,5 +13,5 @@ Use `real-world-clis/` when you want examples of what you can build.
 - `real-world-clis/create-app.ts`
 - `real-world-clis/db-migrate.ts`
 - `real-world-clis/deploy.ts`
-- `real-world-clis/github.ts`
 - `real-world-clis/release.ts`
+- `real-world-clis/workspace.ts`

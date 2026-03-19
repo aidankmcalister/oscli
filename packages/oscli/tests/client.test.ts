@@ -99,6 +99,25 @@ describe("createCLI", () => {
     );
   });
 
+  it("parses hyphenated flag names from commander option values", async () => {
+    const cli = createCLI((b) => ({
+      title: "Flags",
+      flags: {
+        "dry-run": b.flag().boolean().default(false),
+      },
+      prompts: {},
+    }));
+
+    cli.main(async () => {});
+
+    const result = await cli.test({
+      argv: ["--dry-run"],
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.flags["dry-run"]).toBe(true);
+  });
+
   it("parses explicit false values for boolean flags", async () => {
     const cli = createCLI((b) => ({
       title: "Flags",
