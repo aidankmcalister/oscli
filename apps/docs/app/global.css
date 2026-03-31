@@ -232,39 +232,48 @@ html:not(.light) .home-panel .oscli-terminal-success {
     font-size: 0.82rem;
 }
 
-.home-code-pre {
-    font-size: 0.82rem;
-    white-space: pre;
+/* Shiki dual-theme — strip background, wire up light/dark token colours */
+.home-shiki-card .shiki {
+    font-size: 0.88rem;
+    line-height: 1.4;
     margin: 0;
-    color: var(--color-fd-foreground);
+    padding: 0 !important;
+    background: transparent !important;
+    font-family: inherit;
 }
-
-/* Syntax token colors — light mode */
-.home-code-pre .token-keyword { color: hsl(260 60% 48%); }
-.home-code-pre .token-string { color: hsl(142 60% 32%); }
-.home-code-pre .token-fn { color: hsl(210 70% 42%); }
-.home-code-pre .token-prop { color: hsl(0 0% 30%); }
-.home-code-pre .token-punct { color: hsl(0 0% 45%); }
-
-html.dark .home-code-pre .token-keyword { color: hsl(260 70% 72%); }
-html.dark .home-code-pre .token-string { color: hsl(142 60% 60%); }
-html.dark .home-code-pre .token-fn { color: hsl(210 80% 68%); }
-html.dark .home-code-pre .token-prop { color: hsl(0 0% 75%); }
-html.dark .home-code-pre .token-punct { color: hsl(0 0% 55%); }
-
+.home-shiki-card .shiki .line {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+.home-shiki-wrap .shiki {
+    background: transparent !important;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0 !important;
+    white-space: pre;
+    font-family: inherit;
+}
+.home-shiki-wrap .shiki span,
+.home-shiki-card .shiki span {
+    color: var(--shiki-light);
+}
+html.dark .home-shiki-wrap .shiki span,
+html.dark .home-shiki-card .shiki span {
+    color: var(--shiki-dark);
+}
 @media (prefers-color-scheme: dark) {
-    html:not(.light) .home-code-pre .token-keyword { color: hsl(260 70% 72%); }
-    html:not(.light) .home-code-pre .token-string { color: hsl(142 60% 60%); }
-    html:not(.light) .home-code-pre .token-fn { color: hsl(210 80% 68%); }
-    html:not(.light) .home-code-pre .token-prop { color: hsl(0 0% 75%); }
-    html:not(.light) .home-code-pre .token-punct { color: hsl(0 0% 55%); }
+    html:not(.light) .home-shiki-wrap .shiki span,
+    html:not(.light) .home-shiki-card .shiki span {
+        color: var(--shiki-dark);
+    }
 }
 
 @media (min-width: 640px) {
     .home-panel .oscli-terminal-body {
         font-size: 0.92rem;
     }
-    .home-code-pre {
+    .home-shiki-wrap .shiki {
         font-size: 0.82rem;
     }
 }
@@ -273,7 +282,7 @@ html.dark .home-code-pre .token-punct { color: hsl(0 0% 55%); }
     .home-panel .oscli-terminal-body {
         font-size: 0.85rem;
     }
-    .home-code-pre {
+    .home-shiki-wrap .shiki {
         font-size: 0.78rem;
     }
 }

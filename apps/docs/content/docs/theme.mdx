@@ -37,6 +37,10 @@ export const themeOverrideFields = {
     type: 'false | "square" | "rounded"',
     description: "Controls intro and outro corners and the left rail.",
   },
+  sidebarIcons: {
+    type: '"outside" | "inside"',
+    description: 'Controls whether leading icons sit outside or inside the rail column. Defaults to "outside".',
+  },
   symbols: {
     type: "Partial<ThemeSymbols>",
     description: "Overrides individual symbols without replacing the full theme.",
@@ -74,6 +78,11 @@ export const symbolKeys = {
   pipe: { type: "string", description: "Sidebar rail symbol." },
   bar_fill: { type: "string", description: "Progress fill symbol." },
   bar_empty: { type: "string", description: "Progress empty symbol." },
+  step_active: { type: "string", description: "Active step symbol." },
+  step_done: { type: "string", description: "Completed step symbol." },
+  step_pending: { type: "string", description: "Pending step symbol." },
+  arrow: { type: "string", description: "Arrow symbol used in hints and diffs." },
+  dot_leader: { type: "string", description: "Dot leader symbol used in cli.leaders()." },
 };
 
 The theme system is shallow to use and deep enough to be practical. Use a

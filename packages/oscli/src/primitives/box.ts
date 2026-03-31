@@ -13,7 +13,7 @@ export type BoxOptions = {
 function renderLegacyBox(options: BoxOptions): string {
   const { title, content } = options;
   const lines = content.split("\n");
-  const contentWidth = Math.max(0, ...lines.map((line) => line.length));
+  const contentWidth = Math.max(0, ...lines.map((line) => visibleLength(line)));
 
   const topCore = title ? ` ${title} ` : "";
   const topFill = Math.max(0, contentWidth + 2 - topCore.length);

@@ -1,5 +1,5 @@
-import githubDark from "@shikijs/themes/github-dark";
-import githubLight from "@shikijs/themes/github-light";
+import gruvboxDarkSoft from "@shikijs/themes/gruvbox-dark-soft";
+import gruvboxLightSoft from "@shikijs/themes/gruvbox-light-soft";
 import type { LanguageRegistration, ThemeRegistration } from "shiki";
 
 export const oscliLanguage: LanguageRegistration = {
@@ -301,13 +301,13 @@ function withOscliTokens(
 }
 
 export const oscliLightTheme = withOscliTokens(
-  githubLight,
-  "github-light-oscli",
+  gruvboxLightSoft,
+  "gruvbox-light-soft-oscli",
   oscliTokenColorsLight,
 );
 
 export const oscliDarkTheme = withOscliTokens(
-  githubDark,
-  "github-dark-oscli",
+  gruvboxDarkSoft,
+  "gruvbox-dark-soft-oscli",
   oscliTokenColorsDark,
 );
