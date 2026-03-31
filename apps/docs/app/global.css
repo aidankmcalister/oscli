@@ -245,6 +245,10 @@ html:not(.light) .home-panel .oscli-terminal-success {
     padding-left: 0 !important;
     padding-right: 0 !important;
 }
+.home-shiki-wrap {
+    overflow-x: auto;
+    min-width: 0;
+}
 .home-shiki-wrap .shiki {
     background: transparent !important;
     font-size: 0.82rem;
@@ -253,6 +257,7 @@ html:not(.light) .home-panel .oscli-terminal-success {
     padding: 0 !important;
     white-space: pre;
     font-family: inherit;
+    min-width: max-content;
 }
 .home-shiki-wrap .shiki span,
 .home-shiki-card .shiki span {

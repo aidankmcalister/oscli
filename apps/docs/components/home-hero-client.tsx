@@ -110,7 +110,7 @@ export function HomeHeroClient({ codeHtml, codeText, cardHtmls }: { codeHtml: st
         </div>
 
         {/* Right: code */}
-        <div className="home-panel rounded-xl">
+        <div className="home-panel min-w-0 w-full rounded-xl overflow-hidden lg:w-auto">
           <div className="home-panel-header flex items-center justify-between px-4 py-2.5">
             <span className="font-mono text-[11px] font-medium">src/cli.ts</span>
             <CopyButton text={codeText} />
